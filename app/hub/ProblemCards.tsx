@@ -1,0 +1,75 @@
+"use client";
+
+import { useState } from "react";
+
+const CARDS = [
+  { quote: "I've applied to 30 jobs and heard nothing.", reality: "You're not being rejected. You're being missed - lost in a stack of 500 look-alike CVs a recruiter skims in seconds." },
+  { quote: "I don't know why I'm not getting shortlisted.", reality: "Because no one tells you. There's no feedback loop between “Apply” and “We regret to inform you.”" },
+  { quote: "My CV looks fine to me.", reality: "Fine isn't the bar. The bar is fit - how closely you match this specific role. And you've never had a way to measure it." },
+];
+
+export default function ProblemCards() {
+  const [flipped, setFlipped] = useState<number | null>(null);
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" style={{ gap: 16 }}>
+      {CARDS.map((c, i) => {
+        const isFlipped = flipped === i;
+        return (
+          <div
+            key={c.quote}
+            onClick={() => setFlipped(isFlipped ? null : i)}
+            className="group cursor-pointer"
+            style={{ perspective: 1000, minHeight: 230 }}
+          >
+            <div
+              className="relative w-full h-full transition-transform sm:group-hover:[transform:rotateY(180deg)]"
+              style={{
+                minHeight: 230,
+                transformStyle: "preserve-3d",
+                transitionDuration: "600ms",
+                transitionTimingFunction: "cubic-bezier(0.23,1,0.32,1)",
+                transform: isFlipped ? "rotateY(180deg)" : undefined,
+              }}
+            >
+              {/* Front */}
+              <div
+                className="absolute inset-0 flex flex-col bg-[#fef7f7] border border-[#f4d8d8] box-border"
+                style={{ borderRadius: 18, padding: 22, backfaceVisibility: "hidden", gap: 14, boxShadow: "0px 18px 50px rgba(17,35,89,0.04)" }}
+              >
+                <span className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#ed1a24]" style={{ fontSize: 11, letterSpacing: "0.05em" }}>
+                  Sound familiar?
+                </span>
+                <p className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.25rem", lineHeight: 1.35, margin: 0 }}>
+                  &ldquo;{c.quote}&rdquo;
+                </p>
+                <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#9c9c9c]" style={{ marginTop: "auto", fontSize: 11 }}>
+                  Hover for the reality →
+                </span>
+              </div>
+              {/* Back */}
+              <div
+                className="absolute inset-0 flex flex-col justify-center bg-white border border-black/[0.08] box-border"
+                style={{
+                  borderRadius: 18,
+                  padding: 22,
+                  backfaceVisibility: "hidden",
+                  transform: "rotateY(180deg)",
+                  gap: 12,
+                  boxShadow: "0px 18px 50px rgba(17,35,89,0.04)",
+                }}
+              >
+                <span className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#ed1a24]" style={{ fontSize: 11, letterSpacing: "0.05em" }}>
+                  The reality
+                </span>
+                <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 14, lineHeight: 1.7, margin: 0 }}>
+                  {c.reality}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

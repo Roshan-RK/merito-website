@@ -8,6 +8,7 @@ const navLinks = [
   { label: "About us", href: "/about" },
   { label: "Merito's way", href: "/meritoways" },
   { label: "Platform & tools", href: "#tools" },
+  { label: "HUB", href: "/hub" },
   { label: "Insights", href: "/insights" },
 ];
 
