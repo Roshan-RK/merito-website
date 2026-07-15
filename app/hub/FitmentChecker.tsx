@@ -1,61 +1,119 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import Script from "next/script";
 
-type Breakdown = { label: string; val: string; width: string; color: string };
+declare global {
+  interface Window {
+    grecaptcha?: {
+      render: (container: HTMLElement, options: { sitekey: string }) => number;
+      getResponse: (widgetId?: number) => string;
+      reset: (widgetId?: number) => void;
+      ready: (cb: () => void) => void;
+    };
+    onRecaptchaLoad?: () => void;
+  }
+}
+
+type JdMode = "paste" | "link";
 
 export default function FitmentChecker() {
+  const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
-  const [cvUploaded, setCvUploaded] = useState(false);
+  const [jdMode, setJdMode] = useState<JdMode>("paste");
+  const [jdText, setJdText] = useState("");
+  const [jdUrl, setJdUrl] = useState("");
+  const [cvFile, setCvFile] = useState<File | null>(null);
   const [checking, setChecking] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   const [shown, setShown] = useState(0);
+  const [verdict, setVerdict] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const rafRef = useRef<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
+  const recaptchaEnabled = Boolean(recaptchaSiteKey);
+  const recaptchaContainerRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!recaptchaEnabled) return;
+    const renderWidget = () => {
+      if (recaptchaContainerRef.current && window.grecaptcha?.render && widgetIdRef.current === null) {
+        widgetIdRef.current = window.grecaptcha.render(recaptchaContainerRef.current, {
+          sitekey: recaptchaSiteKey,
+        });
+      }
+    };
+    if (window.grecaptcha?.render) {
+      window.grecaptcha.ready(renderWidget);
+    } else {
+      window.onRecaptchaLoad = renderWidget;
+    }
+    return () => {
+      widgetIdRef.current = null;
+    };
+  }, [recaptchaEnabled, recaptchaSiteKey]);
 
   const roleLabel = role.trim() || "your target role";
+  const canSubmit = email.trim() && role.trim() && (jdText.trim() || jdUrl.trim()) && cvFile && !checking;
 
-  const checkFit = () => {
-    if (checking) return;
+  const animateScore = (target: number) => {
+    const t0 = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / 1500);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setShown(target * eased);
+      if (p < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+  };
+
+  const checkFit = async () => {
+    if (!canSubmit || !cvFile) return;
+    setErrorMsg(null);
     setChecking(true);
     setScore(null);
     setShown(0);
-    const seed = (role.trim() || "Product Manager").split("").reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 0);
-    const target = Math.round((6.6 + (seed % 21) / 10) * 10) / 10;
 
-    setTimeout(() => {
+    let recaptchaToken = "";
+    if (recaptchaEnabled) {
+      recaptchaToken = window.grecaptcha?.getResponse?.(widgetIdRef.current ?? undefined) || "";
+      if (!recaptchaToken) {
+        setChecking(false);
+        setErrorMsg("Please verify that you are not a robot.");
+        return;
+      }
+    }
+
+    const form = new FormData();
+    form.set("email", email.trim());
+    form.set("role", role.trim());
+    if (jdMode === "paste") form.set("jdText", jdText.trim());
+    else form.set("jdUrl", jdUrl.trim());
+    form.set("cv", cvFile);
+    form.set("recaptchaToken", recaptchaToken);
+
+    try {
+      const res = await fetch("/api/hub/fitment-check", { method: "POST", body: form });
+      const data = (await res.json()) as { score?: number; verdict?: string; error?: string };
+      window.grecaptcha?.reset?.(widgetIdRef.current ?? undefined);
+      if (!res.ok || typeof data.score !== "number") {
+        setChecking(false);
+        setErrorMsg(data.error || "Something went wrong — please try again.");
+        return;
+      }
       setChecking(false);
-      setScore(target);
-      const t0 = performance.now();
-      const tick = (t: number) => {
-        const p = Math.min(1, (t - t0) / 1500);
-        const eased = 1 - Math.pow(1 - p, 3);
-        setShown(target * eased);
-        if (p < 1) rafRef.current = requestAnimationFrame(tick);
-      };
-      rafRef.current = requestAnimationFrame(tick);
-    }, 1400);
+      setScore(data.score);
+      setVerdict(data.verdict || "");
+      animateScore(data.score);
+    } catch {
+      window.grecaptcha?.reset?.(widgetIdRef.current ?? undefined);
+      setChecking(false);
+      setErrorMsg("Something went wrong — please try again.");
+    }
   };
-
-  const verdict =
-    (score ?? 0) >= 8
-      ? "Strong fit. Polish your CV and apply with confidence."
-      : (score ?? 0) >= 7.3
-      ? "Good fit - a few gaps are costing you shortlists."
-      : "Fixable gaps. See exactly what to change before your next application.";
-
-  const sub = (o: number) => Math.max(3.5, Math.min(9.6, (score ?? 0) + o));
-  const breakdown: Breakdown[] = score
-    ? [
-        { label: "Skills match", v: sub(0.6) },
-        { label: "Experience fit", v: sub(-0.4) },
-        { label: "CV clarity", v: sub(-0.9) },
-      ].map((b) => ({
-        label: b.label,
-        val: b.v.toFixed(1),
-        width: b.v * 10 + "%",
-        color: b.v >= 7 ? "#ed1a24" : "#9c9c9c",
-      }))
-    : [];
 
   const hasScore = !!score;
   const noScore = !score && !checking;
@@ -69,6 +127,10 @@ export default function FitmentChecker() {
       <style>{`
         @keyframes hub-pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.35); opacity: 0.55; } }
       `}</style>
+      {recaptchaEnabled ? (
+        <Script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit" strategy="afterInteractive" />
+      ) : null}
+
       <div className="flex items-center gap-2.5" style={{ marginBottom: 18 }}>
         <span
           className="rounded-full bg-[#ed1a24] inline-block"
@@ -83,48 +145,153 @@ export default function FitmentChecker() {
       </div>
 
       <label className="block font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 12, marginBottom: 6 }}>
-        The job you want (paste JD or link here)
+        Your email
+      </label>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="you@example.com"
+        className="w-full box-border bg-white font-[family-name:var(--font-poppins)] text-black outline-none border border-[#dcdcdc] focus:border-[#ed1a24] transition-colors"
+        style={{ padding: "13px 14px", borderRadius: 8, fontSize: 14, marginBottom: 12 }}
+      />
+
+      <label className="block font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 12, marginBottom: 6 }}>
+        The role you want
       </label>
       <input
         value={role}
         onChange={(e) => setRole(e.target.value)}
         placeholder="e.g. Senior Product Manager"
         className="w-full box-border bg-white font-[family-name:var(--font-poppins)] text-black outline-none border border-[#dcdcdc] focus:border-[#ed1a24] transition-colors"
-        style={{ padding: "13px 14px", borderRadius: 8, fontSize: 14 }}
+        style={{ padding: "13px 14px", borderRadius: 8, fontSize: 14, marginBottom: 12 }}
       />
 
+      <div className="flex items-center" style={{ gap: 8, marginBottom: 6 }}>
+        <label className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 12 }}>
+          Job description
+        </label>
+        <div className="flex border border-[#dcdcdc] overflow-hidden" style={{ borderRadius: 50, marginLeft: "auto" }}>
+          <button
+            type="button"
+            onClick={() => setJdMode("paste")}
+            className="font-[family-name:var(--font-poppins)] font-semibold transition-all"
+            style={{
+              border: "none",
+              cursor: "pointer",
+              fontSize: 11,
+              padding: "5px 12px",
+              background: jdMode === "paste" ? "#ed1a24" : "#fff",
+              color: jdMode === "paste" ? "#fff" : "#4b4b4d",
+            }}
+          >
+            Paste JD
+          </button>
+          <button
+            type="button"
+            onClick={() => setJdMode("link")}
+            className="font-[family-name:var(--font-poppins)] font-semibold transition-all"
+            style={{
+              border: "none",
+              cursor: "pointer",
+              fontSize: 11,
+              padding: "5px 12px",
+              background: jdMode === "link" ? "#ed1a24" : "#fff",
+              color: jdMode === "link" ? "#fff" : "#4b4b4d",
+            }}
+          >
+            JD link
+          </button>
+        </div>
+      </div>
+      {jdMode === "paste" ? (
+        <textarea
+          value={jdText}
+          onChange={(e) => setJdText(e.target.value)}
+          placeholder="Paste the full job description here..."
+          className="w-full box-border bg-white font-[family-name:var(--font-poppins)] text-black outline-none border border-[#dcdcdc] focus:border-[#ed1a24] transition-colors resize-none"
+          style={{ padding: "10px 14px", borderRadius: 8, fontSize: 13, height: 88, marginBottom: 12 }}
+        />
+      ) : (
+        <input
+          value={jdUrl}
+          onChange={(e) => setJdUrl(e.target.value)}
+          placeholder="https://company.com/careers/role"
+          className="w-full box-border bg-white font-[family-name:var(--font-poppins)] text-black outline-none border border-[#dcdcdc] focus:border-[#ed1a24] transition-colors"
+          style={{ padding: "13px 14px", borderRadius: 8, fontSize: 14, marginBottom: 12 }}
+        />
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.docx"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0] || null;
+          if (file && file.size > 5 * 1024 * 1024) {
+            setErrorMsg("That file is too large — please upload a CV under 5MB.");
+            return;
+          }
+          setErrorMsg(null);
+          setCvFile(file);
+        }}
+      />
       <div
-        onClick={() => setCvUploaded((v) => !v)}
+        onClick={() => fileInputRef.current?.click()}
         className="bg-white cursor-pointer flex items-center transition-colors"
         style={{
-          marginTop: 12,
-          border: `1.5px dashed ${cvUploaded ? "#22c55e" : "#dcdcdc"}`,
+          border: `1.5px dashed ${cvFile ? "#22c55e" : "#dcdcdc"}`,
           borderRadius: 10,
           padding: "14px 16px",
           gap: 12,
         }}
       >
-        <svg width="20" height="20" fill="none" stroke={cvUploaded ? "#22c55e" : "#9c9c9c"} strokeWidth="2" viewBox="0 0 24 24">
+        <svg width="20" height="20" fill="none" stroke={cvFile ? "#22c55e" : "#9c9c9c"} strokeWidth="2" viewBox="0 0 24 24">
           <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
           <path d="M14 2v6h6" />
         </svg>
         <span
           className="font-[family-name:var(--font-poppins)] font-semibold"
-          style={{ fontSize: 13, color: cvUploaded ? "#16803c" : "#4b4b4d" }}
+          style={{ fontSize: 13, color: cvFile ? "#16803c" : "#4b4b4d" }}
         >
-          {cvUploaded ? "Your_CV.pdf - ready ✓" : "Upload your CV (PDF) - tap to simulate"}
+          {cvFile ? `${cvFile.name} - ready ✓` : "Upload your CV (PDF or DOCX)"}
         </span>
       </div>
 
+      {recaptchaEnabled ? (
+        <div style={{ marginTop: 14 }}>
+          <div className="origin-top-left scale-[0.82] sm:scale-100" style={{ width: 300 }}>
+            <div ref={recaptchaContainerRef} />
+          </div>
+        </div>
+      ) : null}
+
       <button
         onClick={checkFit}
-        className="w-full font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
-        style={{ marginTop: 14, height: 50, borderRadius: 8, fontSize: 15, boxShadow: "0px 4px 6px rgba(236,34,40,0.3)" }}
+        disabled={!canSubmit}
+        className="w-full font-[family-name:var(--font-poppins)] font-semibold text-white transition-colors"
+        style={{
+          marginTop: 14,
+          height: 50,
+          borderRadius: 8,
+          fontSize: 15,
+          background: canSubmit ? "#ed1a24" : "#dcdcdc",
+          cursor: canSubmit ? "pointer" : "default",
+          boxShadow: canSubmit ? "0px 4px 6px rgba(236,34,40,0.3)" : "none",
+          border: "none",
+        }}
       >
         {checking ? "Scoring your CV…" : "Check my fitment - free"}
       </button>
 
-      {noScore && (
+      {errorMsg && (
+        <p className="text-center" style={{ fontSize: 12.5, color: "#ed1a24", marginTop: 10 }}>
+          {errorMsg}
+        </p>
+      )}
+
+      {noScore && !errorMsg && (
         <div
           className="bg-white border border-black/[0.08] relative"
           style={{ marginTop: 18, borderRadius: 14, padding: 18, boxShadow: "0px 4px 16px rgba(17,35,89,0.04)" }}
@@ -146,26 +313,9 @@ export default function FitmentChecker() {
           <div className="bg-[#f0e6ea] overflow-hidden" style={{ marginTop: 12, height: 10, borderRadius: 6, opacity: 0.75 }}>
             <div className="bg-[#ed1a24] h-full" style={{ borderRadius: 6, width: "78%" }} />
           </div>
-          {[
-            { label: "Skills match", val: "8.4", width: "84%" },
-            { label: "Experience fit", val: "7.6", width: "76%" },
-            { label: "CV clarity", val: "6.9", width: "69%", grey: true },
-          ].map((b) => (
-            <div key={b.label} className="flex items-center" style={{ gap: 12, marginTop: 10, opacity: 0.75 }}>
-              <span className="text-[#4b4b4d] flex-shrink-0" style={{ fontSize: 12, width: 110 }}>{b.label}</span>
-              <div className="flex-1 bg-[#f0e6ea] overflow-hidden" style={{ height: 6, borderRadius: 4 }}>
-                <div className="h-full" style={{ borderRadius: 4, width: b.width, background: b.grey ? "#9c9c9c" : "#ed1a24" }} />
-              </div>
-              <span className="font-bold text-black text-right" style={{ fontSize: 12, width: 32 }}>{b.val}</span>
-            </div>
-          ))}
-          <button
-            onClick={checkFit}
-            className="w-full font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24] border border-[rgba(237,26,36,0.4)] hover:border-[#ed1a24] hover:bg-[#fdeced] transition-all bg-transparent"
-            style={{ marginTop: 16, height: 44, borderRadius: 8, fontSize: 13 }}
-          >
-            Create a free profile - view your detailed fitment report
-          </button>
+          <p className="text-[#9c9c9c]" style={{ fontSize: 12, margin: "14px 0 0", lineHeight: 1.6 }}>
+            Fill in the form above to get your real score.
+          </p>
         </div>
       )}
 
@@ -188,15 +338,6 @@ export default function FitmentChecker() {
           <p className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 13, margin: "12px 0 0" }}>
             {verdict}
           </p>
-          {breakdown.map((b) => (
-            <div key={b.label} className="flex items-center" style={{ gap: 12, marginTop: 10 }}>
-              <span className="text-[#4b4b4d] flex-shrink-0" style={{ fontSize: 12, width: 110 }}>{b.label}</span>
-              <div className="flex-1 bg-[#f0e6ea] overflow-hidden" style={{ height: 6, borderRadius: 4 }}>
-                <div className="h-full" style={{ borderRadius: 4, width: b.width, background: b.color }} />
-              </div>
-              <span className="font-bold text-black text-right" style={{ fontSize: 12, width: 32 }}>{b.val}</span>
-            </div>
-          ))}
           <p className="text-[#9c9c9c]" style={{ fontSize: 12, margin: "14px 0 0", lineHeight: 1.6 }}>
             Create your free account to unlock the full report - strengths, gaps, and exactly what to fix.
           </p>
@@ -204,7 +345,7 @@ export default function FitmentChecker() {
       )}
 
       <p className="font-[family-name:var(--font-poppins)] font-medium text-[#9c9c9c] text-center" style={{ fontSize: 12, margin: "14px 0 0" }}>
-        Free · No sign-up · Takes 60 seconds
+        Free · Takes 60 seconds
       </p>
     </div>
   );
