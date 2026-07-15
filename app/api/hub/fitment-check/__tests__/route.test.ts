@@ -38,6 +38,8 @@ function buildForm(overrides: Record<string, string | Blob> = {}) {
 describe("POST /api/hub/fitment-check", () => {
   beforeEach(() => {
     insertMock.mockClear();
+    // Rate limiters are module-level state; reset modules so each test gets a fresh limiter map.
+    vi.resetModules();
   });
 
   afterEach(() => {
@@ -92,5 +94,35 @@ describe("POST /api/hub/fitment-check", () => {
     });
     const response = await POST(request);
     expect(response.status).toBe(400);
+  });
+
+  it("rejects a CV file larger than 5MB", async () => {
+    const bigFile = new Blob([new Uint8Array(5 * 1024 * 1024 + 1)], { type: "application/pdf" });
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm({ cv: bigFile }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toMatch(/too large/i);
+  });
+
+  it("rejects requests once the per-IP rate limit is exceeded, even with different emails", async () => {
+    const { POST } = await importRoute();
+    const headers = { "x-forwarded-for": "203.0.113.5" };
+
+    let lastResponse: Response | undefined;
+    for (let i = 0; i < 6; i++) {
+      const request = new Request("http://localhost/api/hub/fitment-check", {
+        method: "POST",
+        headers,
+        body: buildForm({ email: `candidate${i}@example.com` }),
+      });
+      lastResponse = await POST(request);
+    }
+
+    expect(lastResponse?.status).toBe(429);
   });
 });

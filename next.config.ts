@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 
 const nextConfig: NextConfig = {
+  // pdf-parse/mammoth bundle Node internals; keep them external to server bundling.
+  serverExternalPackages: ["pdf-parse", "mammoth"],
   images: {
     dangerouslyAllowSVG: true,
     contentDispositionType: "attachment",

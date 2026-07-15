@@ -8,6 +8,11 @@ export const runtime = "nodejs";
 
 // Placeholder threshold — exact limit is an open decision (see spec §Explicit open items).
 const checkEmailRateLimit = createRateLimiter({ max: 3, windowMs: 60 * 60 * 1000 });
+// IP-keyed limiter closes the gap where email is spoofable per-request (unverified at this stage).
+const checkIpRateLimit = createRateLimiter({ max: 5, windowMs: 60 * 60 * 1000 });
+
+const MAX_CV_SIZE_BYTES = 5 * 1024 * 1024; // 5MB, matches client-side cap in FitmentChecker.tsx
+const MAX_TEXT_CHARS = 20000; // token-cost ceiling before text hits scoreFitment's prompt
 
 function normalize(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value.trim() : "";
@@ -18,6 +23,11 @@ function isValidEmail(value: string) {
 }
 
 export async function POST(request: Request) {
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown";
+
   let form: FormData;
   try {
     form = await request.formData();
@@ -44,6 +54,12 @@ export async function POST(request: Request) {
   if (!(cv instanceof File) || cv.size === 0) {
     return Response.json({ error: "A CV file is required." }, { status: 400 });
   }
+  if (cv.size > MAX_CV_SIZE_BYTES) {
+    return Response.json(
+      { error: "CV file is too large — please upload a file under 5MB." },
+      { status: 400 }
+    );
+  }
 
   const recaptchaSecretKey = process.env.RECAPTCHA_SECRET_KEY;
   if (recaptchaSecretKey) {
@@ -56,7 +72,7 @@ export async function POST(request: Request) {
     }
   }
 
-  if (!checkEmailRateLimit(email)) {
+  if (!checkEmailRateLimit(email) || !checkIpRateLimit(ip)) {
     return Response.json(
       { error: "You've checked your fitment recently — please try again later." },
       { status: 429 }
@@ -65,7 +81,7 @@ export async function POST(request: Request) {
 
   let cvText: string;
   try {
-    cvText = await parseCvFile(cv);
+    cvText = (await parseCvFile(cv)).slice(0, MAX_TEXT_CHARS);
   } catch (err) {
     if (err instanceof UnsupportedCvFileError) {
       return Response.json({ error: "We couldn't read that file — please upload a PDF or DOCX." }, { status: 400 });
@@ -77,7 +93,7 @@ export async function POST(request: Request) {
   // for now, a link is stored as the JD source but the pasted text (if any) is
   // what's scored. If only a link was given, use it as the JD text placeholder.
   const jdSource = jdText ? "paste" : "link";
-  const jdForScoring = jdText || jdUrl;
+  const jdForScoring = (jdText || jdUrl).slice(0, MAX_TEXT_CHARS);
 
   let result;
   try {
