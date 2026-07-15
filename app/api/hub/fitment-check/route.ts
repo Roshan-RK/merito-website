@@ -45,12 +45,15 @@ export async function POST(request: Request) {
     return Response.json({ error: "A CV file is required." }, { status: 400 });
   }
 
-  if (!recaptchaToken) {
-    return Response.json({ error: "Captcha verification is required." }, { status: 400 });
-  }
-  const isHuman = await verifyRecaptchaToken(recaptchaToken, process.env.RECAPTCHA_SECRET_KEY ?? "");
-  if (!isHuman) {
-    return Response.json({ error: "Captcha verification failed." }, { status: 400 });
+  const recaptchaSecretKey = process.env.RECAPTCHA_SECRET_KEY;
+  if (recaptchaSecretKey) {
+    if (!recaptchaToken) {
+      return Response.json({ error: "Captcha verification is required." }, { status: 400 });
+    }
+    const isHuman = await verifyRecaptchaToken(recaptchaToken, recaptchaSecretKey);
+    if (!isHuman) {
+      return Response.json({ error: "Captcha verification failed." }, { status: 400 });
+    }
   }
 
   if (!checkEmailRateLimit(email)) {

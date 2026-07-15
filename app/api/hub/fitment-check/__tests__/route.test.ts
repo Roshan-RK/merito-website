@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@/lib/recaptcha", () => ({
   verifyRecaptchaToken: vi.fn().mockResolvedValue(true),
@@ -40,6 +40,10 @@ describe("POST /api/hub/fitment-check", () => {
     insertMock.mockClear();
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("returns 200 with the score for a valid submission", async () => {
     const { POST } = await importRoute();
     const request = new Request("http://localhost/api/hub/fitment-check", {
@@ -78,6 +82,7 @@ describe("POST /api/hub/fitment-check", () => {
   });
 
   it("rejects a submission that fails reCAPTCHA", async () => {
+    vi.stubEnv("RECAPTCHA_SECRET_KEY", "test-secret");
     const { verifyRecaptchaToken } = await import("@/lib/recaptcha");
     vi.mocked(verifyRecaptchaToken).mockResolvedValueOnce(false);
     const { POST } = await importRoute();
