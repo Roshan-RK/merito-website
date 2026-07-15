@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { verifyRecaptchaToken } from "@/lib/recaptcha";
 
 // --- Simple in-memory rate limiter ---
 // Per-instance (sufficient for single deployments; for multi-instance Vercel, swap to KV)
@@ -45,27 +46,6 @@ function escapeHtml(value: string) {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
-
-async function verifyRecaptchaToken(token: string, secret: string) {
-  const verificationResponse = await fetch("https://www.google.com/recaptcha/api/siteverify", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      secret,
-      response: token,
-    }),
-    cache: "no-store",
-  });
-
-  if (!verificationResponse.ok) {
-    return false;
-  }
-
-  const verificationData = (await verificationResponse.json()) as { success?: boolean };
-  return Boolean(verificationData.success);
 }
 
 export async function POST(request: Request) {
