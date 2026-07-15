@@ -57,7 +57,7 @@ export default function FitmentChecker() {
   }, [recaptchaEnabled, recaptchaSiteKey]);
 
   const roleLabel = role.trim() || "your target role";
-  const canSubmit = email.trim() && role.trim() && (jdText.trim() || jdUrl.trim()) && cvFile && !checking;
+  const canSubmit = email.trim() && role.trim() && (jdMode === "paste" ? jdText.trim() : jdUrl.trim()) && cvFile && !checking;
 
   const animateScore = (target: number) => {
     const t0 = performance.now();
