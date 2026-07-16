@@ -1,0 +1,111 @@
+"use client";
+
+export default function ScoreCard({
+  roleTitle,
+  score,
+  prevScore,
+  verdict,
+  reportUnlocked,
+  report,
+  onOpenReportPaywall,
+}: {
+  roleTitle: string;
+  score: number;
+  prevScore: number | null;
+  verdict: string;
+  reportUnlocked: boolean;
+  report: { strengths: string[]; gaps: string[]; cvFixes: string[] } | null;
+  onOpenReportPaywall: () => void;
+}) {
+  const delta = prevScore !== null ? Math.round((score - prevScore) * 10) / 10 : null;
+
+  return (
+    <div
+      className="bg-white border border-black/[0.08]"
+      style={{ borderRadius: 20, padding: 24, boxShadow: "0 18px 50px rgba(17,35,89,0.05)" }}
+    >
+      <div className="flex items-center" style={{ gap: 8, marginBottom: 10 }}>
+        <span
+          className="rounded-full bg-[#ed1a24] inline-block"
+          style={{ width: 8, height: 8 }}
+        />
+        <span className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#4b4b4d]" style={{ fontSize: 11, letterSpacing: "0.06em" }}>
+          Your Job Fitment Score
+        </span>
+        <span
+          className="bg-[#eefdf1] text-[#16803c] font-[family-name:var(--font-poppins)] font-bold"
+          style={{ fontSize: 10, borderRadius: 50, padding: "3px 9px", marginLeft: "auto" }}
+        >
+          ✓ Step 1 complete
+        </span>
+      </div>
+
+      <div className="flex items-baseline flex-wrap" style={{ gap: 10 }}>
+        <span className="font-[family-name:var(--font-gabarito)] font-bold text-[#ed1a24]" style={{ fontSize: "3.2rem", lineHeight: 1, whiteSpace: "nowrap" }}>
+          {score.toFixed(1)}<span className="font-semibold text-[#9c9c9c]" style={{ fontSize: "1.2rem" }}> / 10</span>
+        </span>
+        {delta !== null && delta !== 0 && (
+          <span
+            className={delta > 0 ? "bg-[#eefdf1] text-[#16803c]" : "bg-[#fdeced] text-[#ed1a24]"}
+            style={{ fontSize: 12, fontWeight: 700, borderRadius: 50, padding: "4px 10px" }}
+          >
+            {delta > 0 ? "↑" : "↓"} was {prevScore?.toFixed(1)}
+          </span>
+        )}
+        <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#4b4b4d]" style={{ fontSize: 13, marginLeft: "auto" }}>
+          fit for {roleTitle}
+        </span>
+      </div>
+
+      <div className="bg-[#f0e6ea] overflow-hidden" style={{ marginTop: 12, height: 12, borderRadius: 6 }}>
+        <div className="bg-[#ed1a24] h-full" style={{ borderRadius: 6, width: `${score * 10}%` }} />
+      </div>
+
+      <p className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 13, margin: "12px 0 0" }}>
+        {verdict}
+      </p>
+
+      {!reportUnlocked ? (
+        <>
+          <button
+            onClick={onOpenReportPaywall}
+            className="w-full font-[family-name:var(--font-poppins)] font-semibold text-white"
+            style={{ marginTop: 18, height: 48, borderRadius: 8, fontSize: 14, background: "#ed1a24", border: "none", cursor: "pointer", boxShadow: "0 4px 6px rgba(236,34,40,0.3)" }}
+          >
+            🔒 See my detailed report
+          </button>
+          <p className="text-[#9c9c9c]" style={{ fontSize: 12, margin: "10px 0 0", lineHeight: 1.6 }}>
+            Why {score.toFixed(1)}? Your strengths, your gaps, and how to fix your CV — ₹299
+          </p>
+        </>
+      ) : report ? (
+        <div className="flex flex-col sm:flex-row" style={{ gap: 12, marginTop: 18 }}>
+          <div className="bg-[#eefdf1]" style={{ borderRadius: 12, padding: 14, flex: 1 }}>
+            <p className="font-[family-name:var(--font-poppins)] font-bold text-[#16803c]" style={{ fontSize: 11, margin: "0 0 6px" }}>
+              Top strengths
+            </p>
+            {report.strengths.slice(0, 2).map((s, i) => (
+              <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5, margin: "4px 0" }}>
+                {s}
+              </p>
+            ))}
+          </div>
+          <div className="bg-[#fdeced]" style={{ borderRadius: 12, padding: 14, flex: 1 }}>
+            <p className="font-[family-name:var(--font-poppins)] font-bold text-[#ed1a24]" style={{ fontSize: 11, margin: "0 0 6px" }}>
+              Gaps costing you shortlists
+            </p>
+            {report.gaps.slice(0, 2).map((g, i) => (
+              <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5, margin: "4px 0" }}>
+                {g}
+              </p>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className="text-[#9c9c9c]" style={{ fontSize: 12, margin: "18px 0 0" }}>
+          Unlocked — your report is generating. Refresh in a moment.
+        </p>
+      )}
+    </div>
+  );
+}
