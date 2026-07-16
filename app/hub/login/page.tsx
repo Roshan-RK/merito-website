@@ -17,6 +17,9 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {
+        // The exact URL this resolves to (both local and production) must be
+        // added to the Supabase project's Auth → URL Configuration → Redirect URLs
+        // allow-list, or the magic-link email will fail to redirect correctly.
         emailRedirectTo: getAbsoluteUrl("/hub/auth/callback"),
       },
     });

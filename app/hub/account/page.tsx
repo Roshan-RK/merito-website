@@ -10,7 +10,7 @@ export default async function AccountPage() {
   const { data: leads } = user
     ? await supabase
         .from("fitment_leads")
-        .select("role_title, score, verdict, created_at")
+        .select("id, role_title, score, verdict, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
     : { data: [] };
@@ -30,9 +30,9 @@ export default async function AccountPage() {
 
       {leads && leads.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {leads.map((lead, i) => (
+          {leads.map((lead) => (
             <div
-              key={i}
+              key={lead.id}
               className="bg-white border border-black/[0.08]"
               style={{ borderRadius: 14, padding: 16 }}
             >

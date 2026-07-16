@@ -6,7 +6,7 @@ export async function claimFitmentLeads(userId: string, email: string): Promise<
   const { data, error } = await supabase
     .from("fitment_leads")
     .update({ user_id: userId })
-    .eq("email", email)
+    .ilike("email", email)
     .is("user_id", null)
     .select("id");
 

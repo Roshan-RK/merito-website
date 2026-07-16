@@ -5,6 +5,8 @@ create index if not exists fitment_leads_user_id_idx on fitment_leads (user_id);
 
 alter table fitment_leads enable row level security;
 
+drop policy if exists "Users can view their own claimed fitment leads" on fitment_leads;
+
 create policy "Users can view their own claimed fitment leads"
   on fitment_leads
   for select
