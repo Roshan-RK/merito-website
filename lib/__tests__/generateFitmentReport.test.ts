@@ -16,21 +16,40 @@ describe("generateFitmentReport", () => {
     process.env.ANTHROPIC_API_KEY = "test-key";
   });
 
-  it("returns the parsed requirements and action plan from Claude", async () => {
+  it("returns the parsed verdict summary, categories, and action plan from Claude", async () => {
     parseMock.mockResolvedValue({
       parsed_output: {
-        requirements: [
+        verdictSummary: "This candidate is a strong technical fit with a gap in leadership experience.",
+        categories: [
           {
-            requirement: "5+ years React experience",
-            matchLevel: "strong",
-            evidence: "Led React frontend rewrite for 3 years at Acme Corp",
-            note: "Directly demonstrates senior-level React experience.",
+            category: "Technical Skills",
+            matchedCount: 1,
+            totalCount: 1,
+            requirements: [
+              {
+                requirement: "5+ years React experience",
+                matchLevel: "strong",
+                isMustHave: true,
+                evidence: "Led React frontend rewrite for 3 years at Acme Corp",
+                note: "Directly demonstrates senior-level React experience.",
+                interviewNote: "Lead with this project when asked about your React background.",
+              },
+            ],
           },
           {
-            requirement: "Team leadership experience",
-            matchLevel: "missing",
-            evidence: "Not found in CV",
-            note: "No mention of managing or leading a team.",
+            category: "Experience",
+            matchedCount: 0,
+            totalCount: 1,
+            requirements: [
+              {
+                requirement: "Team leadership experience",
+                matchLevel: "missing",
+                isMustHave: false,
+                evidence: "Not found in CV",
+                note: "No mention of managing or leading a team.",
+                interviewNote: "If asked, mention any informal mentoring or project ownership you've taken on.",
+              },
+            ],
           },
         ],
         actionPlan: [
@@ -38,11 +57,7 @@ describe("generateFitmentReport", () => {
             priority: 1,
             action: "Add a leadership example to your CV",
             why: "This is the JD's top unmet requirement.",
-          },
-          {
-            priority: 2,
-            action: "Quantify your React project's impact",
-            why: "Numbers make strong matches more convincing.",
+            effort: "moderate",
           },
         ],
       },
@@ -50,15 +65,11 @@ describe("generateFitmentReport", () => {
     const { generateFitmentReport } = await import("../generateFitmentReport");
     const result = await generateFitmentReport("Senior PM JD text", "CV text", 7.8);
 
-    expect(result.requirements).toHaveLength(2);
-    expect(result.requirements[0]).toEqual({
-      requirement: "5+ years React experience",
-      matchLevel: "strong",
-      evidence: "Led React frontend rewrite for 3 years at Acme Corp",
-      note: "Directly demonstrates senior-level React experience.",
-    });
-    expect(result.actionPlan).toHaveLength(2);
-    expect(result.actionPlan[0].priority).toBe(1);
+    expect(result.verdictSummary).toContain("strong technical fit");
+    expect(result.categories).toHaveLength(2);
+    expect(result.categories[0].matchedCount).toBe(1);
+    expect(result.categories[0].requirements[0].isMustHave).toBe(true);
+    expect(result.actionPlan[0].effort).toBe("moderate");
     expect(parseMock).toHaveBeenCalledTimes(1);
   });
 
