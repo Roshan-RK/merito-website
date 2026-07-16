@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import type { FitmentReportResult } from "@/lib/generateFitmentReport";
+
 export default function ScoreCard({
   roleTitle,
   score,
@@ -14,7 +17,7 @@ export default function ScoreCard({
   prevScore: number | null;
   verdict: string;
   reportUnlocked: boolean;
-  report: { strengths: string[]; gaps: string[]; cvFixes: string[] } | null;
+  report: FitmentReportResult | null;
   onOpenReportPaywall: () => void;
 }) {
   const delta = prevScore !== null ? Math.round((score - prevScore) * 10) / 10 : null;
@@ -79,27 +82,48 @@ export default function ScoreCard({
           </p>
         </>
       ) : report ? (
-        <div className="flex flex-col sm:flex-row" style={{ gap: 12, marginTop: 18 }}>
-          <div className="bg-[#eefdf1]" style={{ borderRadius: 12, padding: 14, flex: 1 }}>
-            <p className="font-[family-name:var(--font-poppins)] font-bold text-[#16803c]" style={{ fontSize: 11, margin: "0 0 6px" }}>
-              Top strengths
-            </p>
-            {report.strengths.slice(0, 2).map((s, i) => (
-              <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5, margin: "4px 0" }}>
-                {s}
-              </p>
-            ))}
+        <div style={{ marginTop: 18 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {report.requirements.find((r) => r.matchLevel === "strong") && (
+              <div
+                className="bg-[#eefdf1]"
+                style={{ borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}
+              >
+                <span
+                  className="bg-[#16803c] text-white font-[family-name:var(--font-poppins)] font-bold"
+                  style={{ borderRadius: 50, padding: "2px 8px", fontSize: 10 }}
+                >
+                  Strong
+                </span>
+                <span className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5 }}>
+                  {report.requirements.find((r) => r.matchLevel === "strong")?.requirement}
+                </span>
+              </div>
+            )}
+            {report.requirements.find((r) => r.matchLevel === "missing") && (
+              <div
+                className="bg-[#fdeced]"
+                style={{ borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}
+              >
+                <span
+                  className="bg-[#ed1a24] text-white font-[family-name:var(--font-poppins)] font-bold"
+                  style={{ borderRadius: 50, padding: "2px 8px", fontSize: 10 }}
+                >
+                  Missing
+                </span>
+                <span className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5 }}>
+                  {report.requirements.find((r) => r.matchLevel === "missing")?.requirement}
+                </span>
+              </div>
+            )}
           </div>
-          <div className="bg-[#fdeced]" style={{ borderRadius: 12, padding: 14, flex: 1 }}>
-            <p className="font-[family-name:var(--font-poppins)] font-bold text-[#ed1a24]" style={{ fontSize: 11, margin: "0 0 6px" }}>
-              Gaps costing you shortlists
-            </p>
-            {report.gaps.slice(0, 2).map((g, i) => (
-              <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5, margin: "4px 0" }}>
-                {g}
-              </p>
-            ))}
-          </div>
+          <Link
+            href="/hub/account/report"
+            className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+            style={{ fontSize: 13, display: "inline-block", marginTop: 12 }}
+          >
+            Open full report →
+          </Link>
         </div>
       ) : (
         <p className="text-[#9c9c9c]" style={{ fontSize: 12, margin: "18px 0 0" }}>

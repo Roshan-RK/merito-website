@@ -6,8 +6,7 @@ import ProgressRail from "./ProgressRail";
 import ScoreCard from "./ScoreCard";
 import ReportPaywallModal from "./ReportPaywallModal";
 import ChangeRoleModal from "./ChangeRoleModal";
-
-type ReportData = { strengths: string[]; gaps: string[]; cvFixes: string[] };
+import type { FitmentReportResult } from "@/lib/generateFitmentReport";
 
 export default function DashboardClient({
   roleTitle,
@@ -22,11 +21,11 @@ export default function DashboardClient({
   prevScore: number | null;
   verdict: string;
   initialReportUnlocked: boolean;
-  initialReport: ReportData | null;
+  initialReport: FitmentReportResult | null;
 }) {
   const [modal, setModal] = useState<"none" | "report" | "changeRole">("none");
   const [reportUnlocked, setReportUnlocked] = useState(initialReportUnlocked);
-  const [report, setReport] = useState<ReportData | null>(initialReport);
+  const [report, setReport] = useState<FitmentReportResult | null>(initialReport);
 
   return (
     <>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { FitmentReportResult } from "@/lib/generateFitmentReport";
 
 export default function ReportPaywallModal({
   roleTitle,
@@ -9,7 +10,7 @@ export default function ReportPaywallModal({
 }: {
   roleTitle: string;
   onClose: () => void;
-  onUnlocked: (report: { strengths: string[]; gaps: string[]; cvFixes: string[] }) => void;
+  onUnlocked: (report: FitmentReportResult) => void;
 }) {
   const [paying, setPaying] = useState(false);
   const [needsCv, setNeedsCv] = useState(false);

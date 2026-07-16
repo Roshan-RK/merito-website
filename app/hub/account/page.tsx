@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { isReportUnlocked } from "@/lib/reportUnlocks";
 import DashboardClient from "./DashboardClient";
+import type { FitmentReportResult } from "@/lib/generateFitmentReport";
 
 export default async function AccountPage() {
   const supabase = await createSupabaseServerClient();
@@ -37,16 +38,16 @@ export default async function AccountPage() {
 
   const reportUnlocked = await isReportUnlocked(user.id, current.role_title);
 
-  let report = null;
+  let report: FitmentReportResult | null = null;
   if (reportUnlocked) {
     const { data: reportRow } = await supabase
       .from("fitment_reports")
-      .select("strengths, gaps, cv_fixes")
+      .select("requirements, action_plan")
       .eq("user_id", user.id)
       .eq("role_title", current.role_title)
       .maybeSingle();
     if (reportRow) {
-      report = { strengths: reportRow.strengths, gaps: reportRow.gaps, cvFixes: reportRow.cv_fixes };
+      report = { requirements: reportRow.requirements, actionPlan: reportRow.action_plan };
     }
   }
 
