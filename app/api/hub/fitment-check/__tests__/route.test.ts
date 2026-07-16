@@ -57,6 +57,9 @@ describe("POST /api/hub/fitment-check", () => {
     const body = await response.json();
     expect(body).toEqual({ score: 7.8, verdict: "Good fit." });
     expect(insertMock).toHaveBeenCalledTimes(1);
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ cv_text: "Extracted CV text" })
+    );
   });
 
   it("rejects a submission with no email", async () => {

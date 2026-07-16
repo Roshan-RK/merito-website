@@ -110,6 +110,7 @@ export async function POST(request: Request) {
     jd_source: jdSource,
     score: result.score,
     verdict: result.verdict,
+    cv_text: cvText,
   });
 
   if (insertError) {

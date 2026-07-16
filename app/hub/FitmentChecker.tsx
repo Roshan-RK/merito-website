@@ -260,6 +260,14 @@ export default function FitmentChecker() {
         </span>
       </div>
 
+      <p className="text-[#9c9c9c]" style={{ fontSize: 11, lineHeight: 1.5, margin: "8px 0 0" }}>
+        By uploading, you agree to Merito storing your CV to build your profile — see our{" "}
+        <Link href="/privacy" className="text-[#9c9c9c] underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
+
       {recaptchaEnabled ? (
         <div style={{ marginTop: 14 }}>
           <div className="origin-top-left scale-[0.82] sm:scale-100" style={{ width: 300 }}>
