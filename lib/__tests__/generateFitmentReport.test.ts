@@ -16,21 +16,49 @@ describe("generateFitmentReport", () => {
     process.env.ANTHROPIC_API_KEY = "test-key";
   });
 
-  it("returns the parsed strengths, gaps, and CV fixes from Claude", async () => {
+  it("returns the parsed requirements and action plan from Claude", async () => {
     parseMock.mockResolvedValue({
       parsed_output: {
-        strengths: ["Strong product sense", "5+ years B2B SaaS experience"],
-        gaps: ["No direct people-management experience"],
-        cvFixes: ["Quantify the revenue impact of your last two launches"],
+        requirements: [
+          {
+            requirement: "5+ years React experience",
+            matchLevel: "strong",
+            evidence: "Led React frontend rewrite for 3 years at Acme Corp",
+            note: "Directly demonstrates senior-level React experience.",
+          },
+          {
+            requirement: "Team leadership experience",
+            matchLevel: "missing",
+            evidence: "Not found in CV",
+            note: "No mention of managing or leading a team.",
+          },
+        ],
+        actionPlan: [
+          {
+            priority: 1,
+            action: "Add a leadership example to your CV",
+            why: "This is the JD's top unmet requirement.",
+          },
+          {
+            priority: 2,
+            action: "Quantify your React project's impact",
+            why: "Numbers make strong matches more convincing.",
+          },
+        ],
       },
     });
     const { generateFitmentReport } = await import("../generateFitmentReport");
     const result = await generateFitmentReport("Senior PM JD text", "CV text", 7.8);
-    expect(result).toEqual({
-      strengths: ["Strong product sense", "5+ years B2B SaaS experience"],
-      gaps: ["No direct people-management experience"],
-      cvFixes: ["Quantify the revenue impact of your last two launches"],
+
+    expect(result.requirements).toHaveLength(2);
+    expect(result.requirements[0]).toEqual({
+      requirement: "5+ years React experience",
+      matchLevel: "strong",
+      evidence: "Led React frontend rewrite for 3 years at Acme Corp",
+      note: "Directly demonstrates senior-level React experience.",
     });
+    expect(result.actionPlan).toHaveLength(2);
+    expect(result.actionPlan[0].priority).toBe(1);
     expect(parseMock).toHaveBeenCalledTimes(1);
   });
 
