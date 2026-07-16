@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Script from "next/script";
+import Link from "next/link";
 
 declare global {
   interface Window {
@@ -339,7 +340,10 @@ export default function FitmentChecker() {
             {verdict}
           </p>
           <p className="text-[#9c9c9c]" style={{ fontSize: 12, margin: "14px 0 0", lineHeight: 1.6 }}>
-            Create your free account to unlock the full report - strengths, gaps, and exactly what to fix.
+            <Link href="/hub/login" className="font-semibold text-[#ed1a24]" style={{ textDecoration: "underline" }}>
+              Create your free account
+            </Link>
+            {" "}to unlock the full report - strengths, gaps, and exactly what to fix.
           </p>
         </div>
       )}
