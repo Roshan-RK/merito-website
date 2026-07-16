@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
-import SignOutButton from "./SignOutButton";
+import { isReportUnlocked } from "@/lib/reportUnlocks";
+import DashboardClient from "./DashboardClient";
 
 export default async function AccountPage() {
   const supabase = await createSupabaseServerClient();
@@ -7,52 +9,55 @@ export default async function AccountPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: leads } = user
-    ? await supabase
-        .from("fitment_leads")
-        .select("id, role_title, score, verdict, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-    : { data: [] };
+  if (!user) {
+    redirect("/hub/login");
+  }
+
+  const { data: leads } = await supabase
+    .from("fitment_leads")
+    .select("role_title, score, verdict, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (!leads || leads.length === 0) {
+    return (
+      <main style={{ padding: "48px 20px", maxWidth: 640, margin: "0 auto" }}>
+        <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.6rem" }}>
+          No fitment scores yet
+        </h1>
+        <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 14 }}>
+          Head back to the HUB to check your fit for a role.
+        </p>
+      </main>
+    );
+  }
+
+  const current = leads[0];
+  const prevForSameRole = leads.find((l, i) => i > 0 && l.role_title === current.role_title);
+
+  const reportUnlocked = await isReportUnlocked(user.id, current.role_title);
+
+  let report = null;
+  if (reportUnlocked) {
+    const { data: reportRow } = await supabase
+      .from("fitment_reports")
+      .select("strengths, gaps, cv_fixes")
+      .eq("user_id", user.id)
+      .eq("role_title", current.role_title)
+      .maybeSingle();
+    if (reportRow) {
+      report = { strengths: reportRow.strengths, gaps: reportRow.gaps, cvFixes: reportRow.cv_fixes };
+    }
+  }
 
   return (
-    <main style={{ padding: "48px 20px", maxWidth: 640, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-        <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.6rem", margin: 0 }}>
-          Your Merito HUB account
-        </h1>
-        <SignOutButton />
-      </div>
-
-      <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 14, marginBottom: 20 }}>
-        Signed in as {user?.email}.
-      </p>
-
-      {leads && leads.length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {leads.map((lead) => (
-            <div
-              key={lead.id}
-              className="bg-white border border-black/[0.08]"
-              style={{ borderRadius: 14, padding: 16 }}
-            >
-              <p className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 14, margin: 0 }}>
-                {lead.role_title}
-              </p>
-              <p className="font-[family-name:var(--font-gabarito)] font-bold text-[#ed1a24]" style={{ fontSize: "1.5rem", margin: "6px 0" }}>
-                {lead.score} / 10
-              </p>
-              <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 13, margin: 0 }}>
-                {lead.verdict}
-              </p>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 14 }}>
-          No fitment scores yet. Head back to the HUB to check your fit for a role.
-        </p>
-      )}
-    </main>
+    <DashboardClient
+      roleTitle={current.role_title}
+      score={current.score}
+      prevScore={prevForSameRole ? prevForSameRole.score : null}
+      verdict={current.verdict}
+      initialReportUnlocked={reportUnlocked}
+      initialReport={report}
+    />
   );
 }
