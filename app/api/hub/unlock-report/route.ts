@@ -60,9 +60,8 @@ export async function POST(request: Request) {
     {
       user_id: user.id,
       role_title: roleTitle,
-      strengths: report.strengths,
-      gaps: report.gaps,
-      cv_fixes: report.cvFixes,
+      requirements: report.requirements,
+      action_plan: report.actionPlan,
     },
     { onConflict: "user_id,role_title" }
   );

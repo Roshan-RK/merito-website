@@ -107,9 +107,15 @@ describe("POST /api/hub/unlock-report", () => {
     });
     unlockReportMock.mockResolvedValue(undefined);
     generateFitmentReportMock.mockResolvedValue({
-      strengths: ["a"],
-      gaps: ["b"],
-      cvFixes: ["c"],
+      requirements: [
+        {
+          requirement: "React",
+          matchLevel: "strong",
+          evidence: "3 years React",
+          note: "Good match.",
+        },
+      ],
+      actionPlan: [{ priority: 1, action: "Add metrics", why: "Numbers persuade." }],
     });
 
     const { POST } = await importRoute();
@@ -128,13 +134,32 @@ describe("POST /api/hub/unlock-report", () => {
       {
         user_id: "user-123",
         role_title: "Senior Product Manager",
-        strengths: ["a"],
-        gaps: ["b"],
-        cv_fixes: ["c"],
+        requirements: [
+          {
+            requirement: "React",
+            matchLevel: "strong",
+            evidence: "3 years React",
+            note: "Good match.",
+          },
+        ],
+        action_plan: [{ priority: 1, action: "Add metrics", why: "Numbers persuade." }],
       },
       { onConflict: "user_id,role_title" }
     );
-    expect(body).toEqual({ status: "unlocked", report: { strengths: ["a"], gaps: ["b"], cvFixes: ["c"] } });
+    expect(body).toEqual({
+      status: "unlocked",
+      report: {
+        requirements: [
+          {
+            requirement: "React",
+            matchLevel: "strong",
+            evidence: "3 years React",
+            note: "Good match.",
+          },
+        ],
+        actionPlan: [{ priority: 1, action: "Add metrics", why: "Numbers persuade." }],
+      },
+    });
   });
 
   it("unlocks but returns needs_cv when there is no CV text on file", async () => {
