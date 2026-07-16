@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabaseAuth";
+import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { claimFitmentLeads } from "@/lib/claimFitmentLeads";
 
 export async function GET(request: Request) {

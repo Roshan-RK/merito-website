@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const exchangeCodeForSessionMock = vi.fn();
 const claimFitmentLeadsMock = vi.fn();
 
-vi.mock("@/lib/supabaseAuth", () => ({
+vi.mock("@/lib/supabaseAuthServer", () => ({
   createSupabaseServerClient: async () => ({
     auth: { exchangeCodeForSession: exchangeCodeForSessionMock },
   }),

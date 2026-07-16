@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabaseAuth";
+import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import SignOutButton from "./SignOutButton";
 
 export default async function AccountPage() {
