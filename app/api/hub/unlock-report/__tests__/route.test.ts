@@ -10,9 +10,10 @@ const leadMaybeSingleMock = vi.fn();
 const sessionFromMock = vi.fn();
 
 const unlockReportMock = vi.fn();
-const generateFitmentReportMock = vi.fn();
+const getResumeMatchReportMock = vi.fn();
 
-const reportUpsertMock = vi.fn();
+const updateEqMock = vi.fn().mockResolvedValue({ error: null });
+const updateMock = vi.fn().mockReturnValue({ eq: updateEqMock });
 const adminFromMock = vi.fn();
 
 vi.mock("@/lib/supabaseAuthServer", () => ({
@@ -25,8 +26,9 @@ vi.mock("@/lib/reportUnlocks", () => ({
   unlockReport: unlockReportMock,
   isReportUnlocked: vi.fn(),
 }));
-vi.mock("@/lib/generateFitmentReport", () => ({
-  generateFitmentReport: generateFitmentReportMock,
+vi.mock("@/lib/intervuebox/reports", () => ({
+  getResumeMatchReport: getResumeMatchReportMock,
+  scoreOutOfTen: (overallScore: number) => Math.round(overallScore * 10) / 100,
 }));
 vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({ from: adminFromMock }),
@@ -57,11 +59,12 @@ describe("POST /api/hub/unlock-report", () => {
     leadLimitMock.mockReset();
     leadMaybeSingleMock.mockReset();
     unlockReportMock.mockReset();
-    generateFitmentReportMock.mockReset();
-    reportUpsertMock.mockReset();
+    getResumeMatchReportMock.mockReset();
+    updateMock.mockClear();
+    updateEqMock.mockClear();
+    updateEqMock.mockResolvedValue({ error: null });
     adminFromMock.mockReset();
-    adminFromMock.mockReturnValue({ upsert: reportUpsertMock });
-    reportUpsertMock.mockResolvedValue({ error: null });
+    adminFromMock.mockReturnValue({ update: updateMock });
   });
 
   it("returns 401 when there is no session", async () => {
@@ -99,34 +102,14 @@ describe("POST /api/hub/unlock-report", () => {
     expect(unlockReportMock).not.toHaveBeenCalled();
   });
 
-  it("unlocks and generates the report when CV text is on file", async () => {
+  it("returns the stored resume-match detail directly when already READY", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-123" } } });
+    const storedRaw = { overallScore: 78, rank: 1, categories: [], summary: "Good fit.", strongPoints: [], weakPoints: [] };
     buildLeadChain({
-      data: { jd_text: "JD text", cv_text: "CV text", score: 7.8 },
+      data: { id: "lead-1", ib_applied_job_id: "APJ_1", resume_match_status: "READY", resume_match_raw: storedRaw },
       error: null,
     });
     unlockReportMock.mockResolvedValue(undefined);
-    generateFitmentReportMock.mockResolvedValue({
-      verdictSummary: "Strong overall fit.",
-      categories: [
-        {
-          category: "Technical Skills",
-          matchedCount: 1,
-          totalCount: 1,
-          requirements: [
-            {
-              requirement: "React",
-              matchLevel: "strong",
-              isMustHave: true,
-              evidence: "3 years React",
-              note: "Good match.",
-              interviewNote: "Mention this project first.",
-            },
-          ],
-        },
-      ],
-      actionPlan: [{ priority: 1, action: "Add metrics", why: "Numbers persuade.", effort: "quick" }],
-    });
 
     const { POST } = await importRoute();
     const request = new Request("http://localhost/api/hub/unlock-report", {
@@ -138,45 +121,26 @@ describe("POST /api/hub/unlock-report", () => {
 
     expect(response.status).toBe(200);
     expect(unlockReportMock).toHaveBeenCalledWith("user-123", "Senior Product Manager");
-    expect(generateFitmentReportMock).toHaveBeenCalledWith("JD text", "CV text", 7.8);
-    expect(adminFromMock).toHaveBeenCalledWith("fitment_reports");
-    expect(reportUpsertMock).toHaveBeenCalledWith(
-      {
-        user_id: "user-123",
-        role_title: "Senior Product Manager",
-        verdict_summary: "Strong overall fit.",
-        categories: [
-          {
-            category: "Technical Skills",
-            matchedCount: 1,
-            totalCount: 1,
-            requirements: [
-              {
-                requirement: "React",
-                matchLevel: "strong",
-                isMustHave: true,
-                evidence: "3 years React",
-                note: "Good match.",
-                interviewNote: "Mention this project first.",
-              },
-            ],
-          },
-        ],
-        action_plan: [{ priority: 1, action: "Add metrics", why: "Numbers persuade.", effort: "quick" }],
-      },
-      { onConflict: "user_id,role_title" }
-    );
-    expect(body.status).toBe("unlocked");
-    expect(body.report.verdictSummary).toBe("Strong overall fit.");
+    expect(getResumeMatchReportMock).not.toHaveBeenCalled();
+    expect(body).toEqual({ status: "unlocked", report: storedRaw });
   });
 
-  it("unlocks but returns needs_cv when there is no CV text on file", async () => {
+  it("re-fetches, updates the row, and unlocks when the stored status was still PENDING", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-123" } } });
     buildLeadChain({
-      data: { jd_text: "JD text", cv_text: null, score: 7.8 },
+      data: { id: "lead-1", ib_applied_job_id: "APJ_1", resume_match_status: "PENDING", resume_match_raw: null },
       error: null,
     });
     unlockReportMock.mockResolvedValue(undefined);
+    getResumeMatchReportMock.mockResolvedValue({
+      status: "READY",
+      overallScore: 82,
+      rank: 1,
+      categories: [],
+      summary: "Strong overall fit.",
+      strongPoints: ["Skill A"],
+      weakPoints: ["Gap A"],
+    });
 
     const { POST } = await importRoute();
     const request = new Request("http://localhost/api/hub/unlock-report", {
@@ -187,8 +151,33 @@ describe("POST /api/hub/unlock-report", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(unlockReportMock).toHaveBeenCalledWith("user-123", "Senior Product Manager");
-    expect(generateFitmentReportMock).not.toHaveBeenCalled();
-    expect(body).toEqual({ status: "needs_cv" });
+    expect(adminFromMock).toHaveBeenCalledWith("fitment_leads");
+    expect(updateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ score: 8.2, verdict: "Strong overall fit.", resume_match_status: "READY" })
+    );
+    expect(updateEqMock).toHaveBeenCalledWith("id", "lead-1");
+    expect(body.status).toBe("unlocked");
+    expect(body.report.summary).toBe("Strong overall fit.");
+  });
+
+  it("returns pending when re-fetch is still not ready", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-123" } } });
+    buildLeadChain({
+      data: { id: "lead-1", ib_applied_job_id: "APJ_1", resume_match_status: "PENDING", resume_match_raw: null },
+      error: null,
+    });
+    unlockReportMock.mockResolvedValue(undefined);
+    getResumeMatchReportMock.mockResolvedValue({ status: "PENDING" });
+
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/unlock-report", {
+      method: "POST",
+      body: JSON.stringify({ roleTitle: "Senior Product Manager" }),
+    });
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ status: "pending" });
   });
 });

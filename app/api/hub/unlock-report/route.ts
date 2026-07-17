@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { unlockReport } from "@/lib/reportUnlocks";
-import { generateFitmentReport } from "@/lib/generateFitmentReport";
+import { getResumeMatchReport, scoreOutOfTen } from "@/lib/intervuebox/reports";
 import { getSupabaseServerClient } from "@/lib/supabase";
 
 export async function POST(request: Request) {
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
   const { data: lead, error: leadError } = await supabase
     .from("fitment_leads")
-    .select("jd_text, cv_text, score")
+    .select("id, ib_applied_job_id, resume_match_status, resume_match_raw")
     .eq("user_id", user.id)
     .eq("role_title", roleTitle)
     .order("created_at", { ascending: false })
@@ -44,32 +44,45 @@ export async function POST(request: Request) {
     return Response.json({ error: "Something went wrong unlocking the report." }, { status: 500 });
   }
 
-  if (!lead.cv_text) {
-    return Response.json({ status: "needs_cv" });
+  if (lead.resume_match_status === "READY") {
+    return Response.json({ status: "unlocked", report: lead.resume_match_raw });
   }
 
   let report;
   try {
-    report = await generateFitmentReport(lead.jd_text, lead.cv_text, lead.score);
+    report = await getResumeMatchReport(lead.ib_applied_job_id);
   } catch {
-    return Response.json({ error: "Unlocked, but the report failed to generate — please refresh." }, { status: 500 });
+    return Response.json({ error: "Unlocked, but the report failed to load — please refresh." }, { status: 500 });
   }
 
-  const admin = getSupabaseServerClient();
-  const { error: reportError } = await admin.from("fitment_reports").upsert(
-    {
-      user_id: user.id,
-      role_title: roleTitle,
-      verdict_summary: report.verdictSummary,
-      categories: report.categories,
-      action_plan: report.actionPlan,
-    },
-    { onConflict: "user_id,role_title" }
-  );
+  if (report.status === "PENDING") {
+    return Response.json({ status: "pending" });
+  }
 
-  if (reportError) {
+  const resumeMatchRaw = {
+    overallScore: report.overallScore,
+    rank: report.rank,
+    categories: report.categories,
+    summary: report.summary,
+    strongPoints: report.strongPoints,
+    weakPoints: report.weakPoints,
+  };
+
+  const admin = getSupabaseServerClient();
+  const { error: updateError } = await admin
+    .from("fitment_leads")
+    .update({
+      score: scoreOutOfTen(report.overallScore),
+      verdict: report.summary,
+      resume_match_status: "READY",
+      resume_match_score: report.overallScore,
+      resume_match_raw: resumeMatchRaw,
+    })
+    .eq("id", lead.id);
+
+  if (updateError) {
     return Response.json({ error: "Unlocked, but the report failed to save — please refresh." }, { status: 500 });
   }
 
-  return Response.json({ status: "unlocked", report });
+  return Response.json({ status: "unlocked", report: resumeMatchRaw });
 }
