@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { isReportUnlocked } from "@/lib/reportUnlocks";
 import DashboardClient from "./DashboardClient";
-import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
+import { getResumeMatchReport, scoreOutOfTen, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
+import { getSupabaseServerClient } from "@/lib/supabase";
 
 export default async function AccountPage() {
   const supabase = await createSupabaseServerClient();
@@ -16,7 +17,7 @@ export default async function AccountPage() {
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("role_title, score, verdict, resume_match_status, resume_match_raw, created_at")
+    .select("id, role_title, score, verdict, resume_match_status, resume_match_raw, ib_applied_job_id, created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -38,17 +39,56 @@ export default async function AccountPage() {
 
   const reportUnlocked = await isReportUnlocked(user.id, current.role_title);
 
+  let score = current.score;
+  let verdict = current.verdict;
+  let resumeMatchStatus = current.resume_match_status;
+  let resumeMatchRaw = current.resume_match_raw;
+
+  if (resumeMatchStatus === "PENDING") {
+    try {
+      const report = await getResumeMatchReport(current.ib_applied_job_id);
+      if (report.status === "READY") {
+        const freshRaw = {
+          overallScore: report.overallScore,
+          rank: report.rank,
+          categories: report.categories,
+          summary: report.summary,
+          strongPoints: report.strongPoints,
+          weakPoints: report.weakPoints,
+        };
+        const admin = getSupabaseServerClient();
+        await admin
+          .from("fitment_leads")
+          .update({
+            score: scoreOutOfTen(report.overallScore),
+            verdict: report.summary,
+            resume_match_status: "READY",
+            resume_match_score: report.overallScore,
+            resume_match_raw: freshRaw,
+          })
+          .eq("id", current.id);
+
+        score = scoreOutOfTen(report.overallScore);
+        verdict = report.summary;
+        resumeMatchStatus = "READY";
+        resumeMatchRaw = freshRaw;
+      }
+    } catch (err) {
+      console.error("getResumeMatchReport failed on dashboard read, falling back to stale values", err);
+    }
+  }
+
   const report: ResumeMatchReportReady | null =
-    reportUnlocked && current.resume_match_status === "READY"
-      ? (current.resume_match_raw as ResumeMatchReportReady)
+    reportUnlocked && resumeMatchStatus === "READY" && resumeMatchRaw
+      ? (resumeMatchRaw as ResumeMatchReportReady)
       : null;
 
   return (
     <DashboardClient
       roleTitle={current.role_title}
-      score={current.score}
+      score={score}
       prevScore={prevForSameRole ? prevForSameRole.score : null}
-      verdict={current.verdict}
+      verdict={verdict}
       initialReportUnlocked={reportUnlocked}
       initialReport={report}
     />
