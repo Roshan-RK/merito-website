@@ -34,6 +34,12 @@ export default function FitmentChecker() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const rafRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
   const recaptchaEnabled = Boolean(recaptchaSiteKey);
@@ -145,9 +151,11 @@ export default function FitmentChecker() {
       return;
     }
     setTimeout(async () => {
+      if (!isMountedRef.current) return;
       try {
         const res = await fetch(`/api/hub/fitment-check/status?leadId=${encodeURIComponent(leadId)}`);
         const data = (await res.json()) as { status?: "pending" | "ready"; score?: number; verdict?: string };
+        if (!isMountedRef.current) return;
         if (res.ok && data.status === "ready" && typeof data.score === "number") {
           setChecking(false);
           setScore(data.score);
@@ -157,6 +165,7 @@ export default function FitmentChecker() {
         }
         pollForResult(leadId, attempt + 1);
       } catch {
+        if (!isMountedRef.current) return;
         pollForResult(leadId, attempt + 1);
       }
     }, POLL_INTERVAL_MS);
