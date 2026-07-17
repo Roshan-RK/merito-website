@@ -1,13 +1,17 @@
 export default function RequirementRow({
   requirement,
   matchLevel,
+  isMustHave,
   evidence,
   note,
+  interviewNote,
 }: {
   requirement: string;
   matchLevel: "strong" | "partial" | "missing";
+  isMustHave: boolean;
   evidence: string;
   note: string;
+  interviewNote: string;
 }) {
   const chipStyles = {
     strong: { bg: "#eefdf1", fg: "#16803c", label: "Strong match" },
@@ -31,6 +35,9 @@ export default function RequirementRow({
         </span>
         <span className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 14 }}>
           {requirement}
+        </span>
+        <span className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 10.5, marginLeft: "auto" }}>
+          {isMustHave ? "Must-have" : "Nice-to-have"}
         </span>
       </div>
 
@@ -63,6 +70,18 @@ export default function RequirementRow({
       <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 13, lineHeight: 1.6, margin: 0 }}>
         {note}
       </p>
+
+      <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px dashed #dcdcdc" }}>
+        <p
+          className="font-[family-name:var(--font-poppins)] font-semibold uppercase"
+          style={{ fontSize: 10, letterSpacing: "0.06em", color: "#9c9c9c", margin: "0 0 4px" }}
+        >
+          How to talk about this
+        </p>
+        <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5, lineHeight: 1.6, margin: 0 }}>
+          {interviewNote}
+        </p>
+      </div>
     </div>
   );
 }
