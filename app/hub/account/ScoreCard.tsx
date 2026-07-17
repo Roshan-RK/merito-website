@@ -21,6 +21,9 @@ export default function ScoreCard({
   onOpenReportPaywall: () => void;
 }) {
   const delta = prevScore !== null ? Math.round((score - prevScore) * 10) / 10 : null;
+  const allRequirements = report ? report.categories.flatMap((c) => c.requirements) : [];
+  const topStrong = allRequirements.find((r) => r.matchLevel === "strong");
+  const topMissing = allRequirements.find((r) => r.matchLevel === "missing");
 
   return (
     <div
@@ -84,7 +87,7 @@ export default function ScoreCard({
       ) : report ? (
         <div style={{ marginTop: 18 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {report.requirements.find((r) => r.matchLevel === "strong") && (
+            {topStrong && (
               <div
                 className="bg-[#eefdf1]"
                 style={{ borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}
@@ -96,11 +99,11 @@ export default function ScoreCard({
                   Strong
                 </span>
                 <span className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5 }}>
-                  {report.requirements.find((r) => r.matchLevel === "strong")?.requirement}
+                  {topStrong.requirement}
                 </span>
               </div>
             )}
-            {report.requirements.find((r) => r.matchLevel === "missing") && (
+            {topMissing && (
               <div
                 className="bg-[#fdeced]"
                 style={{ borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}
@@ -112,7 +115,7 @@ export default function ScoreCard({
                   Missing
                 </span>
                 <span className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5 }}>
-                  {report.requirements.find((r) => r.matchLevel === "missing")?.requirement}
+                  {topMissing.requirement}
                 </span>
               </div>
             )}

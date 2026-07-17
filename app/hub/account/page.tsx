@@ -42,12 +42,16 @@ export default async function AccountPage() {
   if (reportUnlocked) {
     const { data: reportRow } = await supabase
       .from("fitment_reports")
-      .select("requirements, action_plan")
+      .select("verdict_summary, categories, action_plan")
       .eq("user_id", user.id)
       .eq("role_title", current.role_title)
       .maybeSingle();
     if (reportRow) {
-      report = { requirements: reportRow.requirements, actionPlan: reportRow.action_plan };
+      report = {
+        verdictSummary: reportRow.verdict_summary,
+        categories: reportRow.categories,
+        actionPlan: reportRow.action_plan,
+      };
     }
   }
 
