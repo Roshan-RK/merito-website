@@ -22,6 +22,7 @@ export default function FitmentChecker() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
+  const [phone, setPhone] = useState("");
   const [jdMode, setJdMode] = useState<JdMode>("paste");
   const [jdText, setJdText] = useState("");
   const [jdUrl, setJdUrl] = useState("");
@@ -59,7 +60,7 @@ export default function FitmentChecker() {
   }, [recaptchaEnabled, recaptchaSiteKey]);
 
   const roleLabel = role.trim() || "your target role";
-  const canSubmit = email.trim() && role.trim() && (jdMode === "paste" ? jdText.trim() : jdUrl.trim()) && cvFile && !checking;
+  const canSubmit = email.trim() && role.trim() && phone.trim() && (jdMode === "paste" ? jdText.trim() : jdUrl.trim()) && cvFile && !checking;
 
   const animateScore = (target: number) => {
     const t0 = performance.now();
@@ -93,6 +94,7 @@ export default function FitmentChecker() {
     form.set("name", name.trim());
     form.set("email", email.trim());
     form.set("role", role.trim());
+    form.set("phone", phone.trim());
     if (jdMode === "paste") form.set("jdText", jdText.trim());
     else form.set("jdUrl", jdUrl.trim());
     form.set("cv", cvFile);
@@ -100,22 +102,64 @@ export default function FitmentChecker() {
 
     try {
       const res = await fetch("/api/hub/fitment-check", { method: "POST", body: form });
-      const data = (await res.json()) as { score?: number; verdict?: string; error?: string };
+      const data = (await res.json()) as {
+        status?: "pending" | "ready";
+        score?: number;
+        verdict?: string;
+        leadId?: string;
+        error?: string;
+      };
       window.grecaptcha?.reset?.(widgetIdRef.current ?? undefined);
-      if (!res.ok || typeof data.score !== "number") {
+      if (!res.ok || !data.status) {
         setChecking(false);
         setErrorMsg(data.error || "Something went wrong — please try again.");
         return;
       }
+      if (data.status === "ready" && typeof data.score === "number") {
+        setChecking(false);
+        setScore(data.score);
+        setVerdict(data.verdict || "");
+        animateScore(data.score);
+        return;
+      }
+      if (data.status === "pending" && data.leadId) {
+        pollForResult(data.leadId);
+        return;
+      }
       setChecking(false);
-      setScore(data.score);
-      setVerdict(data.verdict || "");
-      animateScore(data.score);
+      setErrorMsg("Something went wrong — please try again.");
     } catch {
       window.grecaptcha?.reset?.(widgetIdRef.current ?? undefined);
       setChecking(false);
       setErrorMsg("Something went wrong — please try again.");
     }
+  };
+
+  const POLL_INTERVAL_MS = 3000;
+  const POLL_MAX_ATTEMPTS = 20; // 20 * 3000ms = 60s, see plan's Global Constraints on provisional polling values
+
+  const pollForResult = (leadId: string, attempt = 0) => {
+    if (attempt >= POLL_MAX_ATTEMPTS) {
+      setChecking(false);
+      setErrorMsg("Your score is taking longer than usual — check back in a few minutes.");
+      return;
+    }
+    setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/hub/fitment-check/status?leadId=${encodeURIComponent(leadId)}`);
+        const data = (await res.json()) as { status?: "pending" | "ready"; score?: number; verdict?: string };
+        if (res.ok && data.status === "ready" && typeof data.score === "number") {
+          setChecking(false);
+          setScore(data.score);
+          setVerdict(data.verdict || "");
+          animateScore(data.score);
+          return;
+        }
+        pollForResult(leadId, attempt + 1);
+      } catch {
+        pollForResult(leadId, attempt + 1);
+      }
+    }, POLL_INTERVAL_MS);
   };
 
   const hasScore = !!score;
@@ -167,6 +211,18 @@ export default function FitmentChecker() {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="you@example.com"
+        className="w-full box-border bg-white font-[family-name:var(--font-poppins)] text-black outline-none border border-[#dcdcdc] focus:border-[#ed1a24] transition-colors"
+        style={{ padding: "13px 14px", borderRadius: 8, fontSize: 14, marginBottom: 12 }}
+      />
+
+      <label className="block font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 12, marginBottom: 6 }}>
+        Phone number
+      </label>
+      <input
+        type="tel"
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        placeholder="+91 98765 43210"
         className="w-full box-border bg-white font-[family-name:var(--font-poppins)] text-black outline-none border border-[#dcdcdc] focus:border-[#ed1a24] transition-colors"
         style={{ padding: "13px 14px", borderRadius: 8, fontSize: 14, marginBottom: 12 }}
       />
