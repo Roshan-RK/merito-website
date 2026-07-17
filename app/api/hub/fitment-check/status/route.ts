@@ -1,9 +1,21 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { getResumeMatchReport, scoreOutOfTen } from "@/lib/intervuebox/reports";
+import { createRateLimiter } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
+const checkIpRateLimit = createRateLimiter({ max: 60, windowMs: 60 * 60 * 1000 });
+
 export async function GET(request: Request) {
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown";
+
+  if (!checkIpRateLimit(ip)) {
+    return Response.json({ error: "Too many requests — please try again later." }, { status: 429 });
+  }
+
   const { searchParams } = new URL(request.url);
   const leadId = searchParams.get("leadId");
   if (!leadId) {
@@ -25,7 +37,10 @@ export async function GET(request: Request) {
     return Response.json({ status: "ready", score: lead.score, verdict: lead.verdict });
   }
 
-  const report = await getResumeMatchReport(lead.ib_applied_job_id).catch(() => ({ status: "PENDING" as const }));
+  const report = await getResumeMatchReport(lead.ib_applied_job_id).catch((err) => {
+    console.error("getResumeMatchReport failed, treating as pending", err);
+    return { status: "PENDING" as const };
+  });
 
   if (report.status === "PENDING") {
     return Response.json({ status: "pending" });

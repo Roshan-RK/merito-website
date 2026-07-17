@@ -87,8 +87,8 @@ export async function POST(request: Request) {
   const jdSource = jdText ? "paste" : "link";
   const jdForScoring = (jdText || jdUrl).slice(0, MAX_TEXT_CHARS);
 
-  let ibJobId: string;
-  let ibResumeId: string;
+  let ibJobId: string | undefined;
+  let ibResumeId: string | undefined;
   let ibAppliedJobId: string;
   try {
     ({ ibJobId } = await createJob({ title: role, jobDescription: jdForScoring }));
@@ -100,11 +100,15 @@ export async function POST(request: Request) {
       email,
       phoneNumber: phone,
     }));
-  } catch {
+  } catch (err) {
+    console.error("IntervueBox chain failed after partial success", { ibJobId, ibResumeId, error: err });
     return Response.json({ error: "Something went wrong — please try again." }, { status: 500 });
   }
 
-  const report = await getResumeMatchReport(ibAppliedJobId).catch(() => ({ status: "PENDING" as const }));
+  const report = await getResumeMatchReport(ibAppliedJobId).catch((err) => {
+    console.error("getResumeMatchReport failed, treating as pending", err);
+    return { status: "PENDING" as const };
+  });
 
   const supabase = getSupabaseServerClient();
   const { data: inserted, error: insertError } = await supabase

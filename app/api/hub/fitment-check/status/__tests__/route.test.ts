@@ -26,6 +26,7 @@ describe("GET /api/hub/fitment-check/status", () => {
     maybeSingleMock.mockReset();
     updateEqMock.mockClear();
     updateEqMock.mockResolvedValue({ error: null });
+    vi.resetModules();
   });
 
   it("returns 400 when leadId is missing", async () => {
@@ -39,6 +40,25 @@ describe("GET /api/hub/fitment-check/status", () => {
     const { GET } = await importRoute();
     const response = await GET(new Request("http://localhost/api/hub/fitment-check/status?leadId=lead-1"));
     expect(response.status).toBe(404);
+  });
+
+  it("rejects requests once the per-IP rate limit is exceeded", async () => {
+    maybeSingleMock.mockResolvedValue({
+      data: { ib_applied_job_id: "APJ_1", resume_match_status: "READY", score: 7.8, verdict: "Good fit." },
+      error: null,
+    });
+    const { GET } = await importRoute();
+    const headers = { "x-forwarded-for": "203.0.113.9" };
+
+    let lastResponse: Response | undefined;
+    for (let i = 0; i < 61; i++) {
+      const request = new Request("http://localhost/api/hub/fitment-check/status?leadId=lead-1", {
+        headers,
+      });
+      lastResponse = await GET(request);
+    }
+
+    expect(lastResponse?.status).toBe(429);
   });
 
   it("returns the stored score directly when the lead is already READY", async () => {
