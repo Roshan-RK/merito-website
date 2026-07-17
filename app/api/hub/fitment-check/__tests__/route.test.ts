@@ -24,6 +24,7 @@ async function importRoute() {
 
 function buildForm(overrides: Record<string, string | Blob> = {}) {
   const form = new FormData();
+  form.set("name", "Jane Doe");
   form.set("email", "candidate@example.com");
   form.set("role", "Senior Product Manager");
   form.set("jdText", "We need a PM who can ship.");
@@ -57,9 +58,7 @@ describe("POST /api/hub/fitment-check", () => {
     const body = await response.json();
     expect(body).toEqual({ score: 7.8, verdict: "Good fit." });
     expect(insertMock).toHaveBeenCalledTimes(1);
-    expect(insertMock).toHaveBeenCalledWith(
-      expect.objectContaining({ cv_text: "Extracted CV text" })
-    );
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ name: "Jane Doe" }));
   });
 
   it("rejects a submission with no email", async () => {
@@ -127,5 +126,18 @@ describe("POST /api/hub/fitment-check", () => {
     }
 
     expect(lastResponse?.status).toBe(429);
+  });
+
+  it("succeeds without a name, storing it as null", async () => {
+    const form = buildForm();
+    form.delete("name");
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: form,
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ name: null }));
   });
 });

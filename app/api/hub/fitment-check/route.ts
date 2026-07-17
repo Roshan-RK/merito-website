@@ -35,6 +35,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid request body." }, { status: 400 });
   }
 
+  const name = normalize(form.get("name"));
   const email = normalize(form.get("email"));
   const role = normalize(form.get("role"));
   const jdText = normalize(form.get("jdText"));
@@ -104,6 +105,7 @@ export async function POST(request: Request) {
 
   const supabase = getSupabaseServerClient();
   const { error: insertError } = await supabase.from("fitment_leads").insert({
+    name: name || null,
     email,
     role_title: role,
     jd_text: jdForScoring,

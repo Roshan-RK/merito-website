@@ -19,6 +19,7 @@ declare global {
 type JdMode = "paste" | "link";
 
 export default function FitmentChecker() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
   const [jdMode, setJdMode] = useState<JdMode>("paste");
@@ -89,6 +90,7 @@ export default function FitmentChecker() {
     }
 
     const form = new FormData();
+    form.set("name", name.trim());
     form.set("email", email.trim());
     form.set("role", role.trim());
     if (jdMode === "paste") form.set("jdText", jdText.trim());
@@ -144,6 +146,18 @@ export default function FitmentChecker() {
           Job Fitment Score - Free
         </span>
       </div>
+
+      <label className="block font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 12, marginBottom: 6 }}>
+        Full name
+      </label>
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Jane Doe"
+        className="w-full box-border bg-white font-[family-name:var(--font-poppins)] text-black outline-none border border-[#dcdcdc] focus:border-[#ed1a24] transition-colors"
+        style={{ padding: "13px 14px", borderRadius: 8, fontSize: 14, marginBottom: 12 }}
+      />
 
       <label className="block font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 12, marginBottom: 6 }}>
         Your email
