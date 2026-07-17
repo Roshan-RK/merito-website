@@ -6,7 +6,7 @@ import ProgressRail from "./ProgressRail";
 import ScoreCard from "./ScoreCard";
 import ReportPaywallModal from "./ReportPaywallModal";
 import ChangeRoleModal from "./ChangeRoleModal";
-import type { FitmentReportResult } from "@/lib/generateFitmentReport";
+import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 
 export default function DashboardClient({
   roleTitle,
@@ -21,11 +21,11 @@ export default function DashboardClient({
   prevScore: number | null;
   verdict: string;
   initialReportUnlocked: boolean;
-  initialReport: FitmentReportResult | null;
+  initialReport: ResumeMatchReportReady | null;
 }) {
   const [modal, setModal] = useState<"none" | "report" | "changeRole">("none");
   const [reportUnlocked, setReportUnlocked] = useState(initialReportUnlocked);
-  const [report, setReport] = useState<FitmentReportResult | null>(initialReport);
+  const [report, setReport] = useState<ResumeMatchReportReady | null>(initialReport);
 
   return (
     <>

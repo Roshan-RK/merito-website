@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { FitmentReportResult } from "@/lib/generateFitmentReport";
+import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 
 export default function ReportPaywallModal({
   roleTitle,
@@ -10,10 +10,10 @@ export default function ReportPaywallModal({
 }: {
   roleTitle: string;
   onClose: () => void;
-  onUnlocked: (report: FitmentReportResult) => void;
+  onUnlocked: (report: ResumeMatchReportReady) => void;
 }) {
   const [paying, setPaying] = useState(false);
-  const [needsCv, setNeedsCv] = useState(false);
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handlePay = async () => {
@@ -31,9 +31,9 @@ export default function ReportPaywallModal({
         setError(data.error || "Something went wrong — please try again.");
         return;
       }
-      if (data.status === "needs_cv") {
+      if (data.status === "pending") {
         setPaying(false);
-        setNeedsCv(true);
+        setPending(true);
         return;
       }
       setPaying(false);
@@ -75,9 +75,9 @@ export default function ReportPaywallModal({
           Your strengths, your gaps, and exactly how to fix your CV for {roleTitle}.
         </p>
 
-        {needsCv ? (
+        {pending ? (
           <p className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 13.5, lineHeight: 1.6 }}>
-            Report unlocked — but we need your CV to generate it. Head back to the HUB and re-run a fitment check for this role, then return here.
+            Report unlocked — your resume-match score is still processing. Refresh this page in a moment to see it.
           </p>
         ) : (
           <>

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { isReportUnlocked } from "@/lib/reportUnlocks";
 import DashboardClient from "./DashboardClient";
-import type { FitmentReportResult } from "@/lib/generateFitmentReport";
+import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 
 export default async function AccountPage() {
   const supabase = await createSupabaseServerClient();
@@ -16,7 +16,7 @@ export default async function AccountPage() {
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("role_title, score, verdict, created_at")
+    .select("role_title, score, verdict, resume_match_status, resume_match_raw, created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -38,22 +38,10 @@ export default async function AccountPage() {
 
   const reportUnlocked = await isReportUnlocked(user.id, current.role_title);
 
-  let report: FitmentReportResult | null = null;
-  if (reportUnlocked) {
-    const { data: reportRow } = await supabase
-      .from("fitment_reports")
-      .select("verdict_summary, categories, action_plan")
-      .eq("user_id", user.id)
-      .eq("role_title", current.role_title)
-      .maybeSingle();
-    if (reportRow) {
-      report = {
-        verdictSummary: reportRow.verdict_summary,
-        categories: reportRow.categories,
-        actionPlan: reportRow.action_plan,
-      };
-    }
-  }
+  const report: ResumeMatchReportReady | null =
+    reportUnlocked && current.resume_match_status === "READY"
+      ? (current.resume_match_raw as ResumeMatchReportReady)
+      : null;
 
   return (
     <DashboardClient

@@ -3,9 +3,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { isReportUnlocked } from "@/lib/reportUnlocks";
-import type { FitmentReportResult } from "@/lib/generateFitmentReport";
-import CategorySection from "./CategorySection";
-import ActionPlanItem from "./ActionPlanItem";
+import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
+import ResumeMatchCategoryCard from "./ResumeMatchCategoryCard";
 
 export default async function FullReportPage() {
   const supabase = await createSupabaseServerClient();
@@ -19,7 +18,7 @@ export default async function FullReportPage() {
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("role_title, score, name")
+    .select("role_title, score, name, resume_match_status, resume_match_raw")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -34,16 +33,11 @@ export default async function FullReportPage() {
     redirect("/hub/account");
   }
 
-  const { data: reportRow } = await supabase
-    .from("fitment_reports")
-    .select("verdict_summary, categories, action_plan")
-    .eq("user_id", user.id)
-    .eq("role_title", current.role_title)
-    .maybeSingle();
-
-  if (!reportRow) {
+  if (current.resume_match_status !== "READY" || !current.resume_match_raw) {
     redirect("/hub/account");
   }
+
+  const report = current.resume_match_raw as ResumeMatchReportReady;
 
   const displayName = current.name || user.email || "Candidate";
   const formattedDate = new Date().toLocaleDateString("en-IN", {
@@ -51,19 +45,6 @@ export default async function FullReportPage() {
     month: "long",
     day: "numeric",
   });
-
-  const sortedActionPlan = [...reportRow.action_plan].sort(
-    (a: FitmentReportResult["actionPlan"][number], b: FitmentReportResult["actionPlan"][number]) =>
-      a.priority - b.priority
-  );
-
-  // Rows generated under an earlier report schema (before this phase's
-  // migration renamed/restructured this column) won't match the current
-  // shape — filter them out rather than crash; a free CV re-check
-  // regenerates the row under the current schema.
-  const categories = (reportRow.categories as FitmentReportResult["categories"]).filter(
-    (c) => c && Array.isArray(c.requirements)
-  );
 
   return (
     <main className="bg-[#fdf8fb]" style={{ minHeight: "60vh", padding: "48px 20px" }}>
@@ -96,28 +77,33 @@ export default async function FullReportPage() {
             Assessment summary
           </p>
           <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14.5, lineHeight: 1.7, margin: 0 }}>
-            {reportRow.verdict_summary}
+            {report.summary}
           </p>
         </div>
 
         <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.3rem", margin: "0 0 14px" }}>
           Match breakdown
         </h2>
-        {categories.map((c: FitmentReportResult["categories"][number], i: number) => (
-          <CategorySection
-            key={i}
-            category={c.category}
-            matchedCount={c.matchedCount}
-            totalCount={c.totalCount}
-            requirements={c.requirements}
-          />
+        {report.categories.map((category) => (
+          <ResumeMatchCategoryCard key={category.key} category={category} />
         ))}
 
         <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.3rem", margin: "32px 0 14px" }}>
-          Your action plan
+          Strengths
         </h2>
-        {sortedActionPlan.map((item: FitmentReportResult["actionPlan"][number], i: number) => (
-          <ActionPlanItem key={i} priority={item.priority} action={item.action} why={item.why} effort={item.effort} />
+        {report.strongPoints.map((point, i) => (
+          <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13.5, lineHeight: 1.7, margin: "0 0 8px" }}>
+            ✓ {point}
+          </p>
+        ))}
+
+        <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.3rem", margin: "32px 0 14px" }}>
+          Gaps to address
+        </h2>
+        {report.weakPoints.map((point, i) => (
+          <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13.5, lineHeight: 1.7, margin: "0 0 8px" }}>
+            ✗ {point}
+          </p>
         ))}
       </div>
     </main>

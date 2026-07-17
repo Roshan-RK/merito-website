@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { FitmentReportResult } from "@/lib/generateFitmentReport";
+import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 
 export default function ScoreCard({
   roleTitle,
@@ -17,15 +17,12 @@ export default function ScoreCard({
   prevScore: number | null;
   verdict: string;
   reportUnlocked: boolean;
-  report: FitmentReportResult | null;
+  report: ResumeMatchReportReady | null;
   onOpenReportPaywall: () => void;
 }) {
   const delta = prevScore !== null ? Math.round((score - prevScore) * 10) / 10 : null;
-  const allRequirements = report
-    ? report.categories.flatMap((c) => (Array.isArray(c?.requirements) ? c.requirements : []))
-    : [];
-  const topStrong = allRequirements.find((r) => r.matchLevel === "strong");
-  const topMissing = allRequirements.find((r) => r.matchLevel === "missing");
+  const topStrong = report?.strongPoints[0];
+  const topMissing = report?.weakPoints[0];
 
   return (
     <div
@@ -101,7 +98,7 @@ export default function ScoreCard({
                   Strong
                 </span>
                 <span className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5 }}>
-                  {topStrong.requirement}
+                  {topStrong}
                 </span>
               </div>
             )}
@@ -117,7 +114,7 @@ export default function ScoreCard({
                   Missing
                 </span>
                 <span className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5 }}>
-                  {topMissing.requirement}
+                  {topMissing}
                 </span>
               </div>
             )}
