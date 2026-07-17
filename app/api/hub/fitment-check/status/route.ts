@@ -1,0 +1,58 @@
+import { getSupabaseServerClient } from "@/lib/supabase";
+import { getResumeMatchReport, scoreOutOfTen } from "@/lib/intervuebox/reports";
+
+export const runtime = "nodejs";
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const leadId = searchParams.get("leadId");
+  if (!leadId) {
+    return Response.json({ error: "leadId is required." }, { status: 400 });
+  }
+
+  const supabase = getSupabaseServerClient();
+  const { data: lead, error: leadError } = await supabase
+    .from("fitment_leads")
+    .select("ib_applied_job_id, resume_match_status, score, verdict")
+    .eq("id", leadId)
+    .maybeSingle();
+
+  if (leadError || !lead) {
+    return Response.json({ error: "Fitment check not found." }, { status: 404 });
+  }
+
+  if (lead.resume_match_status === "READY") {
+    return Response.json({ status: "ready", score: lead.score, verdict: lead.verdict });
+  }
+
+  const report = await getResumeMatchReport(lead.ib_applied_job_id).catch(() => ({ status: "PENDING" as const }));
+
+  if (report.status === "PENDING") {
+    return Response.json({ status: "pending" });
+  }
+
+  const score = scoreOutOfTen(report.overallScore);
+  const { error: updateError } = await supabase
+    .from("fitment_leads")
+    .update({
+      score,
+      verdict: report.summary,
+      resume_match_status: "READY",
+      resume_match_score: report.overallScore,
+      resume_match_raw: {
+        overallScore: report.overallScore,
+        rank: report.rank,
+        categories: report.categories,
+        summary: report.summary,
+        strongPoints: report.strongPoints,
+        weakPoints: report.weakPoints,
+      },
+    })
+    .eq("id", leadId);
+
+  if (updateError) {
+    return Response.json({ error: "Something went wrong updating your result." }, { status: 500 });
+  }
+
+  return Response.json({ status: "ready", score, verdict: report.summary });
+}

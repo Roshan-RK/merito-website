@@ -3,15 +3,31 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 vi.mock("@/lib/recaptcha", () => ({
   verifyRecaptchaToken: vi.fn().mockResolvedValue(true),
 }));
-vi.mock("@/lib/parseCvFile", () => ({
-  parseCvFile: vi.fn().mockResolvedValue("Extracted CV text"),
-  UnsupportedCvFileError: class UnsupportedCvFileError extends Error {},
+vi.mock("@/lib/intervuebox/jobs", () => ({
+  createJob: vi.fn().mockResolvedValue({ ibJobId: "JOB_123" }),
 }));
-vi.mock("@/lib/scoreFitment", () => ({
-  scoreFitment: vi.fn().mockResolvedValue({ score: 7.8, verdict: "Good fit." }),
+vi.mock("@/lib/intervuebox/resumes", () => ({
+  uploadResume: vi.fn().mockResolvedValue({ ibResumeId: "RES_123" }),
+}));
+vi.mock("@/lib/intervuebox/applicants", () => ({
+  addApplicant: vi.fn().mockResolvedValue({ ibAppliedJobId: "APJ_123" }),
+}));
+vi.mock("@/lib/intervuebox/reports", () => ({
+  getResumeMatchReport: vi.fn().mockResolvedValue({
+    status: "READY",
+    overallScore: 78,
+    rank: 1,
+    categories: [],
+    summary: "Good fit.",
+    strongPoints: [],
+    weakPoints: [],
+  }),
+  scoreOutOfTen: (overallScore: number) => Math.round(overallScore * 10) / 100,
 }));
 
-const insertMock = vi.fn().mockResolvedValue({ error: null });
+const insertSelectSingleMock = vi.fn().mockResolvedValue({ data: { id: "lead-1" }, error: null });
+const insertSelectMock = vi.fn().mockReturnValue({ single: insertSelectSingleMock });
+const insertMock = vi.fn().mockReturnValue({ select: insertSelectMock });
 vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({
     from: () => ({ insert: insertMock }),
@@ -28,6 +44,7 @@ function buildForm(overrides: Record<string, string | Blob> = {}) {
   form.set("email", "candidate@example.com");
   form.set("role", "Senior Product Manager");
   form.set("jdText", "We need a PM who can ship.");
+  form.set("phone", "+919876543210");
   form.set("recaptchaToken", "token-123");
   form.set("cv", new Blob(["cv bytes"], { type: "application/pdf" }), "resume.pdf");
   for (const [key, value] of Object.entries(overrides)) {
@@ -39,7 +56,9 @@ function buildForm(overrides: Record<string, string | Blob> = {}) {
 describe("POST /api/hub/fitment-check", () => {
   beforeEach(() => {
     insertMock.mockClear();
-    // Rate limiters are module-level state; reset modules so each test gets a fresh limiter map.
+    insertSelectMock.mockClear();
+    insertSelectSingleMock.mockClear();
+    insertSelectSingleMock.mockResolvedValue({ data: { id: "lead-1" }, error: null });
     vi.resetModules();
   });
 
@@ -47,7 +66,7 @@ describe("POST /api/hub/fitment-check", () => {
     vi.unstubAllEnvs();
   });
 
-  it("returns 200 with the score for a valid submission", async () => {
+  it("returns 200 ready with the score when the resume-match report resolves inline", async () => {
     const { POST } = await importRoute();
     const request = new Request("http://localhost/api/hub/fitment-check", {
       method: "POST",
@@ -56,9 +75,30 @@ describe("POST /api/hub/fitment-check", () => {
     const response = await POST(request);
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body).toEqual({ score: 7.8, verdict: "Good fit." });
+    expect(body).toEqual({ status: "ready", score: 7.8, verdict: "Good fit." });
     expect(insertMock).toHaveBeenCalledTimes(1);
-    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ name: "Jane Doe" }));
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ib_job_id: "JOB_123",
+        ib_resume_id: "RES_123",
+        ib_applied_job_id: "APJ_123",
+        resume_match_status: "READY",
+      })
+    );
+  });
+
+  it("returns 200 pending with a leadId when the resume-match report isn't ready yet", async () => {
+    const { getResumeMatchReport } = await import("@/lib/intervuebox/reports");
+    vi.mocked(getResumeMatchReport).mockResolvedValueOnce({ status: "PENDING" });
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm(),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toEqual({ status: "pending", leadId: "lead-1" });
   });
 
   it("rejects a submission with no email", async () => {
@@ -73,13 +113,13 @@ describe("POST /api/hub/fitment-check", () => {
     expect(response.status).toBe(400);
   });
 
-  it("rejects a submission with an unsupported file type", async () => {
-    const { parseCvFile, UnsupportedCvFileError } = await import("@/lib/parseCvFile");
-    vi.mocked(parseCvFile).mockRejectedValueOnce(new UnsupportedCvFileError());
+  it("rejects a submission with no phone number", async () => {
+    const form = buildForm();
+    form.delete("phone");
     const { POST } = await importRoute();
     const request = new Request("http://localhost/api/hub/fitment-check", {
       method: "POST",
-      body: buildForm(),
+      body: form,
     });
     const response = await POST(request);
     expect(response.status).toBe(400);
@@ -128,16 +168,15 @@ describe("POST /api/hub/fitment-check", () => {
     expect(lastResponse?.status).toBe(429);
   });
 
-  it("succeeds without a name, storing it as null", async () => {
-    const form = buildForm();
-    form.delete("name");
+  it("returns 500 if any IntervueBox call in the chain fails", async () => {
+    const { addApplicant } = await import("@/lib/intervuebox/applicants");
+    vi.mocked(addApplicant).mockRejectedValueOnce(new Error("boom"));
     const { POST } = await importRoute();
     const request = new Request("http://localhost/api/hub/fitment-check", {
       method: "POST",
-      body: form,
+      body: buildForm(),
     });
     const response = await POST(request);
-    expect(response.status).toBe(200);
-    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ name: null }));
+    expect(response.status).toBe(500);
   });
 });
