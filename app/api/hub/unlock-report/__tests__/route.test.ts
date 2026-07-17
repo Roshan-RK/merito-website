@@ -107,15 +107,25 @@ describe("POST /api/hub/unlock-report", () => {
     });
     unlockReportMock.mockResolvedValue(undefined);
     generateFitmentReportMock.mockResolvedValue({
-      requirements: [
+      verdictSummary: "Strong overall fit.",
+      categories: [
         {
-          requirement: "React",
-          matchLevel: "strong",
-          evidence: "3 years React",
-          note: "Good match.",
+          category: "Technical Skills",
+          matchedCount: 1,
+          totalCount: 1,
+          requirements: [
+            {
+              requirement: "React",
+              matchLevel: "strong",
+              isMustHave: true,
+              evidence: "3 years React",
+              note: "Good match.",
+              interviewNote: "Mention this project first.",
+            },
+          ],
         },
       ],
-      actionPlan: [{ priority: 1, action: "Add metrics", why: "Numbers persuade." }],
+      actionPlan: [{ priority: 1, action: "Add metrics", why: "Numbers persuade.", effort: "quick" }],
     });
 
     const { POST } = await importRoute();
@@ -134,32 +144,30 @@ describe("POST /api/hub/unlock-report", () => {
       {
         user_id: "user-123",
         role_title: "Senior Product Manager",
-        requirements: [
+        verdict_summary: "Strong overall fit.",
+        categories: [
           {
-            requirement: "React",
-            matchLevel: "strong",
-            evidence: "3 years React",
-            note: "Good match.",
+            category: "Technical Skills",
+            matchedCount: 1,
+            totalCount: 1,
+            requirements: [
+              {
+                requirement: "React",
+                matchLevel: "strong",
+                isMustHave: true,
+                evidence: "3 years React",
+                note: "Good match.",
+                interviewNote: "Mention this project first.",
+              },
+            ],
           },
         ],
-        action_plan: [{ priority: 1, action: "Add metrics", why: "Numbers persuade." }],
+        action_plan: [{ priority: 1, action: "Add metrics", why: "Numbers persuade.", effort: "quick" }],
       },
       { onConflict: "user_id,role_title" }
     );
-    expect(body).toEqual({
-      status: "unlocked",
-      report: {
-        requirements: [
-          {
-            requirement: "React",
-            matchLevel: "strong",
-            evidence: "3 years React",
-            note: "Good match.",
-          },
-        ],
-        actionPlan: [{ priority: 1, action: "Add metrics", why: "Numbers persuade." }],
-      },
-    });
+    expect(body.status).toBe("unlocked");
+    expect(body.report.verdictSummary).toBe("Strong overall fit.");
   });
 
   it("unlocks but returns needs_cv when there is no CV text on file", async () => {

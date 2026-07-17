@@ -60,7 +60,8 @@ export async function POST(request: Request) {
     {
       user_id: user.id,
       role_title: roleTitle,
-      requirements: report.requirements,
+      verdict_summary: report.verdictSummary,
+      categories: report.categories,
       action_plan: report.actionPlan,
     },
     { onConflict: "user_id,role_title" }
