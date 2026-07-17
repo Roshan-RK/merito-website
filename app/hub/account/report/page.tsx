@@ -57,6 +57,14 @@ export default async function FullReportPage() {
       a.priority - b.priority
   );
 
+  // Rows generated under an earlier report schema (before this phase's
+  // migration renamed/restructured this column) won't match the current
+  // shape — filter them out rather than crash; a free CV re-check
+  // regenerates the row under the current schema.
+  const categories = (reportRow.categories as FitmentReportResult["categories"]).filter(
+    (c) => c && Array.isArray(c.requirements)
+  );
+
   return (
     <main className="bg-[#fdf8fb]" style={{ minHeight: "60vh", padding: "48px 20px" }}>
       <div className="mx-auto" style={{ maxWidth: 820 }}>
@@ -95,7 +103,7 @@ export default async function FullReportPage() {
         <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.3rem", margin: "0 0 14px" }}>
           Match breakdown
         </h2>
-        {reportRow.categories.map((c: FitmentReportResult["categories"][number], i: number) => (
+        {categories.map((c: FitmentReportResult["categories"][number], i: number) => (
           <CategorySection
             key={i}
             category={c.category}

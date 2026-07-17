@@ -21,7 +21,9 @@ export default function ScoreCard({
   onOpenReportPaywall: () => void;
 }) {
   const delta = prevScore !== null ? Math.round((score - prevScore) * 10) / 10 : null;
-  const allRequirements = report ? report.categories.flatMap((c) => c.requirements) : [];
+  const allRequirements = report
+    ? report.categories.flatMap((c) => (Array.isArray(c?.requirements) ? c.requirements : []))
+    : [];
   const topStrong = allRequirements.find((r) => r.matchLevel === "strong");
   const topMissing = allRequirements.find((r) => r.matchLevel === "missing");
 
