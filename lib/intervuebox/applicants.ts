@@ -33,3 +33,15 @@ export async function addApplicant(input: AddApplicantInput): Promise<{ ibApplie
   });
   return { ibAppliedJobId: response.applicantId };
 }
+
+type GetApplicantResponse = {
+  applicantId: string;
+  candidateId: string;
+  candidateName: string;
+  candidateEmail: string;
+};
+
+export async function getApplicant(appliedJobId: string): Promise<{ candidateId: string }> {
+  const response = await intervueBoxFetch<GetApplicantResponse>(`/public/applicants/${appliedJobId}`);
+  return { candidateId: response.candidateId };
+}

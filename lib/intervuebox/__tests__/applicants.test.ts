@@ -49,3 +49,24 @@ describe("addApplicant", () => {
     });
   });
 });
+
+describe("getApplicant", () => {
+  beforeEach(() => {
+    intervueBoxFetchMock.mockReset();
+  });
+
+  it("fetches applicant detail and returns the candidate id", async () => {
+    intervueBoxFetchMock.mockResolvedValue({
+      applicantId: "APJ_123",
+      candidateId: "USR_123",
+      candidateName: "Jane Doe",
+      candidateEmail: "jane@example.com",
+    });
+    const { getApplicant } = await import("../applicants");
+
+    const result = await getApplicant("APJ_123");
+
+    expect(result).toEqual({ candidateId: "USR_123" });
+    expect(intervueBoxFetchMock).toHaveBeenCalledWith("/public/applicants/APJ_123");
+  });
+});
