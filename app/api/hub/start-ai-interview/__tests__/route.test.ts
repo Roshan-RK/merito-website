@@ -137,4 +137,21 @@ describe("POST /api/hub/start-ai-interview", () => {
     const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
     expect(response.status).toBe(500);
   });
+
+  it("returns 500 if the invitation was sent but not actually invited", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+    leadMaybeSingleMock.mockResolvedValue({
+      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123" },
+      error: null,
+    });
+    getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
+    createInterviewAgentMock.mockResolvedValue({ ibAgentId: "INT_123" });
+    sendInterviewInvitationMock.mockResolvedValue({ invited: 0, failed: 1 });
+
+    const { POST } = await importRoute();
+    const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
+    expect(response.status).toBe(500);
+    expect(insertMock).not.toHaveBeenCalled();
+  });
 });

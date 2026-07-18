@@ -57,7 +57,17 @@ export async function POST(request: Request) {
   try {
     ({ candidateId } = await getApplicant(lead.ib_applied_job_id));
     ({ ibAgentId } = await createInterviewAgent(lead.ib_job_id));
-    await sendInterviewInvitation(ibAgentId, [candidateId]);
+    const { invited } = await sendInterviewInvitation(ibAgentId, [candidateId]);
+    if (invited === 0) {
+      console.error("IntervueBox interview-invite chain failed", {
+        jobId: lead.ib_job_id,
+        error: "sendInterviewInvitation reported zero invited",
+      });
+      return Response.json(
+        { error: "Something went wrong starting your AI interview — please try again." },
+        { status: 500 }
+      );
+    }
   } catch (err) {
     console.error("IntervueBox interview-invite chain failed", { jobId: lead.ib_job_id, error: err });
     return Response.json(
