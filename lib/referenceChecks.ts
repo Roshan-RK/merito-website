@@ -314,3 +314,9 @@ export async function getRefereeName(refereeId: string): Promise<string | null> 
   const { data } = await supabase.from("referees").select("name").eq("id", refereeId).maybeSingle();
   return data?.name ?? null;
 }
+
+export async function getReferenceCheckOwner(checkId: string): Promise<string | null> {
+  const supabase = getSupabaseServerClient();
+  const { data } = await supabase.from("reference_checks").select("user_id").eq("id", checkId).maybeSingle();
+  return data?.user_id ?? null;
+}
