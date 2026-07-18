@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import TopBar from "./TopBar";
-import ProgressRail from "./ProgressRail";
+import ProgressRail, { type InterviewStatus } from "./ProgressRail";
 import ScoreCard from "./ScoreCard";
 import ReportPaywallModal from "./ReportPaywallModal";
 import ChangeRoleModal from "./ChangeRoleModal";
+import InterviewStartModal from "./InterviewStartModal";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 
 export default function DashboardClient({
@@ -15,6 +16,7 @@ export default function DashboardClient({
   verdict,
   initialReportUnlocked,
   initialReport,
+  initialInterviewStatus,
 }: {
   roleTitle: string;
   score: number;
@@ -22,10 +24,12 @@ export default function DashboardClient({
   verdict: string;
   initialReportUnlocked: boolean;
   initialReport: ResumeMatchReportReady | null;
+  initialInterviewStatus: InterviewStatus;
 }) {
-  const [modal, setModal] = useState<"none" | "report" | "changeRole">("none");
+  const [modal, setModal] = useState<"none" | "report" | "changeRole" | "interview">("none");
   const [reportUnlocked, setReportUnlocked] = useState(initialReportUnlocked);
   const [report, setReport] = useState<ResumeMatchReportReady | null>(initialReport);
+  const [interviewStatus, setInterviewStatus] = useState<InterviewStatus>(initialInterviewStatus);
 
   return (
     <>
@@ -35,7 +39,12 @@ export default function DashboardClient({
         className="mx-auto"
         style={{ maxWidth: 1440, padding: 24, display: "grid", gridTemplateColumns: "280px minmax(0,1fr)", gap: 22 }}
       >
-        <ProgressRail reportUnlocked={reportUnlocked} onOpenReportPaywall={() => setModal("report")} />
+        <ProgressRail
+          reportUnlocked={reportUnlocked}
+          interviewStatus={interviewStatus}
+          onOpenReportPaywall={() => setModal("report")}
+          onOpenInterviewStart={() => setModal("interview")}
+        />
 
         <div>
           <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.9rem", letterSpacing: "-0.03em", margin: "0 0 6px" }}>
@@ -70,6 +79,16 @@ export default function DashboardClient({
       )}
       {modal === "changeRole" && (
         <ChangeRoleModal onClose={() => setModal("none")} onRoleChanged={() => setModal("none")} />
+      )}
+      {modal === "interview" && (
+        <InterviewStartModal
+          roleTitle={roleTitle}
+          onClose={() => setModal("none")}
+          onStarted={() => {
+            setInterviewStatus("invited");
+            setModal("none");
+          }}
+        />
       )}
     </>
   );
