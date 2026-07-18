@@ -27,10 +27,10 @@ async function importRoute() {
 }
 
 function request(headers: Record<string, string> = {}) {
-  return new Request("http://localhost/api/hub/references/reminder-sweep", { method: "POST", headers });
+  return new Request("http://localhost/api/hub/references/reminder-sweep", { method: "GET", headers });
 }
 
-describe("POST /api/hub/references/reminder-sweep", () => {
+describe("GET /api/hub/references/reminder-sweep", () => {
   beforeEach(() => {
     getStaleRefereesForReminderMock.mockReset();
     getReferenceCheckOwnerMock.mockReset();
@@ -42,8 +42,8 @@ describe("POST /api/hub/references/reminder-sweep", () => {
   });
 
   it("returns 401 when the bearer token doesn't match CRON_SECRET", async () => {
-    const { POST } = await importRoute();
-    const response = await POST(request({ authorization: "Bearer wrong" }));
+    const { GET } = await importRoute();
+    const response = await GET(request({ authorization: "Bearer wrong" }));
     expect(response.status).toBe(401);
     expect(getStaleRefereesForReminderMock).not.toHaveBeenCalled();
   });
@@ -59,8 +59,8 @@ describe("POST /api/hub/references/reminder-sweep", () => {
     sendRefereeReminderEmailMock.mockResolvedValue(undefined);
     incrementReminderCountMock.mockResolvedValue(undefined);
 
-    const { POST } = await importRoute();
-    const response = await POST(request({ authorization: "Bearer sekret" }));
+    const { GET } = await importRoute();
+    const response = await GET(request({ authorization: "Bearer sekret" }));
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -74,8 +74,8 @@ describe("POST /api/hub/references/reminder-sweep", () => {
     getStaleRefereesForReminderMock.mockResolvedValue([{ id: "referee-1", name: "Jane", email: "jane@example.com", reference_check_id: "check-1" }]);
     getReferenceCheckOwnerMock.mockResolvedValue(null);
 
-    const { POST } = await importRoute();
-    const response = await POST(request({ authorization: "Bearer sekret" }));
+    const { GET } = await importRoute();
+    const response = await GET(request({ authorization: "Bearer sekret" }));
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -96,8 +96,8 @@ describe("POST /api/hub/references/reminder-sweep", () => {
     });
     incrementReminderCountMock.mockResolvedValue(undefined);
 
-    const { POST } = await importRoute();
-    const response = await POST(request({ authorization: "Bearer sekret" }));
+    const { GET } = await importRoute();
+    const response = await GET(request({ authorization: "Bearer sekret" }));
     const body = await response.json();
 
     expect(response.status).toBe(200);

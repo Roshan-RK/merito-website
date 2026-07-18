@@ -2,7 +2,7 @@ import { getStaleRefereesForReminder, getReferenceCheckOwner, getCandidateDispla
 import { createRefereeToken } from "@/lib/referenceTokens";
 import { sendRefereeReminderEmail } from "@/lib/referenceEmails";
 
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   const expected = process.env.CRON_SECRET;
   const authorization = request.headers.get("authorization");
 
