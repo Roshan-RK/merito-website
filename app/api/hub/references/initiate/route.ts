@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { initiateReferenceCheck } from "@/lib/referenceChecks";
 
-export async function POST() {
+export async function POST(_request: Request) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
