@@ -17,11 +17,16 @@ export async function POST(request: Request) {
     const ownerId = await getReferenceCheckOwner(referee.reference_check_id);
     if (!ownerId) continue;
 
-    const candidateName = await getCandidateDisplayName(ownerId);
-    const token = await createRefereeToken(referee.id);
-    await sendRefereeReminderEmail({ to: referee.email, refereeName: referee.name, candidateName, token });
-    await incrementReminderCount(referee.id);
-    remindersSent++;
+    try {
+      const candidateName = await getCandidateDisplayName(ownerId);
+      const token = await createRefereeToken(referee.id);
+      await sendRefereeReminderEmail({ to: referee.email, refereeName: referee.name, candidateName, token });
+      await incrementReminderCount(referee.id);
+      remindersSent++;
+    } catch (error) {
+      console.error(`reminder-sweep: failed to send reminder for referee ${referee.id}`, error);
+      continue;
+    }
   }
 
   return Response.json({ remindersSent });

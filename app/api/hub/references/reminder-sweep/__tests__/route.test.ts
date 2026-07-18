@@ -82,4 +82,28 @@ describe("POST /api/hub/references/reminder-sweep", () => {
     expect(body).toEqual({ remindersSent: 0 });
     expect(sendRefereeReminderEmailMock).not.toHaveBeenCalled();
   });
+
+  it("isolates a per-referee failure so the rest of the sweep still succeeds", async () => {
+    getStaleRefereesForReminderMock.mockResolvedValue([
+      { id: "referee-1", name: "Jane", email: "jane@example.com", reference_check_id: "check-1" },
+      { id: "referee-2", name: "Sam", email: "sam@example.com", reference_check_id: "check-2" },
+    ]);
+    getReferenceCheckOwnerMock.mockImplementation(async (checkId: string) => (checkId === "check-1" ? "user-1" : "user-2"));
+    getCandidateDisplayNameMock.mockResolvedValue("Alex Kumar");
+    createRefereeTokenMock.mockResolvedValue("token-x");
+    sendRefereeReminderEmailMock.mockImplementation(async ({ to }: { to: string }) => {
+      if (to === "jane@example.com") throw new Error("send failed");
+    });
+    incrementReminderCountMock.mockResolvedValue(undefined);
+
+    const { POST } = await importRoute();
+    const response = await POST(request({ authorization: "Bearer sekret" }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ remindersSent: 1 });
+    expect(incrementReminderCountMock).not.toHaveBeenCalledWith("referee-1");
+    expect(incrementReminderCountMock).toHaveBeenCalledWith("referee-2");
+    expect(incrementReminderCountMock).toHaveBeenCalledTimes(1);
+  });
 });
