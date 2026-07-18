@@ -308,3 +308,9 @@ export async function getStaleRefereesForReminder(): Promise<
 
   return data ?? [];
 }
+
+export async function getRefereeName(refereeId: string): Promise<string | null> {
+  const supabase = getSupabaseServerClient();
+  const { data } = await supabase.from("referees").select("name").eq("id", refereeId).maybeSingle();
+  return data?.name ?? null;
+}
