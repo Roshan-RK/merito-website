@@ -41,18 +41,23 @@ export default function FeedbackForm({ token }: { token: string }) {
   async function submit(payload: unknown) {
     setBusy(true);
     setError(null);
-    const res = await fetch(`/api/hub/references/feedback/${token}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    setBusy(false);
-    if (!res.ok) {
-      setError(data.error || "Something went wrong.");
-      return;
+    try {
+      const res = await fetch(`/api/hub/references/feedback/${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      setBusy(false);
+      if (!res.ok) {
+        setError(data.error || "Something went wrong.");
+        return;
+      }
+      setState({ kind: "submitted" });
+    } catch {
+      setBusy(false);
+      setError("Something went wrong — please try again.");
     }
-    setState({ kind: "submitted" });
   }
 
   async function handleSubmit(e: React.FormEvent) {
