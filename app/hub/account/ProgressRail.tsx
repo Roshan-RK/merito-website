@@ -1,5 +1,8 @@
 "use client";
 
+import type { CSSProperties, ReactNode } from "react";
+import Link from "next/link";
+
 const STEPS = [
   { key: "score", label: "Job fitment score" },
   { key: "report", label: "Detailed report" },
@@ -8,14 +11,20 @@ const STEPS = [
   { key: "interview", label: "Mock AI interview" },
 ] as const;
 
+export type InterviewStatus = "not_started" | "invited" | "ready";
+
 export default function ProgressRail({
   reportUnlocked,
+  interviewStatus,
   onOpenReportPaywall,
+  onOpenInterviewStart,
 }: {
   reportUnlocked: boolean;
+  interviewStatus: InterviewStatus;
   onOpenReportPaywall: () => void;
+  onOpenInterviewStart: () => void;
 }) {
-  const doneCount = 1 + (reportUnlocked ? 1 : 0); // score is always done; report counts once unlocked
+  const doneCount = 1 + (reportUnlocked ? 1 : 0) + (interviewStatus === "ready" ? 1 : 0);
   const percent = Math.round((doneCount / STEPS.length) * 100);
   const circumference = 2 * Math.PI * 31;
   const dashoffset = circumference - (percent / 100) * circumference;
@@ -56,26 +65,59 @@ export default function ProgressRail({
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {STEPS.map((step, i) => {
-          const isDone = step.key === "score" || (step.key === "report" && reportUnlocked);
           const isReportLocked = step.key === "report" && !reportUnlocked;
-          const isComingSoon = step.key === "personality" || step.key === "references" || step.key === "interview";
+          const isComingSoon = step.key === "personality" || step.key === "references";
+          const isInterviewStep = step.key === "interview";
 
-          return (
-            <div
-              key={step.key}
-              onClick={isReportLocked ? onOpenReportPaywall : undefined}
-              className={isDone ? "bg-[#eefdf1]" : isReportLocked ? "bg-[#fdf8fb]" : "bg-white"}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "8px 10px",
-                borderRadius: 12,
-                minHeight: 44,
-                cursor: isReportLocked ? "pointer" : "default",
-                borderLeft: isReportLocked ? "5px solid #ed1a24" : "5px solid transparent",
-              }}
-            >
+          const isDone =
+            step.key === "score" ||
+            (step.key === "report" && reportUnlocked) ||
+            (isInterviewStep && interviewStatus === "ready");
+
+          let rightBadge: ReactNode = null;
+          if (isComingSoon) {
+            rightBadge = (
+              <span className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11 }}>
+                Coming soon
+              </span>
+            );
+          } else if (isReportLocked) {
+            rightBadge = (
+              <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 11 }}>
+                ₹299
+              </span>
+            );
+          } else if (isInterviewStep && interviewStatus === "invited") {
+            rightBadge = (
+              <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#9c9c9c]" style={{ fontSize: 11 }}>
+                Invited
+              </span>
+            );
+          } else if (isInterviewStep && interviewStatus === "not_started") {
+            rightBadge = (
+              <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 11 }}>
+                Start
+              </span>
+            );
+          }
+
+          const isClickable = isReportLocked || (isInterviewStep && interviewStatus === "not_started");
+          const isLinkable = isInterviewStep && interviewStatus === "ready";
+
+          const rowStyle: CSSProperties = {
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "8px 10px",
+            borderRadius: 12,
+            minHeight: 44,
+            cursor: isClickable || isLinkable ? "pointer" : "default",
+            borderLeft: isClickable ? "5px solid #ed1a24" : "5px solid transparent",
+          };
+          const rowClassName = isDone ? "bg-[#eefdf1]" : isClickable ? "bg-[#fdf8fb]" : "bg-white";
+
+          const content = (
+            <>
               <div
                 className={isDone ? "bg-[#eefdf1] text-[#16803c]" : isComingSoon ? "bg-[#f0e6ea] text-[#9c9c9c]" : "bg-[#fdeced] text-[#ed1a24]"}
                 style={{ width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}
@@ -85,16 +127,32 @@ export default function ProgressRail({
               <span className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 13, flex: 1 }}>
                 {step.label}
               </span>
-              {isComingSoon && (
-                <span className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11 }}>
-                  Coming soon
-                </span>
-              )}
-              {isReportLocked && (
-                <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 11 }}>
-                  ₹299
-                </span>
-              )}
+              {rightBadge}
+            </>
+          );
+
+          if (isLinkable) {
+            return (
+              <Link key={step.key} href="/hub/account/interview" className={rowClassName} style={rowStyle}>
+                {content}
+              </Link>
+            );
+          }
+
+          return (
+            <div
+              key={step.key}
+              onClick={
+                isReportLocked
+                  ? onOpenReportPaywall
+                  : isInterviewStep && interviewStatus === "not_started"
+                    ? onOpenInterviewStart
+                    : undefined
+              }
+              className={rowClassName}
+              style={rowStyle}
+            >
+              {content}
             </div>
           );
         })}
