@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { isReportUnlocked } from "@/lib/reportUnlocks";
 import DashboardClient from "./DashboardClient";
+import type { InterviewStatus } from "./ProgressRail";
 import { getResumeMatchReport, scoreOutOfTen, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import { getSupabaseServerClient } from "@/lib/supabase";
 
@@ -83,6 +84,19 @@ export default async function AccountPage() {
       ? (resumeMatchRaw as ResumeMatchReportReady)
       : null;
 
+  const { data: interviewRow } = await supabase
+    .from("fitment_interviews")
+    .select("status")
+    .eq("user_id", user.id)
+    .eq("role_title", current.role_title)
+    .maybeSingle();
+
+  const interviewStatus: InterviewStatus = !interviewRow
+    ? "not_started"
+    : interviewRow.status === "ready"
+      ? "ready"
+      : "invited";
+
   return (
     <DashboardClient
       roleTitle={current.role_title}
@@ -91,6 +105,7 @@ export default async function AccountPage() {
       verdict={verdict}
       initialReportUnlocked={reportUnlocked}
       initialReport={report}
+      initialInterviewStatus={interviewStatus}
     />
   );
 }
