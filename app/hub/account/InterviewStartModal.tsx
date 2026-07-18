@@ -9,7 +9,7 @@ export default function InterviewStartModal({
 }: {
   roleTitle: string;
   onClose: () => void;
-  onStarted: () => void;
+  onStarted: (status: "invited" | "ready") => void;
 }) {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export default function InterviewStartModal({
         return;
       }
       setStarting(false);
-      onStarted();
+      onStarted(data.status === "ready" ? "ready" : "invited");
     } catch {
       setStarting(false);
       setError("Something went wrong — please try again.");

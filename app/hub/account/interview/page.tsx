@@ -4,7 +4,11 @@ import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import InterviewSkillCard from "./InterviewSkillCard";
 
-export default async function InterviewReportPage() {
+export default async function InterviewReportPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -14,10 +18,19 @@ export default async function InterviewReportPage() {
     redirect("/hub/login");
   }
 
-  const { data: interview } = await supabase
+  const { role } = await searchParams;
+  const roleTitle = typeof role === "string" ? role : null;
+
+  let query = supabase
     .from("fitment_interviews")
     .select("role_title, status, report_raw")
-    .eq("user_id", user.id)
+    .eq("user_id", user.id);
+
+  if (roleTitle) {
+    query = query.eq("role_title", roleTitle);
+  }
+
+  const { data: interview } = await query
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();

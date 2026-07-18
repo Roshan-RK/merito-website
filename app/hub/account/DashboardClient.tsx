@@ -42,6 +42,7 @@ export default function DashboardClient({
         <ProgressRail
           reportUnlocked={reportUnlocked}
           interviewStatus={interviewStatus}
+          roleTitle={roleTitle}
           onOpenReportPaywall={() => setModal("report")}
           onOpenInterviewStart={() => setModal("interview")}
         />
@@ -84,8 +85,8 @@ export default function DashboardClient({
         <InterviewStartModal
           roleTitle={roleTitle}
           onClose={() => setModal("none")}
-          onStarted={() => {
-            setInterviewStatus("invited");
+          onStarted={(status) => {
+            setInterviewStatus(status);
             setModal("none");
           }}
         />

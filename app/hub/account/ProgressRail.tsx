@@ -16,11 +16,13 @@ export type InterviewStatus = "not_started" | "invited" | "ready";
 export default function ProgressRail({
   reportUnlocked,
   interviewStatus,
+  roleTitle,
   onOpenReportPaywall,
   onOpenInterviewStart,
 }: {
   reportUnlocked: boolean;
   interviewStatus: InterviewStatus;
+  roleTitle: string;
   onOpenReportPaywall: () => void;
   onOpenInterviewStart: () => void;
 }) {
@@ -133,7 +135,12 @@ export default function ProgressRail({
 
           if (isLinkable) {
             return (
-              <Link key={step.key} href="/hub/account/interview" className={rowClassName} style={rowStyle}>
+              <Link
+                key={step.key}
+                href={`/hub/account/interview?role=${encodeURIComponent(roleTitle)}`}
+                className={rowClassName}
+                style={rowStyle}
+              >
                 {content}
               </Link>
             );
