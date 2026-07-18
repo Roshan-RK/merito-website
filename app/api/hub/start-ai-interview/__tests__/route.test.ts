@@ -27,8 +27,14 @@ const sessionFromMock = vi.fn((table: string) => {
 });
 
 const insertMock = vi.fn().mockResolvedValue({ error: null });
+const adminReselectMaybeSingleMock = vi.fn();
+const adminReselectEq2Mock = vi.fn().mockReturnValue({ maybeSingle: adminReselectMaybeSingleMock });
+const adminReselectEq1Mock = vi.fn().mockReturnValue({ eq: adminReselectEq2Mock });
+const adminReselectSelectMock = vi.fn().mockReturnValue({ eq: adminReselectEq1Mock });
 vi.mock("@/lib/supabase", () => ({
-  getSupabaseServerClient: () => ({ from: () => ({ insert: insertMock }) }),
+  getSupabaseServerClient: () => ({
+    from: () => ({ insert: insertMock, select: adminReselectSelectMock }),
+  }),
 }));
 
 const getApplicantMock = vi.fn();
@@ -56,6 +62,7 @@ describe("POST /api/hub/start-ai-interview", () => {
     leadMaybeSingleMock.mockReset();
     insertMock.mockClear();
     insertMock.mockResolvedValue({ error: null });
+    adminReselectMaybeSingleMock.mockReset();
     getApplicantMock.mockReset();
     createInterviewAgentMock.mockReset();
     sendInterviewInvitationMock.mockReset();
@@ -153,5 +160,47 @@ describe("POST /api/hub/start-ai-interview", () => {
     const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
     expect(response.status).toBe(500);
     expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 with the insert error still surfaced when the insert fails for a non-conflict reason", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+    leadMaybeSingleMock.mockResolvedValue({
+      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123" },
+      error: null,
+    });
+    getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
+    createInterviewAgentMock.mockResolvedValue({ ibAgentId: "INT_123" });
+    sendInterviewInvitationMock.mockResolvedValue({ invited: 1, failed: 0 });
+    insertMock.mockResolvedValue({ error: { code: "42501", message: "permission denied" } });
+
+    const { POST } = await importRoute();
+    const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
+
+    expect(response.status).toBe(500);
+    expect(adminReselectSelectMock).not.toHaveBeenCalled();
+  });
+
+  it("treats a 23505 primary-key conflict on insert as an idempotent success and returns the existing row's status", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+    leadMaybeSingleMock.mockResolvedValue({
+      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123" },
+      error: null,
+    });
+    getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
+    createInterviewAgentMock.mockResolvedValue({ ibAgentId: "INT_123" });
+    sendInterviewInvitationMock.mockResolvedValue({ invited: 1, failed: 0 });
+    insertMock.mockResolvedValue({
+      error: { code: "23505", message: "duplicate key value violates unique constraint" },
+    });
+    adminReselectMaybeSingleMock.mockResolvedValue({ data: { status: "ready" }, error: null });
+
+    const { POST } = await importRoute();
+    const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "ready" });
+    expect(adminReselectSelectMock).toHaveBeenCalled();
   });
 });

@@ -87,6 +87,33 @@ export async function POST(request: Request) {
   });
 
   if (insertError) {
+    // Postgres unique-violation on the (user_id, role_title) primary key —
+    // a realistic double-click race where two concurrent requests both pass
+    // the "no existing row" check above. The IntervueBox-side invite already
+    // succeeded (possibly twice) either way, so treat this as an idempotent
+    // success: re-select the row a concurrent request already inserted and
+    // return its status instead of failing the request.
+    if (insertError.code === "23505") {
+      const { data: existingRow } = await admin
+        .from("fitment_interviews")
+        .select("status")
+        .eq("user_id", user.id)
+        .eq("role_title", roleTitle)
+        .maybeSingle();
+
+      if (existingRow) {
+        return Response.json({ status: existingRow.status === "ready" ? "ready" : "invited" });
+      }
+    }
+
+    // IntervueBox-side records now exist with no Merito row pointing at
+    // them — log the IDs so this can be manually traced and reconciled.
+    console.error("fitment_interviews insert failed after IntervueBox invite chain succeeded", {
+      ib_job_id: lead.ib_job_id,
+      ib_agent_id: ibAgentId,
+      ib_candidate_id: candidateId,
+      error: insertError,
+    });
     return Response.json(
       { error: "Invitation sent, but we couldn't save the status — please refresh." },
       { status: 500 }
