@@ -110,6 +110,20 @@ describe("POST /api/hub/references/feedback/[token]", () => {
     expect(consumeRefereeTokenMock).toHaveBeenCalledWith("good-token");
   });
 
+  it("returns 409 and still consumes the token when the referee already responded", async () => {
+    validateRefereeTokenMock.mockResolvedValue({ valid: true, refereeId: "referee-1" });
+    recordRefereeDeclineMock.mockRejectedValue(new Error("REFEREE_ALREADY_RESPONDED"));
+    consumeRefereeTokenMock.mockResolvedValue(undefined);
+
+    const { POST } = await importRoute();
+    const response = await POST(body({ declined: true }), params("good-token"));
+    const responseBody = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(responseBody).toEqual({ error: "This reference has already been responded to." });
+    expect(consumeRefereeTokenMock).toHaveBeenCalledWith("good-token");
+  });
+
   it("returns 400 when the body matches neither shape", async () => {
     validateRefereeTokenMock.mockResolvedValue({ valid: true, refereeId: "referee-1" });
     const { POST } = await importRoute();

@@ -52,14 +52,30 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   const decline = DeclineSchema.safeParse(json);
   if (decline.success) {
-    await recordRefereeDecline(validation.refereeId);
+    try {
+      await recordRefereeDecline(validation.refereeId);
+    } catch (error) {
+      if (error instanceof Error && error.message === "REFEREE_ALREADY_RESPONDED") {
+        await consumeRefereeToken(token);
+        return Response.json({ error: "This reference has already been responded to." }, { status: 409 });
+      }
+      throw error;
+    }
     await consumeRefereeToken(token);
     return Response.json({ ok: true });
   }
 
   const feedback = SubmitFeedbackSchema.safeParse(json);
   if (feedback.success) {
-    await recordRefereeFeedback(validation.refereeId, feedback.data);
+    try {
+      await recordRefereeFeedback(validation.refereeId, feedback.data);
+    } catch (error) {
+      if (error instanceof Error && error.message === "REFEREE_ALREADY_RESPONDED") {
+        await consumeRefereeToken(token);
+        return Response.json({ error: "This reference has already been responded to." }, { status: 409 });
+      }
+      throw error;
+    }
     await consumeRefereeToken(token);
     return Response.json({ ok: true });
   }
