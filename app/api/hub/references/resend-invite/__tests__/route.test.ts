@@ -54,7 +54,7 @@ describe("POST /api/hub/references/resend-invite", () => {
 
   it("resends the invite for a pending referee", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    getRefereeForUserMock.mockResolvedValue({ id: "referee-1", name: "Jane", email: "jane@example.com", status: "pending", reminderCount: 0 });
+    getRefereeForUserMock.mockResolvedValue({ id: "referee-1", name: "Jane", email: "jane@example.com", status: "pending", reminderCount: 0, checkStatus: "in_progress" });
     getCandidateDisplayNameMock.mockResolvedValue("Alex Kumar");
     createRefereeTokenMock.mockResolvedValue("token-new");
     sendRefereeInviteEmailMock.mockResolvedValue(undefined);
@@ -70,9 +70,18 @@ describe("POST /api/hub/references/resend-invite", () => {
 
   it("returns 409 when the referee already responded", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    getRefereeForUserMock.mockResolvedValue({ id: "referee-1", name: "Jane", email: "jane@example.com", status: "completed", reminderCount: 0 });
+    getRefereeForUserMock.mockResolvedValue({ id: "referee-1", name: "Jane", email: "jane@example.com", status: "completed", reminderCount: 0, checkStatus: "in_progress" });
     const { POST } = await importRoute();
     const response = await POST(body({ refereeId: "referee-1" }));
     expect(response.status).toBe(409);
+  });
+
+  it("returns 409 when the reference check is no longer active", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    getRefereeForUserMock.mockResolvedValue({ id: "referee-1", name: "Jane", email: "jane@example.com", status: "pending", reminderCount: 0, checkStatus: "completed" });
+    const { POST } = await importRoute();
+    const response = await POST(body({ refereeId: "referee-1" }));
+    expect(response.status).toBe(409);
+    expect(sendRefereeInviteEmailMock).not.toHaveBeenCalled();
   });
 });

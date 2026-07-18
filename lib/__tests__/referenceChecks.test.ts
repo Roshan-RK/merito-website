@@ -120,7 +120,7 @@ describe("referenceChecks", () => {
 
   describe("recordRefereeFeedback", () => {
     it("marks the referee completed and auto-completes the check at the threshold", async () => {
-      const refereeSingle = vi.fn().mockResolvedValue({ data: { reference_check_id: "check-1" }, error: null });
+      const refereeSingle = vi.fn().mockResolvedValue({ data: { reference_check_id: "check-1", status: "pending" }, error: null });
       const refereeEq = vi.fn().mockReturnValue({ single: refereeSingle });
       const refereeSelect = vi.fn().mockReturnValue({ eq: refereeEq });
 
@@ -139,7 +139,7 @@ describe("referenceChecks", () => {
       const completeUpdate = vi.fn().mockReturnValue({ eq: completeUpdateEq });
 
       fromMock
-        .mockReturnValueOnce({ select: refereeSelect }) // fetch referee -> check id
+        .mockReturnValueOnce({ select: refereeSelect }) // fetch referee -> check id + status
         .mockReturnValueOnce({ update }) // update referee to completed
         .mockReturnValueOnce({ select: checkSelect }) // fetch check
         .mockReturnValueOnce({ select: countSelect }) // count completed referees
@@ -156,19 +156,72 @@ describe("referenceChecks", () => {
       );
       expect(completeUpdate).toHaveBeenCalledWith(expect.objectContaining({ status: "completed" }));
     });
+
+    it("throws REFEREE_ALREADY_RESPONDED when the referee is no longer pending", async () => {
+      const refereeSingle = vi.fn().mockResolvedValue({ data: { reference_check_id: "check-1", status: "completed" }, error: null });
+      const refereeEq = vi.fn().mockReturnValue({ single: refereeSingle });
+      const refereeSelect = vi.fn().mockReturnValue({ eq: refereeEq });
+      fromMock.mockReturnValueOnce({ select: refereeSelect });
+
+      const { recordRefereeFeedback } = await import("../referenceChecks");
+      await expect(
+        recordRefereeFeedback("referee-1", { ratings: [{ category: "teamwork", value: 5 }], overallFeedback: "Great." })
+      ).rejects.toThrow("REFEREE_ALREADY_RESPONDED");
+      expect(fromMock).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("recordRefereeDecline", () => {
     it("marks the referee rejected", async () => {
-      const eq = vi.fn().mockResolvedValue({ error: null });
-      const update = vi.fn().mockReturnValue({ eq });
-      fromMock.mockReturnValue({ update });
+      const refereeSingle = vi.fn().mockResolvedValue({ data: { status: "pending" }, error: null });
+      const refereeEq = vi.fn().mockReturnValue({ single: refereeSingle });
+      const refereeSelect = vi.fn().mockReturnValue({ eq: refereeEq });
+
+      const updateEq = vi.fn().mockResolvedValue({ error: null });
+      const update = vi.fn().mockReturnValue({ eq: updateEq });
+
+      fromMock.mockReturnValueOnce({ select: refereeSelect }).mockReturnValueOnce({ update });
 
       const { recordRefereeDecline } = await import("../referenceChecks");
       await recordRefereeDecline("referee-1");
 
       expect(update).toHaveBeenCalledWith({ status: "rejected" });
-      expect(eq).toHaveBeenCalledWith("id", "referee-1");
+      expect(updateEq).toHaveBeenCalledWith("id", "referee-1");
+    });
+
+    it("throws REFEREE_ALREADY_RESPONDED when the referee is no longer pending", async () => {
+      const refereeSingle = vi.fn().mockResolvedValue({ data: { status: "rejected" }, error: null });
+      const refereeEq = vi.fn().mockReturnValue({ single: refereeSingle });
+      const refereeSelect = vi.fn().mockReturnValue({ eq: refereeEq });
+      fromMock.mockReturnValueOnce({ select: refereeSelect });
+
+      const { recordRefereeDecline } = await import("../referenceChecks");
+      await expect(recordRefereeDecline("referee-1")).rejects.toThrow("REFEREE_ALREADY_RESPONDED");
+      expect(fromMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("getStaleRefereesForReminder", () => {
+    it("filters to referees whose parent check is still initiated/in_progress", async () => {
+      const orMock = vi.fn().mockResolvedValue({
+        data: [{ id: "r1", name: "Jane", email: "jane@example.com", reference_check_id: "check-1" }],
+        error: null,
+      });
+      const inMock = vi.fn().mockReturnValue({ or: orMock });
+      const ltMock = vi.fn().mockReturnValue({ in: inMock });
+      const eqMock = vi.fn().mockReturnValue({ lt: ltMock });
+      const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
+      fromMock.mockReturnValue({ select: selectMock });
+
+      const { getStaleRefereesForReminder } = await import("../referenceChecks");
+      const result = await getStaleRefereesForReminder();
+
+      expect(fromMock).toHaveBeenCalledWith("referees");
+      expect(selectMock).toHaveBeenCalledWith(
+        expect.stringContaining("reference_checks!inner(status)")
+      );
+      expect(inMock).toHaveBeenCalledWith("reference_checks.status", ["initiated", "in_progress"]);
+      expect(result).toEqual([{ id: "r1", name: "Jane", email: "jane@example.com", reference_check_id: "check-1" }]);
     });
   });
 

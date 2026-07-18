@@ -43,7 +43,7 @@ describe("POST /api/hub/references/send-reminder", () => {
 
   it("returns 409 when the reminder cap is already reached", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    getRefereeForUserMock.mockResolvedValue({ id: "referee-1", name: "Jane", email: "jane@example.com", status: "pending", reminderCount: 3 });
+    getRefereeForUserMock.mockResolvedValue({ id: "referee-1", name: "Jane", email: "jane@example.com", status: "pending", reminderCount: 3, checkStatus: "in_progress" });
     const { POST } = await importRoute();
     const response = await POST(body({ refereeId: "referee-1" }));
     expect(response.status).toBe(409);
@@ -52,7 +52,7 @@ describe("POST /api/hub/references/send-reminder", () => {
 
   it("sends a reminder and increments the count", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    getRefereeForUserMock.mockResolvedValue({ id: "referee-1", name: "Jane", email: "jane@example.com", status: "pending", reminderCount: 1 });
+    getRefereeForUserMock.mockResolvedValue({ id: "referee-1", name: "Jane", email: "jane@example.com", status: "pending", reminderCount: 1, checkStatus: "in_progress" });
     getCandidateDisplayNameMock.mockResolvedValue("Alex Kumar");
     createRefereeTokenMock.mockResolvedValue("token-new");
     sendRefereeReminderEmailMock.mockResolvedValue(undefined);
@@ -65,5 +65,15 @@ describe("POST /api/hub/references/send-reminder", () => {
     expect(response.status).toBe(200);
     expect(responseBody).toEqual({ ok: true });
     expect(incrementReminderCountMock).toHaveBeenCalledWith("referee-1");
+  });
+
+  it("returns 409 when the reference check is no longer active", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    getRefereeForUserMock.mockResolvedValue({ id: "referee-1", name: "Jane", email: "jane@example.com", status: "pending", reminderCount: 1, checkStatus: "cancelled" });
+    const { POST } = await importRoute();
+    const response = await POST(body({ refereeId: "referee-1" }));
+    expect(response.status).toBe(409);
+    expect(incrementReminderCountMock).not.toHaveBeenCalled();
+    expect(sendRefereeReminderEmailMock).not.toHaveBeenCalled();
   });
 });

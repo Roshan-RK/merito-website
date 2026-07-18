@@ -48,6 +48,7 @@ export type RefereeForUser = {
   email: string;
   status: "pending" | "completed" | "rejected";
   reminderCount: number;
+  checkStatus: "initiated" | "in_progress" | "completed" | "cancelled";
 };
 
 export async function initiateReferenceCheck(userId: string): Promise<{ id: string }> {
@@ -173,12 +174,18 @@ export async function getRefereeForUser(userId: string, refereeId: string): Prom
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("referees")
-    .select("id, name, email, status, reminder_count, reference_check_id, reference_checks!inner(user_id)")
+    .select("id, name, email, status, reminder_count, reference_check_id, reference_checks!inner(user_id, status)")
     .eq("id", refereeId)
     .eq("reference_checks.user_id", userId)
     .maybeSingle();
 
   if (error || !data) return null;
+
+  // Supabase's query-builder type inference defaults an embedded to-one relation to an
+  // array shape when no generated Database types are supplied; at runtime a `referees ->
+  // reference_checks` (many-to-one via reference_check_id) embed always resolves to a
+  // single object, never an array. Cast to reflect the true runtime shape.
+  const check = data.reference_checks as unknown as { status: RefereeForUser["checkStatus"] };
 
   return {
     id: data.id,
@@ -186,6 +193,7 @@ export async function getRefereeForUser(userId: string, refereeId: string): Prom
     email: data.email,
     status: data.status,
     reminderCount: data.reminder_count,
+    checkStatus: check.status,
   };
 }
 
@@ -197,12 +205,15 @@ export async function recordRefereeFeedback(
 
   const { data: referee, error: refereeError } = await supabase
     .from("referees")
-    .select("reference_check_id")
+    .select("reference_check_id, status")
     .eq("id", refereeId)
     .single();
 
   if (refereeError || !referee) {
     throw new Error(`Referee not found: ${refereeError?.message}`);
+  }
+  if (referee.status !== "pending") {
+    throw new Error("REFEREE_ALREADY_RESPONDED");
   }
 
   const { error } = await supabase
@@ -224,6 +235,20 @@ export async function recordRefereeFeedback(
 
 export async function recordRefereeDecline(refereeId: string): Promise<void> {
   const supabase = getSupabaseServerClient();
+
+  const { data: referee, error: refereeError } = await supabase
+    .from("referees")
+    .select("status")
+    .eq("id", refereeId)
+    .single();
+
+  if (refereeError || !referee) {
+    throw new Error(`Referee not found: ${refereeError?.message}`);
+  }
+  if (referee.status !== "pending") {
+    throw new Error("REFEREE_ALREADY_RESPONDED");
+  }
+
   const { error } = await supabase.from("referees").update({ status: "rejected" }).eq("id", refereeId);
 
   if (error) {
@@ -297,9 +322,10 @@ export async function getStaleRefereesForReminder(): Promise<
 
   const { data, error } = await supabase
     .from("referees")
-    .select("id, name, email, reference_check_id")
+    .select("id, name, email, reference_check_id, reference_checks!inner(status)")
     .eq("status", "pending")
     .lt("reminder_count", MAX_REMINDERS)
+    .in("reference_checks.status", ["initiated", "in_progress"])
     .or(`last_reminded_at.lt.${cutoff},and(last_reminded_at.is.null,created_at.lt.${cutoff})`);
 
   if (error) {

@@ -31,6 +31,9 @@ export async function POST(request: Request) {
   if (referee.status !== "pending") {
     return Response.json({ error: "This referee has already responded." }, { status: 409 });
   }
+  if (referee.checkStatus !== "initiated" && referee.checkStatus !== "in_progress") {
+    return Response.json({ error: "This reference check is no longer active." }, { status: 409 });
+  }
   if (referee.reminderCount >= MAX_REMINDERS) {
     return Response.json({ error: "You've already sent the maximum number of reminders." }, { status: 409 });
   }
