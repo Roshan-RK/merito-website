@@ -16,17 +16,21 @@ export type InterviewStatus = "not_started" | "invited" | "ready";
 export default function ProgressRail({
   reportUnlocked,
   interviewStatus,
+  referenceCheckStatus,
   roleTitle,
   onOpenReportPaywall,
   onOpenInterviewStart,
 }: {
   reportUnlocked: boolean;
   interviewStatus: InterviewStatus;
+  referenceCheckStatus: "none" | "in_progress" | "completed";
   roleTitle: string;
   onOpenReportPaywall: () => void;
   onOpenInterviewStart: () => void;
 }) {
-  const doneCount = 1 + (reportUnlocked ? 1 : 0) + (interviewStatus === "ready" ? 1 : 0);
+  const referencesDone = referenceCheckStatus === "completed";
+  const doneCount =
+    1 + (reportUnlocked ? 1 : 0) + (referencesDone ? 1 : 0) + (interviewStatus === "ready" ? 1 : 0);
   const percent = Math.round((doneCount / STEPS.length) * 100);
   const circumference = 2 * Math.PI * 31;
   const dashoffset = circumference - (percent / 100) * circumference;
@@ -68,12 +72,14 @@ export default function ProgressRail({
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {STEPS.map((step, i) => {
           const isReportLocked = step.key === "report" && !reportUnlocked;
-          const isComingSoon = step.key === "personality" || step.key === "references";
+          const isComingSoon = step.key === "personality";
           const isInterviewStep = step.key === "interview";
+          const isReferencesStep = step.key === "references";
 
           const isDone =
             step.key === "score" ||
             (step.key === "report" && reportUnlocked) ||
+            (isReferencesStep && referencesDone) ||
             (isInterviewStep && interviewStatus === "ready");
 
           let rightBadge: ReactNode = null;
@@ -87,6 +93,12 @@ export default function ProgressRail({
             rightBadge = (
               <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 11 }}>
                 ₹299
+              </span>
+            );
+          } else if (isReferencesStep && referenceCheckStatus === "in_progress") {
+            rightBadge = (
+              <span className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11 }}>
+                In progress
               </span>
             );
           } else if (isInterviewStep && interviewStatus === "invited") {
@@ -104,7 +116,7 @@ export default function ProgressRail({
           }
 
           const isClickable = isReportLocked || (isInterviewStep && interviewStatus === "not_started");
-          const isLinkable = isInterviewStep && interviewStatus === "ready";
+          const isLinkable = isReferencesStep || (isInterviewStep && interviewStatus === "ready");
 
           const rowStyle: CSSProperties = {
             display: "flex",
@@ -137,7 +149,11 @@ export default function ProgressRail({
             return (
               <Link
                 key={step.key}
-                href={`/hub/account/interview?role=${encodeURIComponent(roleTitle)}`}
+                href={
+                  isReferencesStep
+                    ? "/hub/account/references"
+                    : `/hub/account/interview?role=${encodeURIComponent(roleTitle)}`
+                }
                 className={rowClassName}
                 style={rowStyle}
               >

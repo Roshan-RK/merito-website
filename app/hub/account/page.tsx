@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { isReportUnlocked } from "@/lib/reportUnlocks";
+import { getReferenceCheckStatus } from "@/lib/referenceChecks";
 import DashboardClient from "./DashboardClient";
 import type { InterviewStatus } from "./ProgressRail";
 import { getResumeMatchReport, scoreOutOfTen, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
@@ -97,6 +98,10 @@ export default async function AccountPage() {
       ? "ready"
       : "invited";
 
+  const referenceCheck = await getReferenceCheckStatus(user.id);
+  const referenceCheckStatus: "none" | "in_progress" | "completed" =
+    !referenceCheck ? "none" : referenceCheck.status === "completed" ? "completed" : "in_progress";
+
   return (
     <DashboardClient
       roleTitle={current.role_title}
@@ -106,6 +111,7 @@ export default async function AccountPage() {
       initialReportUnlocked={reportUnlocked}
       initialReport={report}
       initialInterviewStatus={interviewStatus}
+      referenceCheckStatus={referenceCheckStatus}
     />
   );
 }
