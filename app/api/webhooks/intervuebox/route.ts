@@ -14,6 +14,13 @@ function verifySignature(secret: string, rawBody: string, signatureHeader: strin
   const signature = parts.v1;
   if (!timestamp || !signature) return false;
 
+  // Reject stale timestamps so a captured, validly-signed request can't be
+  // replayed indefinitely — same 5-minute tolerance window Stripe and most
+  // major webhook providers default to.
+  const timestampSeconds = Number(timestamp);
+  if (!Number.isFinite(timestampSeconds)) return false;
+  if (Math.abs(Date.now() / 1000 - timestampSeconds) > 300) return false;
+
   const expected = crypto.createHmac("sha256", secret).update(`${timestamp}.${rawBody}`).digest("hex");
   const expectedBuf = Buffer.from(expected, "utf8");
   const signatureBuf = Buffer.from(signature, "utf8");
@@ -51,29 +58,31 @@ export async function POST(request: Request) {
     return Response.json({ received: true });
   }
 
-  for (const row of pending) {
-    try {
-      const report = await getInterviewReport(row.ib_agent_id, row.ib_candidate_id);
-      if (report.status !== "READY") continue;
+  await Promise.allSettled(
+    pending.map(async (row) => {
+      try {
+        const report = await getInterviewReport(row.ib_agent_id, row.ib_candidate_id);
+        if (report.status !== "READY") return;
 
-      await supabase
-        .from("fitment_interviews")
-        .update({
-          status: "ready",
-          report_raw: {
-            overallSkillScore: report.overallSkillScore,
-            skillReport: report.skillReport,
-            overallReport: report.overallReport,
-            shareableReportLink: report.shareableReportLink,
-          },
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", row.user_id)
-        .eq("role_title", row.role_title);
-    } catch (err) {
-      console.error("Webhook sweep: getInterviewReport failed for a pending row", { row, error: err });
-    }
-  }
+        await supabase
+          .from("fitment_interviews")
+          .update({
+            status: "ready",
+            report_raw: {
+              overallSkillScore: report.overallSkillScore,
+              skillReport: report.skillReport,
+              overallReport: report.overallReport,
+              shareableReportLink: report.shareableReportLink,
+            },
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", row.user_id)
+          .eq("role_title", row.role_title);
+      } catch (err) {
+        console.error("Webhook sweep: getInterviewReport failed for a pending row", { row, error: err });
+      }
+    })
+  );
 
   return Response.json({ received: true });
 }

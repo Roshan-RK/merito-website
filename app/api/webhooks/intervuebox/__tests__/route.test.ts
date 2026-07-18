@@ -20,7 +20,7 @@ async function importRoute() {
   return await import("../route");
 }
 
-function sign(secret: string, rawBody: string, timestamp = "1700000000") {
+function sign(secret: string, rawBody: string, timestamp = String(Math.floor(Date.now() / 1000))) {
   const hmac = crypto.createHmac("sha256", secret).update(`${timestamp}.${rawBody}`).digest("hex");
   return `t=${timestamp},v1=${hmac}`;
 }
@@ -101,6 +101,19 @@ describe("POST /api/webhooks/intervuebox", () => {
     );
     expect(updateEq1Mock).toHaveBeenCalledWith("user_id", "user-1");
     expect(updateEq2Mock).toHaveBeenCalledWith("role_title", "Senior Product Manager");
+  });
+
+  it("returns 401 when the signature is validly-signed but the timestamp is outside the 5-minute replay window", async () => {
+    const { POST } = await importRoute();
+    const rawBody = JSON.stringify({ eventType: "AIInterviewReportGenerated" });
+    const staleTimestamp = String(Math.floor(Date.now() / 1000) - 600); // 10 minutes old
+    const request = new Request("http://localhost/api/webhooks/intervuebox", {
+      method: "POST",
+      headers: { "x-ib-signature": sign("whsec_test", rawBody, staleTimestamp) },
+      body: rawBody,
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(401);
   });
 
   it("returns 200 with no updates when there are no invited rows", async () => {
