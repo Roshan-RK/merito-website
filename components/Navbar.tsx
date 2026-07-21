@@ -33,7 +33,10 @@ export default function Navbar() {
       return;
     }
 
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    supabase.auth.getSession().then(
+      ({ data }) => setSession(data.session),
+      () => setSession(null)
+    );
 
     const {
       data: { subscription },
