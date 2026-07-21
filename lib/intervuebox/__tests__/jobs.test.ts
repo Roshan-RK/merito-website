@@ -34,6 +34,10 @@ describe("createJob", () => {
       department: "General",
       openings: 1,
       jobDescription: "Ship things.",
+      skills: [],
+      education: [],
+      experience: "Not specified",
+      status: "ACTIVE",
     });
   });
 });

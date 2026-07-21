@@ -38,12 +38,24 @@ export async function intervueBoxFetch<T>(path: string, init: RequestInit = {}):
   const body = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const errorShape = (body as { error?: Partial<IntervueBoxErrorShape> } | null)?.error ?? {};
+    // IntervueBox's real error responses don't always match the documented
+    // { error: { code, message, status } } envelope — some endpoints return
+    // a flat { message, error, statusCode } shape instead (message is a
+    // string here, not an object). Check both so the real message text
+    // (e.g. "Resume is still being parsed...") survives instead of falling
+    // back to a generic string.
+    const rawError = (body as { error?: unknown } | null)?.error;
+    const nestedShape = rawError && typeof rawError === "object" ? (rawError as Partial<IntervueBoxErrorShape>) : {};
+    const flatMessage = (body as { message?: unknown } | null)?.message;
+    const message =
+      nestedShape.message ??
+      (typeof flatMessage === "string" ? flatMessage : undefined) ??
+      `IntervueBox request failed with status ${response.status}`;
     throw new IntervueBoxError({
-      code: errorShape.code ?? "unknown_error",
-      message: errorShape.message ?? `IntervueBox request failed with status ${response.status}`,
-      status: errorShape.status ?? response.status,
-      details: errorShape.details,
+      code: nestedShape.code ?? "unknown_error",
+      message,
+      status: nestedShape.status ?? response.status,
+      details: nestedShape.details,
     });
   }
 

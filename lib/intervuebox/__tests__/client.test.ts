@@ -61,6 +61,34 @@ describe("intervueBoxFetch", () => {
     }
   });
 
+  it("extracts the real message from a flat { message, error, statusCode } error body", async () => {
+    // IntervueBox's live API doesn't always follow the documented
+    // { error: { code, message, status } } envelope — confirmed against a
+    // real request, some endpoints return this flat shape instead.
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({
+        response: { title: "Resume still parsing", message: "Resume is still being parsed and has no linked candidate yet." },
+        status: 400,
+        message: "Resume is still being parsed and has no linked candidate yet.",
+        name: "HttpException",
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { intervueBoxFetch, IntervueBoxError } = await import("../client");
+    try {
+      await intervueBoxFetch("/public/jobs/JOB_1/applicants", { method: "POST" });
+      throw new Error("expected intervueBoxFetch to reject");
+    } catch (err) {
+      expect(err).toBeInstanceOf(IntervueBoxError);
+      const ibErr = err as InstanceType<typeof IntervueBoxError>;
+      expect(ibErr.message).toBe("Resume is still being parsed and has no linked candidate yet.");
+      expect(ibErr.status).toBe(400);
+    }
+  });
+
   it("throws a plain Error if INTERVUEBOX_API_KEY is missing", async () => {
     vi.unstubAllEnvs();
     vi.stubEnv("INTERVUEBOX_BASE_URL", "https://api.intervuebox.ai/api/v1");

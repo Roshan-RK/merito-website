@@ -129,6 +129,20 @@ The first design pass here relied on WebFetch's AI-summarized docs, which turned
 
 `POST /jobs` requires `title`, `location[]`, `jobType`, `industry`, `designation`, `openings`, `department`, `jobDescription` — Merito's form only supplies a role title and JD text. Defaults used: `location: ["Remote"]`, `jobType: "Full-time"`, `industry: "General"`, `designation: <role title>`, `department: "General"`, `openings: 1`. These are free-text/no-enum fields per the docs, so generic defaults are safe to ship; flagged here since they're inferred, not user-provided.
 
+**Update (2026-07-20, IntervueBox — Krupal Patel):** IntervueBox is building a feature (currently in UAT, "live in a few days" as of this date) where only `jobDescription` needs to be supplied and the other fields auto-populate server-side. **Not live yet — do not change `createJob` until confirmed shipped.** Once it ships, this is a real simplification opportunity: `lib/intervuebox/jobs.ts` could drop the `location`/`jobType`/`industry`/`department`/`openings` placeholder guessing entirely. Tracked as a follow-up, not actioned in this plan.
+
+## Vendor confirmation received (2026-07-20, IntervueBox — Krupal Patel)
+
+In reply to our outreach email, IntervueBox's team confirmed:
+
+1. **`GET /reports/interviews` request format — CONFIRMED.** The documented form (GET with a JSON body `{interviewId, candidateId}`) is correct and current. A separate doc scrape (`quickstart` page) showed a conflicting `GET /reports/interviews/:sessionId` path-param form — that page is stale/wrong; ignore it. No code change needed — `lib/intervuebox/interviewReports.ts`'s raw-HTTP implementation (built specifically to support a GET-with-body, since Node's native `fetch` throws on this) stays as-is.
+2. **Applicant "Not specified"/null placeholders — CONFIRMED acceptable** for `currentCtc`/`expectedCtc`/`willingToRelocate`/`noticePeriod` when Merito doesn't collect real values. Upgrades the "Confirmed by user: option (a)" placeholder choice above from an assumption to a vendor-confirmed contract. No code change needed.
+3. **Job-creation auto-populate feature** — see the note added just above; in UAT, not yet actionable.
+4. **Data retention** — no direct policy statement; pointed to their DPA (`https://www.intervuebox.ai/dpa/`). Summary pulled from that page: candidate CVs and interview recordings are retained "as long as the client contract continues, or three (3) months from contract termination," with return/deletion available on request (subject to legal-hold exceptions). Notably: **free/trial and SMB-tier candidate data may by default be used for IntervueBox's own AI model training — only enterprise-tier accounts auto opt out.** This is relevant to Merito's own privacy policy disclosure and to which IntervueBox plan tier gets purchased; needs a business decision, not a code change.
+5. Krupal asked Merito to reciprocate with **our own retention policy** for candidate data (likely needed for their side of the DPA/compliance paperwork) — this is a business/legal answer for the founder to provide, not something derivable from the codebase.
+
+Still genuinely open after this reply: Open Item #2 (webhook payload body shape per event) and #5 (real resume-match latency) above — neither was addressed. Krupal offered a call to walk through API key creation and webhook configuration, which may resolve #2 live.
+
 ## Testing
 - Unit tests per `lib/intervuebox/*` module with mocked `fetch` (mirrors existing `lib/__tests__/generateFitmentReport.test.ts` pattern).
 - Route tests for `fitment-check` and `unlock-report` mock the IntervueBox client the same way current tests mock `scoreFitment`/`generateFitmentReport`.

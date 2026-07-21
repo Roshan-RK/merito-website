@@ -2,14 +2,41 @@ import { verifyRecaptchaToken } from "@/lib/recaptcha";
 import { createRateLimiter } from "@/lib/rateLimit";
 import { createJob } from "@/lib/intervuebox/jobs";
 import { uploadResume } from "@/lib/intervuebox/resumes";
-import { addApplicant } from "@/lib/intervuebox/applicants";
+import { addApplicant, type AddApplicantInput } from "@/lib/intervuebox/applicants";
 import { getResumeMatchReport, scoreOutOfTen } from "@/lib/intervuebox/reports";
+import { IntervueBoxError } from "@/lib/intervuebox/client";
 import { getSupabaseServerClient } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
 const checkEmailRateLimit = createRateLimiter({ max: 3, windowMs: 60 * 60 * 1000 });
 const checkIpRateLimit = createRateLimiter({ max: 5, windowMs: 60 * 60 * 1000 });
+
+// IntervueBox parses an uploaded resume asynchronously before it can be
+// linked to a job (~40-50s observed for a real DOCX). addApplicant rejects
+// with "Resume is still being parsed..." until that finishes — retry on
+// that specific condition instead of failing immediately. Overridable via
+// env so tests can use near-instant real delays instead of fake timers.
+const RESUME_PARSE_MAX_WAIT_MS = Number(process.env.RESUME_PARSE_MAX_WAIT_MS) || 90_000;
+const RESUME_PARSE_RETRY_INTERVAL_MS = Number(process.env.RESUME_PARSE_RETRY_INTERVAL_MS) || 8_000;
+
+function isResumeStillParsingError(err: unknown): boolean {
+  return err instanceof IntervueBoxError && /still being parsed/i.test(err.message);
+}
+
+async function addApplicantWithRetry(input: AddApplicantInput) {
+  const deadline = Date.now() + RESUME_PARSE_MAX_WAIT_MS;
+  for (;;) {
+    try {
+      return await addApplicant(input);
+    } catch (err) {
+      if (!isResumeStillParsingError(err) || Date.now() >= deadline) {
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, RESUME_PARSE_RETRY_INTERVAL_MS));
+    }
+  }
+}
 
 const MAX_CV_SIZE_BYTES = 5 * 1024 * 1024; // 5MB, matches client-side cap in FitmentChecker.tsx
 const MAX_TEXT_CHARS = 20000;
@@ -93,7 +120,7 @@ export async function POST(request: Request) {
   try {
     ({ ibJobId } = await createJob({ title: role, jobDescription: jdForScoring }));
     ({ ibResumeId } = await uploadResume(cv, { jobId: ibJobId }));
-    ({ ibAppliedJobId } = await addApplicant({
+    ({ ibAppliedJobId } = await addApplicantWithRetry({
       jobId: ibJobId,
       resumeId: ibResumeId,
       name: name || "Candidate",

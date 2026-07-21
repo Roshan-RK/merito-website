@@ -23,6 +23,10 @@ export async function createJob(input: CreateJobInput): Promise<{ ibJobId: strin
       department: "General",
       openings: 1,
       jobDescription: input.jobDescription,
+      skills: [],
+      education: [],
+      experience: "Not specified",
+      status: "ACTIVE",
     }),
   });
   return { ibJobId: response.jobId };

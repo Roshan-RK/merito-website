@@ -12,6 +12,10 @@ vi.mock("@/lib/intervuebox/resumes", () => ({
 vi.mock("@/lib/intervuebox/applicants", () => ({
   addApplicant: vi.fn().mockResolvedValue({ ibAppliedJobId: "APJ_123" }),
 }));
+vi.mock("@/lib/intervuebox/client", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/intervuebox/client")>("@/lib/intervuebox/client");
+  return { IntervueBoxError: actual.IntervueBoxError };
+});
 vi.mock("@/lib/intervuebox/reports", () => ({
   getResumeMatchReport: vi.fn().mockResolvedValue({
     status: "READY",
@@ -177,6 +181,57 @@ describe("POST /api/hub/fitment-check", () => {
       body: buildForm(),
     });
     const response = await POST(request);
+    expect(response.status).toBe(500);
+  });
+
+  it("retries addApplicant while the resume is still being parsed, then succeeds", async () => {
+    vi.stubEnv("RESUME_PARSE_MAX_WAIT_MS", "200");
+    vi.stubEnv("RESUME_PARSE_RETRY_INTERVAL_MS", "5");
+    const { addApplicant } = await import("@/lib/intervuebox/applicants");
+    const { IntervueBoxError } = await import("@/lib/intervuebox/client");
+    vi.mocked(addApplicant)
+      .mockRejectedValueOnce(
+        new IntervueBoxError({
+          code: "bad_request",
+          message: "Resume is still being parsed and has no linked candidate yet.",
+          status: 400,
+        })
+      )
+      .mockResolvedValueOnce({ ibAppliedJobId: "APJ_123" });
+
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm(),
+    });
+    const response = await POST(request);
+
+    // A plain rejection (no retry) would have 500'd immediately — 200 here
+    // only happens if the retry loop caught the "still parsing" rejection
+    // and successfully re-called addApplicant to get the resolved value.
+    expect(response.status).toBe(200);
+  });
+
+  it("gives up and returns 500 if the resume is still parsing after the max wait", async () => {
+    vi.stubEnv("RESUME_PARSE_MAX_WAIT_MS", "20");
+    vi.stubEnv("RESUME_PARSE_RETRY_INTERVAL_MS", "5");
+    const { addApplicant } = await import("@/lib/intervuebox/applicants");
+    const { IntervueBoxError } = await import("@/lib/intervuebox/client");
+    vi.mocked(addApplicant).mockRejectedValue(
+      new IntervueBoxError({
+        code: "bad_request",
+        message: "Resume is still being parsed and has no linked candidate yet.",
+        status: 400,
+      })
+    );
+
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm(),
+    });
+    const response = await POST(request);
+
     expect(response.status).toBe(500);
   });
 });
