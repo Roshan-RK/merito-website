@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import SignOutButton from "./SignOutButton";
 
 export default function TopBar({ roleTitle, onChangeRole }: { roleTitle: string; onChangeRole: () => void }) {
@@ -10,16 +11,25 @@ export default function TopBar({ roleTitle, onChangeRole }: { roleTitle: string;
       style={{ height: 66, padding: "0 24px", zIndex: 20, boxShadow: "0 8px 22px rgba(17,35,89,0.06)" }}
     >
       <div className="flex items-center" style={{ gap: 10 }}>
-        <Image src="/logo.png" alt="Merito" width={100} height={28} style={{ height: 24, width: "auto" }} />
-        <span
-          className="bg-[#ed1a24] text-white font-[family-name:var(--font-poppins)] font-bold"
-          style={{ fontSize: 10, letterSpacing: "0.06em", borderRadius: 50, padding: "3px 9px" }}
-        >
-          HUB
-        </span>
+        <Link href="/" className="flex items-center" style={{ gap: 10 }}>
+          <Image src="/logo.png" alt="Merito" width={100} height={28} style={{ height: 24, width: "auto" }} />
+          <span
+            className="bg-[#ed1a24] text-white font-[family-name:var(--font-poppins)] font-bold"
+            style={{ fontSize: 10, letterSpacing: "0.06em", borderRadius: 50, padding: "3px 9px" }}
+          >
+            HUB
+          </span>
+        </Link>
         <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#4b4b4d] hidden sm:inline" style={{ fontSize: 13 }}>
           Dashboard
         </span>
+        <Link
+          href="/"
+          className="hidden lg:inline font-[family-name:var(--font-poppins)] font-semibold text-[#9c9c9c] hover:text-[#ed1a24] transition-colors"
+          style={{ fontSize: 12 }}
+        >
+          ← Merito.ai
+        </Link>
       </div>
 
       <div className="flex items-center" style={{ gap: 12 }}>
