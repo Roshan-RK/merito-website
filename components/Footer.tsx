@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { isHubAccountRoute } from "@/lib/hubRoutes";
 
 const socialLinks = [
   {
@@ -38,6 +40,12 @@ const socialLinks = [
 ];
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  if (isHubAccountRoute(pathname)) {
+    return null;
+  }
+
   return (
     <footer className="w-full bg-black text-white">
       <div className="mx-auto flex max-w-[1328px] flex-col gap-10 px-5 py-14 sm:px-6 lg:px-10">

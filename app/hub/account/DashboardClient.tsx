@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import TopBar from "./TopBar";
 import ProgressRail, { type InterviewStatus } from "./ProgressRail";
 import ScoreCard from "./ScoreCard";
 import ReportPaywallModal from "./ReportPaywallModal";
-import ChangeRoleModal from "./ChangeRoleModal";
 import InterviewStartModal from "./InterviewStartModal";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 
@@ -26,15 +24,13 @@ export default function DashboardClient({
   initialReport: ResumeMatchReportReady | null;
   initialInterviewStatus: InterviewStatus;
 }) {
-  const [modal, setModal] = useState<"none" | "report" | "changeRole" | "interview">("none");
+  const [modal, setModal] = useState<"none" | "report" | "interview">("none");
   const [reportUnlocked, setReportUnlocked] = useState(initialReportUnlocked);
   const [report, setReport] = useState<ResumeMatchReportReady | null>(initialReport);
   const [interviewStatus, setInterviewStatus] = useState<InterviewStatus>(initialInterviewStatus);
 
   return (
     <>
-      <TopBar roleTitle={roleTitle} onChangeRole={() => setModal("changeRole")} />
-
       <div
         className="mx-auto"
         style={{ maxWidth: 1440, padding: 24, display: "grid", gridTemplateColumns: "280px minmax(0,1fr)", gap: 22 }}
@@ -77,9 +73,6 @@ export default function DashboardClient({
             setModal("none");
           }}
         />
-      )}
-      {modal === "changeRole" && (
-        <ChangeRoleModal onClose={() => setModal("none")} onRoleChanged={() => setModal("none")} />
       )}
       {modal === "interview" && (
         <InterviewStartModal

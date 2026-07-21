@@ -3,6 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
+import { isHubAccountRoute } from "@/lib/hubRoutes";
 
 const navLinks = [
   { label: "About us", href: "/about" },
@@ -16,6 +18,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [platformsOpen, setPlatformsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -28,6 +31,10 @@ export default function Navbar() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  if (isHubAccountRoute(pathname)) {
+    return null;
+  }
 
   return (
     <header className="sticky top-0 z-50 flex justify-center bg-transparent px-4 py-4">
