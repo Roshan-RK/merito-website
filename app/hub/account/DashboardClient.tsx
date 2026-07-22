@@ -15,6 +15,7 @@ export default function DashboardClient({
   initialReportUnlocked,
   initialReport,
   initialInterviewStatus,
+  referenceCheckStatus,
 }: {
   roleTitle: string;
   score: number;
@@ -23,6 +24,7 @@ export default function DashboardClient({
   initialReportUnlocked: boolean;
   initialReport: ResumeMatchReportReady | null;
   initialInterviewStatus: InterviewStatus;
+  referenceCheckStatus: "none" | "in_progress" | "completed";
 }) {
   const [modal, setModal] = useState<"none" | "report" | "interview">("none");
   const [reportUnlocked, setReportUnlocked] = useState(initialReportUnlocked);
@@ -38,6 +40,7 @@ export default function DashboardClient({
         <ProgressRail
           reportUnlocked={reportUnlocked}
           interviewStatus={interviewStatus}
+          referenceCheckStatus={referenceCheckStatus}
           roleTitle={roleTitle}
           onOpenReportPaywall={() => setModal("report")}
           onOpenInterviewStart={() => setModal("interview")}
