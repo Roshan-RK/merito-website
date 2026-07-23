@@ -78,6 +78,7 @@ export async function POST(request: Request) {
                 strengths: report.strengths,
                 areasOfImprovement: report.areasOfImprovement,
                 shareableReportLink: report.shareableReportLink,
+                approxDurationMinutes: report.approxDurationMinutes,
               },
               updated_at: new Date().toISOString(),
             })

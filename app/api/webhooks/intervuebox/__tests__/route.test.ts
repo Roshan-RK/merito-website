@@ -80,6 +80,7 @@ describe("POST /api/webhooks/intervuebox", () => {
           strengths: "Clear communication.",
           areasOfImprovement: "More examples.",
           shareableReportLink: "https://app.intervuebox.com/reports/ISE_1",
+          approxDurationMinutes: 4,
         };
       }
       return { status: "NOT_READY" };
@@ -99,7 +100,10 @@ describe("POST /api/webhooks/intervuebox", () => {
     expect(getInterviewReportMock).toHaveBeenCalledTimes(2);
     expect(updateMock).toHaveBeenCalledTimes(1);
     expect(updateMock).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "ready" })
+      expect.objectContaining({
+        status: "ready",
+        report_raw: expect.objectContaining({ approxDurationMinutes: 4 }),
+      })
     );
     expect(updateEq1Mock).toHaveBeenCalledWith("user_id", "user-1");
     expect(updateEq2Mock).toHaveBeenCalledWith("role_title", "Senior Product Manager");
