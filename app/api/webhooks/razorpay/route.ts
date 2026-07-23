@@ -30,6 +30,13 @@ export async function POST(request: Request) {
     return Response.json({ received: true });
   }
 
+  // Only payment.captured means the payment actually succeeded — entity
+  // shape is identical for payment.failed, so without this check a failed
+  // payment's webhook would still unlock the report.
+  if (payload.event !== "payment.captured") {
+    return Response.json({ received: true });
+  }
+
   const orderId = payload.payload?.payment?.entity?.order_id;
   const paymentId = payload.payload?.payment?.entity?.id;
 

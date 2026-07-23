@@ -64,6 +64,19 @@ describe("POST /api/webhooks/razorpay", () => {
     expect(await response.json()).toEqual({ received: true });
   });
 
+  it("does not finalize a payment.failed event even though the entity shape matches", async () => {
+    verifyWebhookSignatureMock.mockReturnValue(true);
+    const rawBody = JSON.stringify({
+      event: "payment.failed",
+      payload: { payment: { entity: { id: "pay_1", order_id: "order_1" } } },
+    });
+    const { POST } = await importRoute();
+    const response = await POST(buildRequest(rawBody, "good-signature"));
+
+    expect(finalizeRazorpayOrderMock).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+  });
+
   it("still returns 200 without calling finalize when the payload has no payment entity", async () => {
     verifyWebhookSignatureMock.mockReturnValue(true);
     const rawBody = JSON.stringify({ event: "order.paid" });
