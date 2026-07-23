@@ -119,7 +119,8 @@ function parseTimestampToSeconds(timestamp: string): number {
 function computeApproxDurationMinutes(answers: Array<{ timestamp: string }> | undefined): number | null {
   if (!answers || answers.length === 0) return null;
   const lastTimestamp = answers[answers.length - 1].timestamp;
-  return Math.ceil(parseTimestampToSeconds(lastTimestamp) / 60);
+  const minutes = Math.ceil(parseTimestampToSeconds(lastTimestamp) / 60);
+  return Number.isFinite(minutes) ? minutes : null;
 }
 
 export async function getInterviewReport(interviewId: string, candidateId: string): Promise<InterviewReport> {

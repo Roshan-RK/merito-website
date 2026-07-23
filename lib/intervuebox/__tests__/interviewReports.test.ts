@@ -115,6 +115,31 @@ describe("getInterviewReport", () => {
     expect(result).toMatchObject({ status: "READY", approxDurationMinutes: null });
   });
 
+  it("returns null approxDurationMinutes instead of NaN when the last timestamp is malformed", async () => {
+    respond = (_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          shareableReportLink: null,
+          sessionDetails: {
+            skillReport: {},
+            answers: [{ timestamp: "ab:cd" }],
+            overallReport: {
+              score: 5,
+              metrics: {},
+              overallSummary: "Malformed timestamp from upstream.",
+            },
+          },
+        })
+      );
+    };
+    const { getInterviewReport } = await import("../interviewReports");
+
+    const result = await getInterviewReport("INT_123", "USR_123");
+
+    expect(result).toMatchObject({ status: "READY", approxDurationMinutes: null });
+  });
+
   it("returns NOT_READY when the server responds 404", async () => {
     respond = (_req, res) => {
       res.writeHead(404, { "Content-Type": "application/json" });

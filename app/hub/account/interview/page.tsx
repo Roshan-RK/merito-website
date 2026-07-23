@@ -139,7 +139,7 @@ export default async function InterviewReportPage({
               Parameters score
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
-              {Object.entries(report.skillMetrics).map(([skill, score]) => (
+              {Object.entries(report.skillMetrics ?? {}).map(([skill, score]) => (
                 <ParameterScoreTile key={skill} skill={skill} score={score} />
               ))}
             </div>

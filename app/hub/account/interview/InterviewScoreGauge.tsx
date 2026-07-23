@@ -22,7 +22,7 @@ export default function InterviewScoreGauge({ score }: { score: number }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
       <svg width={140} height={140} viewBox="0 0 140 140">
-        <circle cx={70} cy={70} r={radius} fill="none" stroke="#f0e6ea" strokeWidth={12} />
+        <circle cx={70} cy={70} r={radius} fill="none" stroke={band.trackColor} strokeWidth={12} />
         <circle
           cx={70}
           cy={70}
