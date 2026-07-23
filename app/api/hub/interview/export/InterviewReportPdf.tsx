@@ -32,63 +32,73 @@ function splitBullets(text: string): string[] {
     .filter(Boolean);
 }
 
-export default function InterviewReportPdf({
-  displayName,
-  roleTitle,
-  infoLine,
-  report,
-}: {
+export type InterviewPdfContentProps = {
   displayName: string;
   roleTitle: string;
   infoLine: string;
   report: InterviewReportReady;
-}) {
+};
+
+export function InterviewPdfContent({
+  displayName,
+  roleTitle,
+  infoLine,
+  report,
+}: InterviewPdfContentProps) {
   const band = getScoreBand(report.overallScore);
 
   return (
+    <>
+      <View style={styles.headerRow}>
+        <Text style={styles.name}>{displayName}</Text>
+        <Text style={styles.rolePill}>{roleTitle}</Text>
+      </View>
+      {infoLine && <Text style={styles.infoLine}>{infoLine}</Text>}
+
+      <View style={styles.overallScoreBlock}>
+        <Text style={styles.overallScoreNumber}>{report.overallScore}/10</Text>
+        <Text style={[styles.overallScoreBand, { color: band.textColor }]}>{band.label}</Text>
+      </View>
+
+      <Text style={styles.sectionHeading}>Parameters score</Text>
+      {Object.entries(report.skillMetrics ?? {}).map(([skill, score]) => (
+        <PdfScoreBar key={skill} label={skill} score={score} max={10} />
+      ))}
+
+      <PdfSectionCard label="AI overview">
+        <Text style={styles.point}>{report.overallSummary}</Text>
+      </PdfSectionCard>
+
+      {report.strengths && (
+        <View>
+          <Text style={styles.sectionHeading}>Strengths</Text>
+          {splitBullets(report.strengths).map((point, i) => (
+            <Text key={i} style={styles.point}>
+              + {point}
+            </Text>
+          ))}
+        </View>
+      )}
+
+      {report.areasOfImprovement && (
+        <View>
+          <Text style={styles.sectionHeading}>Areas to improve</Text>
+          {splitBullets(report.areasOfImprovement).map((point, i) => (
+            <Text key={i} style={styles.point}>
+              - {point}
+            </Text>
+          ))}
+        </View>
+      )}
+    </>
+  );
+}
+
+export default function InterviewReportPdf(props: InterviewPdfContentProps) {
+  return (
     <Document>
       <PdfPage title="AI Interview Report">
-        <View style={styles.headerRow}>
-          <Text style={styles.name}>{displayName}</Text>
-          <Text style={styles.rolePill}>{roleTitle}</Text>
-        </View>
-        {infoLine && <Text style={styles.infoLine}>{infoLine}</Text>}
-
-        <View style={styles.overallScoreBlock}>
-          <Text style={styles.overallScoreNumber}>{report.overallScore}/10</Text>
-          <Text style={[styles.overallScoreBand, { color: band.textColor }]}>{band.label}</Text>
-        </View>
-
-        <Text style={styles.sectionHeading}>Parameters score</Text>
-        {Object.entries(report.skillMetrics ?? {}).map(([skill, score]) => (
-          <PdfScoreBar key={skill} label={skill} score={score} max={10} />
-        ))}
-
-        <PdfSectionCard label="AI overview">
-          <Text style={styles.point}>{report.overallSummary}</Text>
-        </PdfSectionCard>
-
-        {report.strengths && (
-          <View>
-            <Text style={styles.sectionHeading}>Strengths</Text>
-            {splitBullets(report.strengths).map((point, i) => (
-              <Text key={i} style={styles.point}>
-                + {point}
-              </Text>
-            ))}
-          </View>
-        )}
-
-        {report.areasOfImprovement && (
-          <View>
-            <Text style={styles.sectionHeading}>Areas to improve</Text>
-            {splitBullets(report.areasOfImprovement).map((point, i) => (
-              <Text key={i} style={styles.point}>
-                - {point}
-              </Text>
-            ))}
-          </View>
-        )}
+        <InterviewPdfContent {...props} />
       </PdfPage>
     </Document>
   );

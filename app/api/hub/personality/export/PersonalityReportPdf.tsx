@@ -44,78 +44,88 @@ const styles = StyleSheet.create({
   validityValue: { fontFamily: "Helvetica-Bold", fontSize: 11, marginTop: 2 },
 });
 
-export default function PersonalityReportPdf({
-  candidateName,
-  roleTitle,
-  scores,
-  validity,
-}: {
+export type PersonalityPdfContentProps = {
   candidateName: string;
   roleTitle: string;
   scores: Scores;
   validity: Validity;
-}) {
+};
+
+export function PersonalityPdfContent({
+  candidateName,
+  roleTitle,
+  scores,
+  validity,
+}: PersonalityPdfContentProps) {
   const firstName = candidateName.split(/\s+/)[0] || candidateName;
   const flags = validityFlags(validity);
 
   return (
+    <>
+      <Text style={styles.name}>{candidateName}</Text>
+      <Text style={styles.subtitle}>Big Five (OCEAN) · fit signal for {roleTitle}</Text>
+
+      {TRAITS.map((t) => {
+        const s = scores[t];
+        const level = traitLevel(s.pct);
+        return (
+          <PdfSectionCard key={t} label={`Trait ${TRAITS.indexOf(t) + 1} of ${TRAITS.length}`}>
+            <View style={styles.traitHeaderRow}>
+              <Text style={styles.traitName}>{TRAIT_NAME[t]}</Text>
+              <Text style={styles.traitScore}>
+                {s.pct}% · {BANDS[s.band]}
+              </Text>
+            </View>
+            <View style={styles.bandStrip}>
+              {BANDS.map((_, i) => (
+                <View
+                  key={i}
+                  style={[styles.bandSeg, { backgroundColor: i === s.band ? pdfTheme.colors.primary : "#f0e6ea" }]}
+                />
+              ))}
+            </View>
+            <Text style={styles.sectionLabel}>What it measures</Text>
+            <Text style={styles.body}>{TRAIT_MEANING[t]}</Text>
+            <Text style={styles.sectionLabel}>What {firstName}&apos;s score suggests at work</Text>
+            <Text style={styles.body}>{TRAIT_WORK_IMPLICATION[t][level](firstName)}</Text>
+          </PdfSectionCard>
+        );
+      })}
+
+      <PdfSectionCard label="Response quality & validity checks">
+        <View style={styles.validityGrid}>
+          <View style={styles.validityCell}>
+            <Text style={styles.validityLabel}>Acquiescence (agree bias)</Text>
+            <Text style={styles.validityValue}>{validity.meanRaw.toFixed(2)} avg</Text>
+          </View>
+          <View style={styles.validityCell}>
+            <Text style={styles.validityLabel}>Central tendency</Text>
+            <Text style={styles.validityValue}>{Math.round(validity.pctMid)}% midpoint</Text>
+          </View>
+          <View style={styles.validityCell}>
+            <Text style={styles.validityLabel}>Consistency</Text>
+            <Text style={styles.validityValue}>{validity.incon.toFixed(2)} avg gap</Text>
+          </View>
+          <View style={styles.validityCell}>
+            <Text style={styles.validityLabel}>Social desirability</Text>
+            <Text style={styles.validityValue}>{validity.sd.toFixed(2)} avg</Text>
+          </View>
+        </View>
+        <Text style={styles.body}>
+          {flags.length === 0
+            ? "Validity checks passed — the response pattern looks honest and attentive, so the scores can be read at face value."
+            : `Interpret with some caution — the response pattern shows signs of ${flags.join(", ")}.`}
+        </Text>
+      </PdfSectionCard>
+    </>
+  );
+}
+
+export default function PersonalityReportPdf(props: PersonalityPdfContentProps) {
+  return (
     <Document>
       <PdfPage title="Personality Profile">
-        <Text style={styles.name}>{candidateName}</Text>
-        <Text style={styles.subtitle}>Big Five (OCEAN) · fit signal for {roleTitle}</Text>
-
-        {TRAITS.map((t) => {
-          const s = scores[t];
-          const level = traitLevel(s.pct);
-          return (
-            <PdfSectionCard key={t} label={`Trait ${TRAITS.indexOf(t) + 1} of ${TRAITS.length}`}>
-              <View style={styles.traitHeaderRow}>
-                <Text style={styles.traitName}>{TRAIT_NAME[t]}</Text>
-                <Text style={styles.traitScore}>
-                  {s.pct}% · {BANDS[s.band]}
-                </Text>
-              </View>
-              <View style={styles.bandStrip}>
-                {BANDS.map((_, i) => (
-                  <View
-                    key={i}
-                    style={[styles.bandSeg, { backgroundColor: i === s.band ? pdfTheme.colors.primary : "#f0e6ea" }]}
-                  />
-                ))}
-              </View>
-              <Text style={styles.sectionLabel}>What it measures</Text>
-              <Text style={styles.body}>{TRAIT_MEANING[t]}</Text>
-              <Text style={styles.sectionLabel}>What {firstName}&apos;s score suggests at work</Text>
-              <Text style={styles.body}>{TRAIT_WORK_IMPLICATION[t][level](firstName)}</Text>
-            </PdfSectionCard>
-          );
-        })}
-
-        <PdfSectionCard label="Response quality & validity checks">
-          <View style={styles.validityGrid}>
-            <View style={styles.validityCell}>
-              <Text style={styles.validityLabel}>Acquiescence (agree bias)</Text>
-              <Text style={styles.validityValue}>{validity.meanRaw.toFixed(2)} avg</Text>
-            </View>
-            <View style={styles.validityCell}>
-              <Text style={styles.validityLabel}>Central tendency</Text>
-              <Text style={styles.validityValue}>{Math.round(validity.pctMid)}% midpoint</Text>
-            </View>
-            <View style={styles.validityCell}>
-              <Text style={styles.validityLabel}>Consistency</Text>
-              <Text style={styles.validityValue}>{validity.incon.toFixed(2)} avg gap</Text>
-            </View>
-            <View style={styles.validityCell}>
-              <Text style={styles.validityLabel}>Social desirability</Text>
-              <Text style={styles.validityValue}>{validity.sd.toFixed(2)} avg</Text>
-            </View>
-          </View>
-          <Text style={styles.body}>
-            {flags.length === 0
-              ? "Validity checks passed — the response pattern looks honest and attentive, so the scores can be read at face value."
-              : `Interpret with some caution — the response pattern shows signs of ${flags.join(", ")}.`}
-          </Text>
-        </PdfSectionCard>
+        <PersonalityPdfContent {...props} />
       </PdfPage>
     </Document>
   );

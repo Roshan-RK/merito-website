@@ -28,108 +28,118 @@ const styles = StyleSheet.create({
   profileMeta: { fontSize: 8.5, color: pdfTheme.colors.mutedText, marginTop: 1 },
 });
 
-export default function FitmentReportPdf({
-  displayName,
-  roleTitle,
-  formattedDate,
-  score,
-  report,
-  candidateDetails,
-}: {
+export type FitmentPdfContentProps = {
   displayName: string;
   roleTitle: string;
   formattedDate: string;
   score: number;
   report: ResumeMatchReportReady;
   candidateDetails: CandidateResumeDetails | null;
-}) {
+};
+
+export function FitmentPdfContent({
+  displayName,
+  roleTitle,
+  formattedDate,
+  score,
+  report,
+  candidateDetails,
+}: FitmentPdfContentProps) {
   return (
-    <Document>
-      <PdfPage title="Fitment Report">
-        <Text style={styles.name}>{displayName}</Text>
-        <Text style={styles.subtitle}>
-          {score.toFixed(1)} / 10 fit for {roleTitle} · {formattedDate}
-        </Text>
+    <>
+      <Text style={styles.name}>{displayName}</Text>
+      <Text style={styles.subtitle}>
+        {score.toFixed(1)} / 10 fit for {roleTitle} · {formattedDate}
+      </Text>
 
-        <PdfSectionCard label="Assessment summary">
-          <Text>{report.summary}</Text>
-        </PdfSectionCard>
+      <PdfSectionCard label="Assessment summary">
+        <Text>{report.summary}</Text>
+      </PdfSectionCard>
 
-        {candidateDetails && candidateDetails.skills.length > 0 && (
-          <View style={{ marginBottom: 12 }}>
-            <Text style={styles.sectionHeading}>Skills</Text>
-            <View style={styles.chipsRow}>
-              {candidateDetails.skills.map((skill) => (
-                <Text key={skill} style={styles.chip}>
-                  {skill}
-                </Text>
-              ))}
-            </View>
+      {candidateDetails && candidateDetails.skills.length > 0 && (
+        <View style={{ marginBottom: 12 }}>
+          <Text style={styles.sectionHeading}>Skills</Text>
+          <View style={styles.chipsRow}>
+            {candidateDetails.skills.map((skill) => (
+              <Text key={skill} style={styles.chip}>
+                {skill}
+              </Text>
+            ))}
           </View>
-        )}
+        </View>
+      )}
 
-        <Text style={styles.sectionHeading}>Match breakdown</Text>
-        {report.categories.map((category) => (
-          <PdfScoreBar key={category.key} label={category.label} score={category.score} comment={category.comment} />
-        ))}
+      <Text style={styles.sectionHeading}>Match breakdown</Text>
+      {report.categories.map((category) => (
+        <PdfScoreBar key={category.key} label={category.label} score={category.score} comment={category.comment} />
+      ))}
 
-        <Text style={styles.sectionHeading}>Strengths</Text>
-        {report.strongPoints.map((point, i) => (
-          <Text key={i} style={styles.point}>
-            + {point}
-          </Text>
-        ))}
+      <Text style={styles.sectionHeading}>Strengths</Text>
+      {report.strongPoints.map((point, i) => (
+        <Text key={i} style={styles.point}>
+          + {point}
+        </Text>
+      ))}
 
-        <Text style={styles.sectionHeading}>Gaps to address</Text>
-        {report.weakPoints.map((point, i) => (
-          <Text key={i} style={styles.point}>
-            - {point}
-          </Text>
-        ))}
+      <Text style={styles.sectionHeading}>Gaps to address</Text>
+      {report.weakPoints.map((point, i) => (
+        <Text key={i} style={styles.point}>
+          - {point}
+        </Text>
+      ))}
 
-        {candidateDetails && (candidateDetails.education.length > 0 || candidateDetails.experience.length > 0) && (
-          <View>
-            <Text style={styles.sectionHeading}>Candidate profile</Text>
-            <View style={styles.profileRow}>
-              {candidateDetails.education.length > 0 && (
-                <View style={styles.profileCol}>
-                  <Text style={[styles.profileTitle, { marginBottom: 4 }]}>Education</Text>
-                  {candidateDetails.education.map((e, i) => (
-                    <View key={i} style={{ marginBottom: 6 }}>
-                      <Text style={styles.profileTitle}>{e.qualification}</Text>
-                      <Text style={styles.profileMeta}>
-                        {e.college} · {e.duration}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-              {candidateDetails.experience.length > 0 && (
-                <View style={styles.profileCol}>
-                  <Text style={[styles.profileTitle, { marginBottom: 4 }]}>Experience</Text>
-                  {candidateDetails.experience.map((e, i) => (
-                    <View key={i} style={{ marginBottom: 6 }}>
-                      <Text style={styles.profileTitle}>{e.position}</Text>
-                      <Text style={styles.profileMeta}>
-                        {e.company} · {e.duration}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-            {candidateDetails.certifications.length > 0 && (
-              <View>
-                <Text style={[styles.profileTitle, { marginBottom: 4 }]}>Certifications</Text>
-                {candidateDetails.certifications.map((c, i) => (
-                  <Text key={i} style={styles.point}>
-                    {c}
-                  </Text>
+      {candidateDetails && (candidateDetails.education.length > 0 || candidateDetails.experience.length > 0) && (
+        <View>
+          <Text style={styles.sectionHeading}>Candidate profile</Text>
+          <View style={styles.profileRow}>
+            {candidateDetails.education.length > 0 && (
+              <View style={styles.profileCol}>
+                <Text style={[styles.profileTitle, { marginBottom: 4 }]}>Education</Text>
+                {candidateDetails.education.map((e, i) => (
+                  <View key={i} style={{ marginBottom: 6 }}>
+                    <Text style={styles.profileTitle}>{e.qualification}</Text>
+                    <Text style={styles.profileMeta}>
+                      {e.college} · {e.duration}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            {candidateDetails.experience.length > 0 && (
+              <View style={styles.profileCol}>
+                <Text style={[styles.profileTitle, { marginBottom: 4 }]}>Experience</Text>
+                {candidateDetails.experience.map((e, i) => (
+                  <View key={i} style={{ marginBottom: 6 }}>
+                    <Text style={styles.profileTitle}>{e.position}</Text>
+                    <Text style={styles.profileMeta}>
+                      {e.company} · {e.duration}
+                    </Text>
+                  </View>
                 ))}
               </View>
             )}
           </View>
-        )}
+          {candidateDetails.certifications.length > 0 && (
+            <View>
+              <Text style={[styles.profileTitle, { marginBottom: 4 }]}>Certifications</Text>
+              {candidateDetails.certifications.map((c, i) => (
+                <Text key={i} style={styles.point}>
+                  {c}
+                </Text>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
+    </>
+  );
+}
+
+export default function FitmentReportPdf(props: FitmentPdfContentProps) {
+  return (
+    <Document>
+      <PdfPage title="Fitment Report">
+        <FitmentPdfContent {...props} />
       </PdfPage>
     </Document>
   );
