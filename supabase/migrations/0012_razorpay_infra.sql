@@ -1,4 +1,4 @@
-create type payu_product as enum ('report', 'personality', 'references', 'interview', 'counselling', 'bundle');
+create type product_type as enum ('report', 'personality', 'references', 'interview', 'counselling', 'bundle');
 create type candidate_level as enum ('entry', 'mid', 'senior');
 
 alter table fitment_leads
@@ -28,10 +28,11 @@ alter table report_unlocks alter column lead_id set not null;
 alter table report_unlocks drop constraint report_unlocks_pkey;
 alter table report_unlocks add primary key (user_id, lead_id);
 
-create table if not exists payu_transactions (
-  txnid text primary key,
+create table if not exists razorpay_transactions (
+  order_id text primary key,
+  payment_id text,
   user_id uuid not null references auth.users(id),
-  product payu_product not null,
+  product product_type not null,
   level candidate_level not null,
   lead_id uuid references fitment_leads(id),
   amount_paise integer not null,
@@ -40,11 +41,11 @@ create table if not exists payu_transactions (
   created_at timestamptz not null default now()
 );
 
-alter table payu_transactions enable row level security;
+alter table razorpay_transactions enable row level security;
 
-drop policy if exists "Users can view their own payu transactions" on payu_transactions;
+drop policy if exists "Users can view their own razorpay transactions" on razorpay_transactions;
 
-create policy "Users can view their own payu transactions"
-  on payu_transactions
+create policy "Users can view their own razorpay transactions"
+  on razorpay_transactions
   for select
   using (auth.uid() = user_id);
