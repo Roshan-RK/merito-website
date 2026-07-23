@@ -1,11 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const getUserMock = vi.fn();
 const leadSelectMock = vi.fn();
 const leadEq1Mock = vi.fn();
 const leadEq2Mock = vi.fn();
-const leadOrderMock = vi.fn();
-const leadLimitMock = vi.fn();
 const leadMaybeSingleMock = vi.fn();
 const sessionFromMock = vi.fn();
 
@@ -14,6 +12,7 @@ const getResumeMatchReportMock = vi.fn();
 
 const updateEqMock = vi.fn().mockResolvedValue({ error: null });
 const updateMock = vi.fn().mockReturnValue({ eq: updateEqMock });
+const insertMock = vi.fn();
 const adminFromMock = vi.fn();
 
 vi.mock("@/lib/supabaseAuthServer", () => ({
@@ -38,9 +37,7 @@ function buildLeadChain(result: { data: unknown; error: unknown }) {
   sessionFromMock.mockReturnValue({ select: leadSelectMock });
   leadSelectMock.mockReturnValue({ eq: leadEq1Mock });
   leadEq1Mock.mockReturnValue({ eq: leadEq2Mock });
-  leadEq2Mock.mockReturnValue({ order: leadOrderMock });
-  leadOrderMock.mockReturnValue({ limit: leadLimitMock });
-  leadLimitMock.mockReturnValue({ maybeSingle: leadMaybeSingleMock });
+  leadEq2Mock.mockReturnValue({ maybeSingle: leadMaybeSingleMock });
   leadMaybeSingleMock.mockResolvedValue(result);
 }
 
@@ -55,16 +52,16 @@ describe("POST /api/hub/unlock-report", () => {
     leadSelectMock.mockReset();
     leadEq1Mock.mockReset();
     leadEq2Mock.mockReset();
-    leadOrderMock.mockReset();
-    leadLimitMock.mockReset();
     leadMaybeSingleMock.mockReset();
     unlockReportMock.mockReset();
     getResumeMatchReportMock.mockReset();
     updateMock.mockClear();
     updateEqMock.mockClear();
     updateEqMock.mockResolvedValue({ error: null });
+    insertMock.mockReset();
+    insertMock.mockResolvedValue({ error: null });
     adminFromMock.mockReset();
-    adminFromMock.mockReturnValue({ update: updateMock });
+    adminFromMock.mockReturnValue({ update: updateMock, insert: insertMock });
   });
 
   it("returns 401 when there is no session", async () => {
@@ -72,13 +69,13 @@ describe("POST /api/hub/unlock-report", () => {
     const { POST } = await importRoute();
     const request = new Request("http://localhost/api/hub/unlock-report", {
       method: "POST",
-      body: JSON.stringify({ roleTitle: "Senior Product Manager" }),
+      body: JSON.stringify({ leadId: "lead-1" }),
     });
     const response = await POST(request);
     expect(response.status).toBe(401);
   });
 
-  it("returns 400 when roleTitle is missing", async () => {
+  it("returns 400 when leadId is missing", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-123" } } });
     const { POST } = await importRoute();
     const request = new Request("http://localhost/api/hub/unlock-report", {
@@ -95,11 +92,25 @@ describe("POST /api/hub/unlock-report", () => {
     const { POST } = await importRoute();
     const request = new Request("http://localhost/api/hub/unlock-report", {
       method: "POST",
-      body: JSON.stringify({ roleTitle: "Senior Product Manager" }),
+      body: JSON.stringify({ leadId: "lead-1" }),
     });
     const response = await POST(request);
     expect(response.status).toBe(400);
     expect(unlockReportMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when the lead doesn't belong to this user", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-123" } } });
+    buildLeadChain({ data: null, error: null });
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/unlock-report", {
+      method: "POST",
+      body: JSON.stringify({ leadId: "someone-elses-lead" }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+    expect(leadEq1Mock).toHaveBeenCalledWith("user_id", "user-123");
+    expect(leadEq2Mock).toHaveBeenCalledWith("id", "someone-elses-lead");
   });
 
   it("returns the stored resume-match detail directly when already READY", async () => {
@@ -114,13 +125,13 @@ describe("POST /api/hub/unlock-report", () => {
     const { POST } = await importRoute();
     const request = new Request("http://localhost/api/hub/unlock-report", {
       method: "POST",
-      body: JSON.stringify({ roleTitle: "Senior Product Manager" }),
+      body: JSON.stringify({ leadId: "lead-1" }),
     });
     const response = await POST(request);
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(unlockReportMock).toHaveBeenCalledWith("user-123", "Senior Product Manager");
+    expect(unlockReportMock).toHaveBeenCalledWith("user-123", "lead-1");
     expect(getResumeMatchReportMock).not.toHaveBeenCalled();
     expect(body).toEqual({ status: "unlocked", report: storedRaw });
   });
@@ -145,7 +156,7 @@ describe("POST /api/hub/unlock-report", () => {
     const { POST } = await importRoute();
     const request = new Request("http://localhost/api/hub/unlock-report", {
       method: "POST",
-      body: JSON.stringify({ roleTitle: "Senior Product Manager" }),
+      body: JSON.stringify({ leadId: "lead-1" }),
     });
     const response = await POST(request);
     const body = await response.json();
@@ -172,12 +183,53 @@ describe("POST /api/hub/unlock-report", () => {
     const { POST } = await importRoute();
     const request = new Request("http://localhost/api/hub/unlock-report", {
       method: "POST",
-      body: JSON.stringify({ roleTitle: "Senior Product Manager" }),
+      body: JSON.stringify({ leadId: "lead-1" }),
     });
     const response = await POST(request);
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ status: "pending" });
+  });
+
+  describe("live PayU path (PAYU_BYPASS=false)", () => {
+    beforeEach(() => {
+      process.env.PAYU_BYPASS = "false";
+      process.env.PAYU_MERCHANT_KEY = "testkey";
+      process.env.PAYU_MERCHANT_SALT = "testsalt";
+      process.env.PAYU_BASE_URL = "https://test.payu.in";
+    });
+
+    afterEach(() => {
+      delete process.env.PAYU_BYPASS;
+      delete process.env.PAYU_MERCHANT_KEY;
+      delete process.env.PAYU_MERCHANT_SALT;
+      delete process.env.PAYU_BASE_URL;
+    });
+
+    it("creates a pending payu_transactions row and returns a redirect form instead of unlocking", async () => {
+      getUserMock.mockResolvedValue({ data: { user: { id: "user-123", email: "rushi@example.com" } } });
+      buildLeadChain({
+        data: { id: "lead-1", role_title: "Senior Product Manager", candidate_level: "mid", ib_applied_job_id: "APJ_1", resume_match_status: "READY", resume_match_raw: {} },
+        error: null,
+      });
+      insertMock.mockResolvedValue({ error: null });
+
+      const { POST } = await importRoute();
+      const request = new Request("http://localhost/api/hub/unlock-report", {
+        method: "POST",
+        body: JSON.stringify({ leadId: "lead-1" }),
+      });
+      const response = await POST(request);
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.status).toBe("redirect");
+      expect(body.form.action).toContain("_payment");
+      expect(insertMock).toHaveBeenCalledWith(
+        expect.objectContaining({ user_id: "user-123", product: "report", lead_id: "lead-1", level: "mid", status: "initiated" })
+      );
+      expect(unlockReportMock).not.toHaveBeenCalled();
+    });
   });
 });
