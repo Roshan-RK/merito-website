@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import ProgressRail, { type InterviewStatus } from "./ProgressRail";
+import ProgressRail, { type InterviewStatus, type PersonalityStatus } from "./ProgressRail";
 import ScoreCard from "./ScoreCard";
 import ReportPaywallModal from "./ReportPaywallModal";
 import InterviewStartModal from "./InterviewStartModal";
+import CombinedExportModal from "./CombinedExportModal";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 
 export default function DashboardClient({
@@ -16,6 +17,7 @@ export default function DashboardClient({
   initialReport,
   initialInterviewStatus,
   referenceCheckStatus,
+  personalityStatus,
 }: {
   roleTitle: string;
   score: number;
@@ -25,8 +27,9 @@ export default function DashboardClient({
   initialReport: ResumeMatchReportReady | null;
   initialInterviewStatus: InterviewStatus;
   referenceCheckStatus: "none" | "in_progress" | "completed";
+  personalityStatus: PersonalityStatus;
 }) {
-  const [modal, setModal] = useState<"none" | "report" | "interview">("none");
+  const [modal, setModal] = useState<"none" | "report" | "interview" | "export">("none");
   const [reportUnlocked, setReportUnlocked] = useState(initialReportUnlocked);
   const [report, setReport] = useState<ResumeMatchReportReady | null>(initialReport);
   const [interviewStatus, setInterviewStatus] = useState<InterviewStatus>(initialInterviewStatus);
@@ -41,6 +44,7 @@ export default function DashboardClient({
           reportUnlocked={reportUnlocked}
           interviewStatus={interviewStatus}
           referenceCheckStatus={referenceCheckStatus}
+          personalityStatus={personalityStatus}
           roleTitle={roleTitle}
           onOpenReportPaywall={() => setModal("report")}
           onOpenInterviewStart={() => setModal("interview")}
@@ -66,6 +70,16 @@ export default function DashboardClient({
         </div>
       </div>
 
+      <div className="mx-auto" style={{ maxWidth: 1440, padding: "0 24px 24px" }}>
+        <button
+          onClick={() => setModal("export")}
+          className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+          style={{ background: "none", border: "1px solid rgba(237,26,36,0.4)", borderRadius: 8, padding: "10px 16px", fontSize: 13, cursor: "pointer" }}
+        >
+          Download combined report
+        </button>
+      </div>
+
       {modal === "report" && (
         <ReportPaywallModal
           roleTitle={roleTitle}
@@ -85,6 +99,15 @@ export default function DashboardClient({
             setInterviewStatus(status);
             setModal("none");
           }}
+        />
+      )}
+      {modal === "export" && (
+        <CombinedExportModal
+          roleTitle={roleTitle}
+          reportUnlocked={reportUnlocked}
+          personalityStatus={personalityStatus}
+          interviewStatus={interviewStatus}
+          onClose={() => setModal("none")}
         />
       )}
     </>
