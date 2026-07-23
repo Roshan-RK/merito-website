@@ -68,6 +68,7 @@ export async function POST(request: Request) {
   const jdText = normalize(form.get("jdText"));
   const jdUrl = normalize(form.get("jdUrl"));
   const phone = normalize(form.get("phone"));
+  const candidateLevel = normalize(form.get("candidateLevel"));
   const recaptchaToken = normalize(form.get("recaptchaToken"));
   const cv = form.get("cv");
 
@@ -79,6 +80,9 @@ export async function POST(request: Request) {
   }
   if (!phone) {
     return Response.json({ error: "A phone number is required." }, { status: 400 });
+  }
+  if (candidateLevel !== "entry" && candidateLevel !== "mid" && candidateLevel !== "senior") {
+    return Response.json({ error: "Select your experience level." }, { status: 400 });
   }
   if (!jdText && !jdUrl) {
     return Response.json({ error: "Paste a job description or provide a link." }, { status: 400 });
@@ -144,6 +148,7 @@ export async function POST(request: Request) {
       name: name || null,
       email,
       role_title: role,
+      candidate_level: candidateLevel,
       jd_text: jdForScoring,
       jd_source: jdSource,
       score: report.status === "READY" ? scoreOutOfTen(report.overallScore) : 0,

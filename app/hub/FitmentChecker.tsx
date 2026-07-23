@@ -23,6 +23,7 @@ export default function FitmentChecker() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
   const [phone, setPhone] = useState("");
+  const [candidateLevel, setCandidateLevel] = useState<"" | "entry" | "mid" | "senior">("");
   const [jdMode, setJdMode] = useState<JdMode>("paste");
   const [jdText, setJdText] = useState("");
   const [jdUrl, setJdUrl] = useState("");
@@ -66,7 +67,7 @@ export default function FitmentChecker() {
   }, [recaptchaEnabled, recaptchaSiteKey]);
 
   const roleLabel = role.trim() || "your target role";
-  const canSubmit = email.trim() && role.trim() && phone.trim() && (jdMode === "paste" ? jdText.trim() : jdUrl.trim()) && cvFile && !checking;
+  const canSubmit = email.trim() && role.trim() && phone.trim() && candidateLevel && (jdMode === "paste" ? jdText.trim() : jdUrl.trim()) && cvFile && !checking;
 
   const animateScore = (target: number) => {
     const t0 = performance.now();
@@ -101,6 +102,7 @@ export default function FitmentChecker() {
     form.set("email", email.trim());
     form.set("role", role.trim());
     form.set("phone", phone.trim());
+    form.set("candidateLevel", candidateLevel);
     if (jdMode === "paste") form.set("jdText", jdText.trim());
     else form.set("jdUrl", jdUrl.trim());
     form.set("cv", cvFile);
@@ -246,6 +248,20 @@ export default function FitmentChecker() {
         className="w-full box-border bg-white font-[family-name:var(--font-poppins)] text-black outline-none border border-[#dcdcdc] focus:border-[#ed1a24] transition-colors"
         style={{ padding: "13px 14px", borderRadius: 8, fontSize: 14, marginBottom: 12 }}
       />
+
+      <select
+        value={candidateLevel}
+        onChange={(e) => setCandidateLevel(e.target.value as "entry" | "mid" | "senior")}
+        className="w-full box-border bg-white font-[family-name:var(--font-poppins)] text-black outline-none border border-[#dcdcdc] focus:border-[#ed1a24]"
+        style={{ padding: "13px 14px", borderRadius: 8, fontSize: 14, marginBottom: 12 }}
+      >
+        <option value="" disabled>
+          Your experience level
+        </option>
+        <option value="entry">Entry-level (0-2 years)</option>
+        <option value="mid">Mid-level (3-7 years)</option>
+        <option value="senior">Senior-level (8+ years)</option>
+      </select>
 
       <div className="flex items-center" style={{ gap: 8, marginBottom: 6 }}>
         <label className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 12 }}>

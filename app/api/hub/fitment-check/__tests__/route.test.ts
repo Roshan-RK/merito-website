@@ -49,6 +49,7 @@ function buildForm(overrides: Record<string, string | Blob> = {}) {
   form.set("role", "Senior Product Manager");
   form.set("jdText", "We need a PM who can ship.");
   form.set("phone", "+919876543210");
+  form.set("candidateLevel", "mid");
   form.set("recaptchaToken", "token-123");
   form.set("cv", new Blob(["cv bytes"], { type: "application/pdf" }), "resume.pdf");
   for (const [key, value] of Object.entries(overrides)) {
@@ -89,6 +90,36 @@ describe("POST /api/hub/fitment-check", () => {
         resume_match_status: "READY",
       })
     );
+  });
+
+  it("returns 400 when candidateLevel is missing", async () => {
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm({ candidateLevel: "" }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 400 when candidateLevel isn't one of entry/mid/senior", async () => {
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm({ candidateLevel: "expert" }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+  });
+
+  it("saves candidateLevel on the inserted lead", async () => {
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm({ candidateLevel: "senior" }),
+    });
+    await POST(request);
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ candidate_level: "senior" }));
   });
 
   it("returns 200 pending with a leadId when the resume-match report isn't ready yet", async () => {
