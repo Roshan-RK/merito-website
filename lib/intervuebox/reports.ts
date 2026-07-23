@@ -87,3 +87,71 @@ export async function getResumeMatchReport(appliedJobId: string): Promise<Resume
 export function scoreOutOfTen(overallScore: number): number {
   return Math.round(overallScore) / 10;
 }
+
+export type CandidateEducation = {
+  qualification: string;
+  college: string;
+  location: string;
+  duration: string;
+};
+
+export type CandidateExperience = {
+  position: string;
+  company: string;
+  duration: string;
+  summary: string;
+};
+
+export type CandidateResumeDetails = {
+  skills: string[];
+  education: CandidateEducation[];
+  experience: CandidateExperience[];
+  certifications: string[];
+  phoneNumber: string | null;
+  location: string | null;
+  totalExperience: number | null;
+};
+
+// Separate from the resume-match report above — requires the "Get Applicant
+// Resume Report" API key scope (not "Get Resume Match Report"). Returns the
+// parsed candidate profile (skills, education, experience, certifications)
+// that backs IntervueBox's own PDF export, which our resume-match report
+// doesn't include. See open item #10 in
+// specs/2026-07-17-intervuebox-integration-design.md.
+type RawCandidateResumeResponse = {
+  candidateDetails: {
+    skills?: string[];
+    education?: Array<{ Qualification: string; College: string; Location: string; Duration: string }>;
+    experience?: Array<{ Position: string; Company: string; Years_of_experience: string; Summary: string }>;
+    achievements?: { Certifications?: string[] };
+    phoneNumber?: string;
+    location?: string;
+    totalExperience?: number;
+  };
+};
+
+export async function getCandidateResumeDetails(appliedJobId: string): Promise<CandidateResumeDetails> {
+  const response = await intervueBoxFetch<RawCandidateResumeResponse>(
+    `/public/reports/applicants/${appliedJobId}/resume`
+  );
+  const details = response.candidateDetails;
+  return {
+    skills: details.skills ?? [],
+    education: (details.education ?? []).map((e) => ({
+      qualification: e.Qualification,
+      college: e.College,
+      location: e.Location,
+      duration: e.Duration,
+    })),
+    experience: (details.experience ?? []).map((e) => ({
+      position: e.Position,
+      company: e.Company,
+      duration: e.Years_of_experience,
+      summary: e.Summary,
+    })),
+    certifications: details.achievements?.Certifications ?? [],
+    phoneNumber: details.phoneNumber ?? null,
+    location: details.location ?? null,
+    totalExperience: details.totalExperience ?? null,
+  };
+}

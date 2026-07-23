@@ -61,6 +61,55 @@ describe("getResumeMatchReport", () => {
   });
 });
 
+describe("getCandidateResumeDetails", () => {
+  beforeEach(() => {
+    intervueBoxFetchMock.mockReset();
+  });
+
+  it("maps phoneNumber, location, and totalExperience from the real API shape", async () => {
+    intervueBoxFetchMock.mockResolvedValue({
+      candidateDetails: {
+        name: "Kavita Menon",
+        email: "roshanrk2014@gmail.com",
+        phoneNumber: "+919876543210",
+        location: "India",
+        totalExperience: 6,
+        skills: ["Employee Relations"],
+        education: [],
+        experience: [],
+        achievements: { Certifications: [] },
+      },
+    });
+    const { getCandidateResumeDetails } = await import("../reports");
+
+    const result = await getCandidateResumeDetails("AJ_123");
+
+    expect(result).toEqual({
+      skills: ["Employee Relations"],
+      education: [],
+      experience: [],
+      certifications: [],
+      phoneNumber: "+919876543210",
+      location: "India",
+      totalExperience: 6,
+    });
+    expect(intervueBoxFetchMock).toHaveBeenCalledWith("/public/reports/applicants/AJ_123/resume");
+  });
+
+  it("returns null for phoneNumber/location/totalExperience when the API omits them", async () => {
+    intervueBoxFetchMock.mockResolvedValue({
+      candidateDetails: { skills: [], education: [], experience: [] },
+    });
+    const { getCandidateResumeDetails } = await import("../reports");
+
+    const result = await getCandidateResumeDetails("AJ_123");
+
+    expect(result.phoneNumber).toBeNull();
+    expect(result.location).toBeNull();
+    expect(result.totalExperience).toBeNull();
+  });
+});
+
 describe("scoreOutOfTen", () => {
   it("converts a 0-100 score to a 0-10 score with one decimal", async () => {
     const { scoreOutOfTen } = await import("../reports");
