@@ -3,11 +3,28 @@
 import { useState } from "react";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 
+function submitPayuForm(form: { action: string; fields: Record<string, string> }) {
+  const formEl = document.createElement("form");
+  formEl.method = "POST";
+  formEl.action = form.action;
+  for (const [name, value] of Object.entries(form.fields)) {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = value;
+    formEl.appendChild(input);
+  }
+  document.body.appendChild(formEl);
+  formEl.submit();
+}
+
 export default function ReportPaywallModal({
+  leadId,
   roleTitle,
   onClose,
   onUnlocked,
 }: {
+  leadId: string;
   roleTitle: string;
   onClose: () => void;
   onUnlocked: (report: ResumeMatchReportReady) => void;
@@ -23,7 +40,7 @@ export default function ReportPaywallModal({
       const res = await fetch("/api/hub/unlock-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roleTitle }),
+        body: JSON.stringify({ leadId }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -34,6 +51,10 @@ export default function ReportPaywallModal({
       if (data.status === "pending") {
         setPaying(false);
         setPending(true);
+        return;
+      }
+      if (data.status === "redirect") {
+        submitPayuForm(data.form);
         return;
       }
       setPaying(false);

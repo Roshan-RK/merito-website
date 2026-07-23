@@ -18,7 +18,7 @@ export default async function FullReportPage() {
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("role_title, score, name, resume_match_status, resume_match_raw")
+    .select("id, role_title, score, name, resume_match_status, resume_match_raw")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -27,7 +27,7 @@ export default async function FullReportPage() {
   }
 
   const current = leads[0];
-  const unlocked = await isReportUnlocked(user.id, current.role_title);
+  const unlocked = await isReportUnlocked(user.id, current.id);
 
   if (!unlocked) {
     redirect("/hub/account");

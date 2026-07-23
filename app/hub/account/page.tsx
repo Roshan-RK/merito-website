@@ -39,7 +39,7 @@ export default async function AccountPage() {
   const current = leads[0];
   const prevForSameRole = leads.find((l, i) => i > 0 && l.role_title === current.role_title);
 
-  const reportUnlocked = await isReportUnlocked(user.id, current.role_title);
+  const reportUnlocked = await isReportUnlocked(user.id, current.id);
 
   let score = current.score;
   let verdict = current.verdict;
@@ -104,6 +104,7 @@ export default async function AccountPage() {
 
   return (
     <DashboardClient
+      leadId={current.id}
       roleTitle={current.role_title}
       score={score}
       prevScore={prevForSameRole ? prevForSameRole.score : null}

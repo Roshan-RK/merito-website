@@ -8,6 +8,7 @@ import InterviewStartModal from "./InterviewStartModal";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 
 export default function DashboardClient({
+  leadId,
   roleTitle,
   score,
   prevScore,
@@ -17,6 +18,7 @@ export default function DashboardClient({
   initialInterviewStatus,
   referenceCheckStatus,
 }: {
+  leadId: string;
   roleTitle: string;
   score: number;
   prevScore: number | null;
@@ -68,6 +70,7 @@ export default function DashboardClient({
 
       {modal === "report" && (
         <ReportPaywallModal
+          leadId={leadId}
           roleTitle={roleTitle}
           onClose={() => setModal("none")}
           onUnlocked={(unlockedReport) => {
