@@ -100,6 +100,14 @@ export default async function InterviewReportPage({
         >
           ← Back to dashboard
         </Link>
+        <a
+          href={`/api/hub/interview/export?role=${encodeURIComponent(interview.role_title)}`}
+          download
+          className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+          style={{ fontSize: 13, marginLeft: 16 }}
+        >
+          Download PDF
+        </a>
 
         <div className="flex items-center justify-between flex-wrap" style={{ margin: "14px 0 4px", gap: 12 }}>
           <div>
