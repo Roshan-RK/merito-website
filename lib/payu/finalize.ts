@@ -39,8 +39,8 @@ export async function finalizePaymentFromPayu(fields: PayuResponseFields): Promi
   }
 
   if (txn.status !== "success") {
-    await supabase.from("payu_transactions").update({ status: "success" }).eq("txnid", fields.txnid);
     await unlockReport(txn.user_id, txn.lead_id as string);
+    await supabase.from("payu_transactions").update({ status: "success" }).eq("txnid", fields.txnid);
   }
 
   return { ok: true, product, userId: txn.user_id, leadId: txn.lead_id };

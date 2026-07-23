@@ -120,6 +120,20 @@ describe("finalizePaymentFromPayu", () => {
     expect(updateMock).not.toHaveBeenCalled();
   });
 
+  it("does not mark the transaction success if unlockReport throws (retry-safety)", async () => {
+    verifyResponseHashMock.mockReturnValue(true);
+    unlockReportMock.mockRejectedValue(new Error("transient supabase error"));
+    txnMaybeSingleMock.mockResolvedValue({
+      data: { user_id: "user-1", product: "report", lead_id: "lead-1", status: "initiated" },
+      error: null,
+    });
+    const { finalizePaymentFromPayu } = await import("../finalize");
+
+    await expect(finalizePaymentFromPayu(buildFields())).rejects.toThrow("transient supabase error");
+
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
   it("rejects with unsupported_product for any product other than report", async () => {
     verifyResponseHashMock.mockReturnValue(true);
     txnMaybeSingleMock.mockResolvedValue({
