@@ -3,8 +3,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { isReportUnlocked } from "@/lib/reportUnlocks";
-import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
+import { getCandidateResumeDetails, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import ResumeMatchCategoryCard from "./ResumeMatchCategoryCard";
+import CandidateProfile from "./CandidateProfile";
 
 export default async function FullReportPage() {
   const supabase = await createSupabaseServerClient();
@@ -18,7 +19,7 @@ export default async function FullReportPage() {
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("role_title, score, name, resume_match_status, resume_match_raw")
+    .select("role_title, score, name, resume_match_status, resume_match_raw, ib_applied_job_id")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -39,6 +40,13 @@ export default async function FullReportPage() {
 
   const report = current.resume_match_raw as ResumeMatchReportReady;
 
+  const candidateDetails = current.ib_applied_job_id
+    ? await getCandidateResumeDetails(current.ib_applied_job_id).catch((err) => {
+        console.error("getCandidateResumeDetails failed, rendering report without candidate profile", err);
+        return null;
+      })
+    : null;
+
   const displayName = current.name || user.email || "Candidate";
   const formattedDate = new Date().toLocaleDateString("en-IN", {
     year: "numeric",
@@ -56,6 +64,14 @@ export default async function FullReportPage() {
         >
           ← Back to dashboard
         </Link>
+        <a
+          href="/api/hub/report/export"
+          download
+          className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+          style={{ fontSize: 13, marginLeft: 16 }}
+        >
+          Download PDF
+        </a>
 
         <div className="flex items-center justify-between flex-wrap" style={{ margin: "14px 0 4px", gap: 12 }}>
           <div>
@@ -81,6 +97,25 @@ export default async function FullReportPage() {
           </p>
         </div>
 
+        {candidateDetails && candidateDetails.skills.length > 0 && (
+          <div style={{ margin: "0 0 32px" }}>
+            <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.3rem", margin: "0 0 14px" }}>
+              Skills
+            </h2>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {candidateDetails.skills.map((skill) => (
+                <span
+                  key={skill}
+                  className="bg-[#fdf8fb] border border-black/[0.08] font-[family-name:var(--font-poppins)] text-[#4b4b4d]"
+                  style={{ fontSize: 12.5, borderRadius: 50, padding: "6px 14px" }}
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.3rem", margin: "0 0 14px" }}>
           Match breakdown
         </h2>
@@ -105,6 +140,10 @@ export default async function FullReportPage() {
             ✗ {point}
           </p>
         ))}
+
+        {candidateDetails && (candidateDetails.education.length > 0 || candidateDetails.experience.length > 0) && (
+          <CandidateProfile education={candidateDetails.education} experience={candidateDetails.experience} certifications={candidateDetails.certifications} />
+        )}
       </div>
     </main>
   );
