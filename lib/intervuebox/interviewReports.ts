@@ -3,21 +3,39 @@ import https from "https";
 import { IntervueBoxError, type IntervueBoxErrorShape } from "./client";
 
 export type InterviewReportReady = {
-  overallSkillScore: number;
-  skillReport: Record<string, number>;
-  overallReport: string;
+  overallScore: number; // 0-10, per sessionDetails.overallReport.score
+  skillMetrics: Record<string, number>; // 0-10 each, per sessionDetails.overallReport.metrics
+  overallSummary: string;
+  strengths: string | null;
+  areasOfImprovement: string | null;
   shareableReportLink: string | null;
+  approxDurationMinutes: number | null;
 };
 
 export type InterviewReport = { status: "NOT_READY" } | ({ status: "READY" } & InterviewReportReady);
 
+// Live-confirmed against the real API (2026-07-23): the documented
+// `sessionDetails.overallSkillScore` / `sessionDetails.overallReport` (string)
+// / `sessionDetails.skillReport` shape doesn't match what the API actually
+// returns. The real overall score, per-skill metrics, and narrative summary
+// all live nested under `sessionDetails.overallReport` (an object), and
+// `sessionDetails.skillReport` is empty. `feedbackToInterviewer` and `rank`
+// also exist on the real payload but are recruiter-facing (contain a blunt
+// pass/fail recommendation) — deliberately not surfaced to the candidate.
 type RawInterviewReportResponse = {
-  interviewSessionId: string;
   shareableReportLink: string | null;
   sessionDetails: {
-    overallSkillScore: number;
-    skillReport: Record<string, number>;
-    overallReport: string;
+    // Only used for an approximate interview duration — the last answer's
+    // timestamp is a proxy for total elapsed time, not a true recording-length
+    // field (IntervueBox doesn't expose one). Never presented as exact.
+    answers?: Array<{ timestamp: string }>;
+    overallReport: {
+      score: number;
+      metrics: Record<string, number>;
+      overallSummary: string;
+      strengths?: string;
+      areasOfImprovement?: string;
+    };
   };
 };
 
@@ -91,18 +109,35 @@ function getWithBody<T>(path: string, body: unknown): Promise<T> {
   });
 }
 
+function parseTimestampToSeconds(timestamp: string): number {
+  const parts = timestamp.split(":").map(Number);
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return 0;
+}
+
+function computeApproxDurationMinutes(answers: Array<{ timestamp: string }> | undefined): number | null {
+  if (!answers || answers.length === 0) return null;
+  const lastTimestamp = answers[answers.length - 1].timestamp;
+  return Math.ceil(parseTimestampToSeconds(lastTimestamp) / 60);
+}
+
 export async function getInterviewReport(interviewId: string, candidateId: string): Promise<InterviewReport> {
   try {
     const response = await getWithBody<RawInterviewReportResponse>("/public/reports/interviews", {
       interviewId,
       candidateId,
     });
+    const overallReport = response.sessionDetails.overallReport;
     return {
       status: "READY",
-      overallSkillScore: response.sessionDetails.overallSkillScore,
-      skillReport: response.sessionDetails.skillReport,
-      overallReport: response.sessionDetails.overallReport,
+      overallScore: overallReport.score,
+      skillMetrics: overallReport.metrics,
+      overallSummary: overallReport.overallSummary,
+      strengths: overallReport.strengths ?? null,
+      areasOfImprovement: overallReport.areasOfImprovement ?? null,
       shareableReportLink: response.shareableReportLink,
+      approxDurationMinutes: computeApproxDurationMinutes(response.sessionDetails.answers),
     };
   } catch (err) {
     if (err instanceof IntervueBoxError && err.status === 404) {

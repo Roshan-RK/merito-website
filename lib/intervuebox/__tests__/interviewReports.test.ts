@@ -52,12 +52,19 @@ describe("getInterviewReport", () => {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
-          interviewSessionId: "ISE_123",
           shareableReportLink: "https://app.intervuebox.com/reports/ISE_123",
           sessionDetails: {
-            overallSkillScore: 85,
-            skillReport: { technical: 85, communication: 90, problemSolving: 80 },
-            overallReport: "Strong candidate.",
+            skillReport: {},
+            answers: [{ timestamp: "00:00:24" }, { timestamp: "00:03:27" }],
+            overallReport: {
+              score: 8,
+              metrics: { technical: 8, communication: 9, problemSolving: 8 },
+              overallSummary: "Strong candidate.",
+              strengths: "Clear technical explanations.",
+              areasOfImprovement: "Could give more concrete examples.",
+              feedbackToInterviewer: "Recommend advancing.",
+              rank: 1,
+            },
           },
         })
       );
@@ -74,11 +81,38 @@ describe("getInterviewReport", () => {
 
     expect(result).toEqual({
       status: "READY",
-      overallSkillScore: 85,
-      skillReport: { technical: 85, communication: 90, problemSolving: 80 },
-      overallReport: "Strong candidate.",
+      overallScore: 8,
+      skillMetrics: { technical: 8, communication: 9, problemSolving: 8 },
+      overallSummary: "Strong candidate.",
+      strengths: "Clear technical explanations.",
+      areasOfImprovement: "Could give more concrete examples.",
       shareableReportLink: "https://app.intervuebox.com/reports/ISE_123",
+      approxDurationMinutes: 4,
     });
+  });
+
+  it("returns null approxDurationMinutes when the session has no answers", async () => {
+    respond = (_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          shareableReportLink: null,
+          sessionDetails: {
+            skillReport: {},
+            overallReport: {
+              score: 5,
+              metrics: {},
+              overallSummary: "Ended early.",
+            },
+          },
+        })
+      );
+    };
+    const { getInterviewReport } = await import("../interviewReports");
+
+    const result = await getInterviewReport("INT_123", "USR_123");
+
+    expect(result).toMatchObject({ status: "READY", approxDurationMinutes: null });
   });
 
   it("returns NOT_READY when the server responds 404", async () => {
