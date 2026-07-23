@@ -46,3 +46,52 @@ export async function finalizeRazorpayOrder(orderId: string, paymentId: string):
 
   return { ok: true, product, userId: txn.user_id, leadId: txn.lead_id };
 }
+
+export type MarkFailedResult =
+  | { ok: true; alreadyProcessed: boolean; orderId: string; amountPaise: number }
+  | { ok: false; reason: "unknown_order" };
+
+export async function markRazorpayPaymentFailed(orderId: string): Promise<MarkFailedResult> {
+  const supabase = getSupabaseServerClient();
+  const { data: txn, error } = await supabase
+    .from("razorpay_transactions")
+    .select("status, amount_paise")
+    .eq("order_id", orderId)
+    .maybeSingle();
+
+  if (error || !txn) {
+    return { ok: false, reason: "unknown_order" };
+  }
+
+  if (txn.status !== "initiated") {
+    return { ok: true, alreadyProcessed: true, orderId, amountPaise: txn.amount_paise };
+  }
+
+  await supabase.from("razorpay_transactions").update({ status: "failed" }).eq("order_id", orderId);
+  return { ok: true, alreadyProcessed: false, orderId, amountPaise: txn.amount_paise };
+}
+
+export type MarkRefundedResult =
+  | { ok: true; alreadyProcessed: boolean }
+  | { ok: false; reason: "unknown_order" };
+
+export async function markRazorpayRefunded(orderId: string): Promise<MarkRefundedResult> {
+  const supabase = getSupabaseServerClient();
+  const { data: txn, error } = await supabase
+    .from("razorpay_transactions")
+    .select("status, product, user_id, lead_id")
+    .eq("order_id", orderId)
+    .maybeSingle();
+
+  if (error || !txn) {
+    return { ok: false, reason: "unknown_order" };
+  }
+
+  if (txn.status !== "success" || txn.product !== "report" || !txn.lead_id) {
+    return { ok: true, alreadyProcessed: true };
+  }
+
+  await supabase.from("report_unlocks").delete().eq("user_id", txn.user_id).eq("lead_id", txn.lead_id);
+  await supabase.from("razorpay_transactions").update({ status: "refunded" }).eq("order_id", orderId);
+  return { ok: true, alreadyProcessed: false };
+}
