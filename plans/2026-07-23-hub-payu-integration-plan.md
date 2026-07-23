@@ -1320,10 +1320,13 @@ git commit -m "feat(payu): add browser return handler"
 - Modify: `app/hub/account/page.tsx`
 - Modify: `app/hub/account/DashboardClient.tsx`
 - Modify: `app/hub/account/ReportPaywallModal.tsx`
+- Modify: `app/hub/account/report/page.tsx`
 
 **Interfaces:**
 - Consumes: `POST /api/hub/unlock-report` (Task 7) with its new `{ leadId }` body / `{ status: "redirect", form }` response shape.
 - Produces: `DashboardClient` gains a `leadId: string` prop; `ReportPaywallModal` gains a `leadId: string` prop (replacing its use of `roleTitle` for the API call — `roleTitle` stays as a prop, still used for display copy).
+
+**Note:** `app/hub/account/report/page.tsx` (the standalone unlocked-report page, separate from the dashboard) is a *third* call site of `isReportUnlocked` that Task 5's re-scoping affects — found during Task 5's implementation, not in the original task list. It currently calls `isReportUnlocked(user.id, current.role_title)` at line 30, using a `leads` query that selects `role_title, score, name, resume_match_status, resume_match_raw` (no `id`). Step 1 below covers the fix.
 
 - [ ] **Step 1: Pass `leadId` from `page.tsx`**
 
@@ -1411,10 +1414,28 @@ function submitPayuForm(form: { action: string; fields: Record<string, string> }
 }
 ```
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Fix `app/hub/account/report/page.tsx`'s `isReportUnlocked` call**
+
+Add `id` to the `leads` select (`report/page.tsx:19-23`):
+
+```ts
+const { data: leads } = await supabase
+  .from("fitment_leads")
+  .select("id, role_title, score, name, resume_match_status, resume_match_raw")
+  .eq("user_id", user.id)
+  .order("created_at", { ascending: false });
+```
+
+Change the unlock check (`report/page.tsx:30`):
+
+```ts
+const unlocked = await isReportUnlocked(user.id, current.id);
+```
+
+- [ ] **Step 5: Commit**
 
 ```bash
-git add app/hub/account/page.tsx app/hub/account/DashboardClient.tsx app/hub/account/ReportPaywallModal.tsx
+git add app/hub/account/page.tsx app/hub/account/DashboardClient.tsx app/hub/account/ReportPaywallModal.tsx app/hub/account/report/page.tsx
 git commit -m "feat(payu): wire leadId through the report paywall UI"
 ```
 
