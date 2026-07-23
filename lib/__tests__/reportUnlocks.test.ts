@@ -24,27 +24,27 @@ describe("reportUnlocks", () => {
   });
 
   describe("unlockReport", () => {
-    it("upserts a report_unlocks row keyed on user_id + role_title", async () => {
+    it("upserts a report_unlocks row keyed on user_id + lead_id", async () => {
       fromMock.mockReturnValue({ upsert: upsertMock });
       upsertMock.mockResolvedValue({ error: null });
       const { unlockReport } = await import("../reportUnlocks");
 
-      await unlockReport("user-123", "Senior Product Manager");
+      await unlockReport("user-123", "lead-1");
 
       expect(fromMock).toHaveBeenCalledWith("report_unlocks");
       expect(upsertMock).toHaveBeenCalledWith(
-        { user_id: "user-123", role_title: "Senior Product Manager" },
-        { onConflict: "user_id,role_title" }
+        { user_id: "user-123", lead_id: "lead-1" },
+        { onConflict: "user_id,lead_id" }
       );
     });
 
-    it("does not throw when called twice for the same user+role (idempotent)", async () => {
+    it("does not throw when called twice for the same user+lead (idempotent)", async () => {
       fromMock.mockReturnValue({ upsert: upsertMock });
       upsertMock.mockResolvedValue({ error: null });
       const { unlockReport } = await import("../reportUnlocks");
 
-      await unlockReport("user-123", "Senior Product Manager");
-      await expect(unlockReport("user-123", "Senior Product Manager")).resolves.toBeUndefined();
+      await unlockReport("user-123", "lead-1");
+      await expect(unlockReport("user-123", "lead-1")).resolves.toBeUndefined();
     });
 
     it("throws if Supabase returns an error", async () => {
@@ -52,7 +52,7 @@ describe("reportUnlocks", () => {
       upsertMock.mockResolvedValue({ error: { message: "db error" } });
       const { unlockReport } = await import("../reportUnlocks");
 
-      await expect(unlockReport("user-123", "Senior Product Manager")).rejects.toThrow();
+      await expect(unlockReport("user-123", "lead-1")).rejects.toThrow();
     });
   });
 
@@ -65,11 +65,11 @@ describe("reportUnlocks", () => {
       maybeSingleMock.mockResolvedValue({ data: { user_id: "user-123" }, error: null });
 
       const { isReportUnlocked } = await import("../reportUnlocks");
-      const result = await isReportUnlocked("user-123", "Senior Product Manager");
+      const result = await isReportUnlocked("user-123", "lead-1");
 
       expect(fromMock).toHaveBeenCalledWith("report_unlocks");
       expect(eqMock1).toHaveBeenCalledWith("user_id", "user-123");
-      expect(eqMock2).toHaveBeenCalledWith("role_title", "Senior Product Manager");
+      expect(eqMock2).toHaveBeenCalledWith("lead_id", "lead-1");
       expect(result).toBe(true);
     });
 
@@ -81,7 +81,7 @@ describe("reportUnlocks", () => {
       maybeSingleMock.mockResolvedValue({ data: null, error: null });
 
       const { isReportUnlocked } = await import("../reportUnlocks");
-      const result = await isReportUnlocked("user-123", "Senior Product Manager");
+      const result = await isReportUnlocked("user-123", "lead-1");
 
       expect(result).toBe(false);
     });
@@ -94,7 +94,7 @@ describe("reportUnlocks", () => {
       maybeSingleMock.mockResolvedValue({ data: null, error: { message: "db error" } });
 
       const { isReportUnlocked } = await import("../reportUnlocks");
-      await expect(isReportUnlocked("user-123", "Senior Product Manager")).rejects.toThrow();
+      await expect(isReportUnlocked("user-123", "lead-1")).rejects.toThrow();
     });
   });
 });
