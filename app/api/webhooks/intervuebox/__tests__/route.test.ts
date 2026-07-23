@@ -74,9 +74,11 @@ describe("POST /api/webhooks/intervuebox", () => {
       if (interviewId === "INT_1") {
         return {
           status: "READY",
-          overallSkillScore: 85,
-          skillReport: { technical: 85 },
-          overallReport: "Strong candidate.",
+          overallScore: 8,
+          skillMetrics: { technical: 8 },
+          overallSummary: "Strong candidate.",
+          strengths: "Clear communication.",
+          areasOfImprovement: "More examples.",
           shareableReportLink: "https://app.intervuebox.com/reports/ISE_1",
         };
       }
@@ -114,6 +116,40 @@ describe("POST /api/webhooks/intervuebox", () => {
     });
     const response = await POST(request);
     expect(response.status).toBe(401);
+  });
+
+  it("caps concurrent report lookups per WEBHOOK_SWEEP_CONCURRENCY instead of firing all at once", async () => {
+    vi.stubEnv("WEBHOOK_SWEEP_CONCURRENCY", "2");
+    const rows = Array.from({ length: 5 }, (_, i) => ({
+      user_id: `user-${i}`,
+      role_title: "Role",
+      ib_agent_id: `INT_${i}`,
+      ib_candidate_id: `USR_${i}`,
+    }));
+    selectEqMock.mockResolvedValue({ data: rows, error: null });
+
+    let inFlight = 0;
+    let maxInFlight = 0;
+    getInterviewReportMock.mockImplementation(async () => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      inFlight -= 1;
+      return { status: "NOT_READY" };
+    });
+
+    const { POST } = await importRoute();
+    const rawBody = JSON.stringify({ eventType: "AIInterviewReportGenerated" });
+    const request = new Request("http://localhost/api/webhooks/intervuebox", {
+      method: "POST",
+      headers: { "x-ib-signature": sign("whsec_test", rawBody) },
+      body: rawBody,
+    });
+    const response = await POST(request);
+
+    expect(response.status).toBe(200);
+    expect(getInterviewReportMock).toHaveBeenCalledTimes(5);
+    expect(maxInFlight).toBeLessThanOrEqual(2);
   });
 
   it("returns 200 with no updates when there are no invited rows", async () => {

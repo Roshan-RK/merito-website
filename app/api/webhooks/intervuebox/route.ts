@@ -58,31 +58,37 @@ export async function POST(request: Request) {
     return Response.json({ received: true });
   }
 
-  await Promise.allSettled(
-    pending.map(async (row) => {
-      try {
-        const report = await getInterviewReport(row.ib_agent_id, row.ib_candidate_id);
-        if (report.status !== "READY") return;
+  const concurrency = Number(process.env.WEBHOOK_SWEEP_CONCURRENCY) || 10;
+  for (let i = 0; i < pending.length; i += concurrency) {
+    const batch = pending.slice(i, i + concurrency);
+    await Promise.allSettled(
+      batch.map(async (row) => {
+        try {
+          const report = await getInterviewReport(row.ib_agent_id, row.ib_candidate_id);
+          if (report.status !== "READY") return;
 
-        await supabase
-          .from("fitment_interviews")
-          .update({
-            status: "ready",
-            report_raw: {
-              overallSkillScore: report.overallSkillScore,
-              skillReport: report.skillReport,
-              overallReport: report.overallReport,
-              shareableReportLink: report.shareableReportLink,
-            },
-            updated_at: new Date().toISOString(),
-          })
-          .eq("user_id", row.user_id)
-          .eq("role_title", row.role_title);
-      } catch (err) {
-        console.error("Webhook sweep: getInterviewReport failed for a pending row", { row, error: err });
-      }
-    })
-  );
+          await supabase
+            .from("fitment_interviews")
+            .update({
+              status: "ready",
+              report_raw: {
+                overallScore: report.overallScore,
+                skillMetrics: report.skillMetrics,
+                overallSummary: report.overallSummary,
+                strengths: report.strengths,
+                areasOfImprovement: report.areasOfImprovement,
+                shareableReportLink: report.shareableReportLink,
+              },
+              updated_at: new Date().toISOString(),
+            })
+            .eq("user_id", row.user_id)
+            .eq("role_title", row.role_title);
+        } catch (err) {
+          console.error("Webhook sweep: getInterviewReport failed for a pending row", { row, error: err });
+        }
+      })
+    );
+  }
 
   return Response.json({ received: true });
 }
