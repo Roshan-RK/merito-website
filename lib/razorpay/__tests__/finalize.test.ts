@@ -5,6 +5,11 @@ vi.mock("@/lib/reportUnlocks", () => ({
   unlockReport: unlockReportMock,
 }));
 
+const unlockProductMock = vi.fn();
+vi.mock("@/lib/productUnlocks", () => ({
+  unlockProduct: unlockProductMock,
+}));
+
 const txnSelectMock = vi.fn();
 const txnEqMock = vi.fn();
 const txnMaybeSingleMock = vi.fn();
@@ -21,6 +26,8 @@ describe("finalizeRazorpayOrder", () => {
   beforeEach(() => {
     unlockReportMock.mockReset();
     unlockReportMock.mockResolvedValue(undefined);
+    unlockProductMock.mockReset();
+    unlockProductMock.mockResolvedValue(undefined);
     fromMock.mockReset();
     txnSelectMock.mockReset();
     txnEqMock.mockReset();
@@ -49,7 +56,7 @@ describe("finalizeRazorpayOrder", () => {
     expect(unlockReportMock).not.toHaveBeenCalled();
   });
 
-  it("rejects with unsupported_product for any product other than report", async () => {
+  it("unlocks personality and marks success", async () => {
     txnMaybeSingleMock.mockResolvedValue({
       data: { user_id: "user-1", product: "personality", lead_id: null, status: "initiated" },
       error: null,
@@ -58,8 +65,50 @@ describe("finalizeRazorpayOrder", () => {
 
     const result = await finalizeRazorpayOrder("order_1", "pay_1");
 
+    expect(result).toEqual({ ok: true, product: "personality", userId: "user-1", leadId: null });
+    expect(unlockProductMock).toHaveBeenCalledWith("user-1", "personality");
+    expect(updateMock).toHaveBeenCalledWith({ status: "success", payment_id: "pay_1" });
+  });
+
+  it("unlocks references and marks success", async () => {
+    txnMaybeSingleMock.mockResolvedValue({
+      data: { user_id: "user-1", product: "references", lead_id: null, status: "initiated" },
+      error: null,
+    });
+    const { finalizeRazorpayOrder } = await import("../finalize");
+
+    const result = await finalizeRazorpayOrder("order_1", "pay_1");
+
+    expect(result).toEqual({ ok: true, product: "references", userId: "user-1", leadId: null });
+    expect(unlockProductMock).toHaveBeenCalledWith("user-1", "references");
+  });
+
+  it("unlocks the report, personality, and references for a bundle order", async () => {
+    txnMaybeSingleMock.mockResolvedValue({
+      data: { user_id: "user-1", product: "bundle", lead_id: "lead-1", status: "initiated" },
+      error: null,
+    });
+    const { finalizeRazorpayOrder } = await import("../finalize");
+
+    const result = await finalizeRazorpayOrder("order_1", "pay_1");
+
+    expect(result).toEqual({ ok: true, product: "bundle", userId: "user-1", leadId: "lead-1" });
+    expect(unlockReportMock).toHaveBeenCalledWith("user-1", "lead-1");
+    expect(unlockProductMock).toHaveBeenCalledWith("user-1", "personality");
+    expect(unlockProductMock).toHaveBeenCalledWith("user-1", "references");
+    expect(updateMock).toHaveBeenCalledWith({ status: "success", payment_id: "pay_1" });
+  });
+
+  it("rejects with unsupported_product for interview (not yet wired)", async () => {
+    txnMaybeSingleMock.mockResolvedValue({
+      data: { user_id: "user-1", product: "interview", lead_id: null, status: "initiated" },
+      error: null,
+    });
+    const { finalizeRazorpayOrder } = await import("../finalize");
+
+    const result = await finalizeRazorpayOrder("order_1", "pay_1");
+
     expect(result).toEqual({ ok: false, reason: "unsupported_product" });
-    expect(unlockReportMock).not.toHaveBeenCalled();
   });
 
   it("unlocks the report before marking the transaction success (retry-safety)", async () => {

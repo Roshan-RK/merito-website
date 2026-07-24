@@ -1,5 +1,6 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { unlockReport } from "@/lib/reportUnlocks";
+import { unlockProduct } from "@/lib/productUnlocks";
 import type { RazorpayProduct } from "@/lib/razorpay/pricing";
 
 export type FinalizeResult =
@@ -27,9 +28,8 @@ export async function finalizeRazorpayOrder(orderId: string, paymentId: string):
 
   const product = txn.product as RazorpayProduct;
 
-  // "report" and "counselling" are wired up so far — personality/references/
-  // interview/bundle each get their own case in a later plan.
-  if (product !== "report" && product !== "counselling") {
+  // "interview" is not wired up yet — a later plan.
+  if (product === "interview") {
     return { ok: false, reason: "unsupported_product" };
   }
 
@@ -39,13 +39,21 @@ export async function finalizeRazorpayOrder(orderId: string, paymentId: string):
     // genuinely re-attempts it instead of silently skipping it next time.
     if (product === "report") {
       await unlockReport(txn.user_id, txn.lead_id as string);
-    } else {
+    } else if (product === "counselling") {
       const { error: insertError } = await supabase
         .from("counselling_requests")
         .insert({ user_id: txn.user_id, order_id: orderId });
       if (insertError) {
         throw new Error(`Failed to record counselling request: ${insertError.message}`);
       }
+    } else if (product === "personality") {
+      await unlockProduct(txn.user_id, "personality");
+    } else if (product === "references") {
+      await unlockProduct(txn.user_id, "references");
+    } else if (product === "bundle") {
+      await unlockReport(txn.user_id, txn.lead_id as string);
+      await unlockProduct(txn.user_id, "personality");
+      await unlockProduct(txn.user_id, "references");
     }
     await supabase
       .from("razorpay_transactions")
