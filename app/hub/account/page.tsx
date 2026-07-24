@@ -6,6 +6,7 @@ import DashboardClient from "./DashboardClient";
 import type { InterviewStatus } from "./ProgressRail";
 import { getResumeMatchReport, scoreOutOfTen, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { PRODUCT_PRICING, DEFAULT_LEVEL, formatPrice, type CandidateLevel } from "@/lib/razorpay/pricing";
 
 export default async function AccountPage() {
   const supabase = await createSupabaseServerClient();
@@ -19,7 +20,7 @@ export default async function AccountPage() {
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("id, role_title, score, verdict, resume_match_status, resume_match_raw, ib_applied_job_id, created_at")
+    .select("id, role_title, score, verdict, resume_match_status, resume_match_raw, ib_applied_job_id, created_at, candidate_level")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -102,6 +103,15 @@ export default async function AccountPage() {
   const referenceCheckStatus: "none" | "in_progress" | "completed" =
     !referenceCheck ? "none" : referenceCheck.status === "completed" ? "completed" : "in_progress";
 
+  const level = (current.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
+  const counsellingPriceLabel = formatPrice(PRODUCT_PRICING.counselling[level]);
+
+  const { data: counsellingRequest } = await supabase
+    .from("counselling_requests")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
   return (
     <DashboardClient
       leadId={current.id}
@@ -113,6 +123,8 @@ export default async function AccountPage() {
       initialReport={report}
       initialInterviewStatus={interviewStatus}
       referenceCheckStatus={referenceCheckStatus}
+      counsellingPriceLabel={counsellingPriceLabel}
+      initialCounsellingRequested={Boolean(counsellingRequest)}
     />
   );
 }

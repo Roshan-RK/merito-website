@@ -5,6 +5,8 @@ import ProgressRail, { type InterviewStatus } from "./ProgressRail";
 import ScoreCard from "./ScoreCard";
 import ReportPaywallModal from "./ReportPaywallModal";
 import InterviewStartModal from "./InterviewStartModal";
+import CounsellingCard from "./CounsellingCard";
+import CounsellingPaywallModal from "./CounsellingPaywallModal";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 
 export default function DashboardClient({
@@ -17,6 +19,8 @@ export default function DashboardClient({
   initialReport,
   initialInterviewStatus,
   referenceCheckStatus,
+  counsellingPriceLabel,
+  initialCounsellingRequested,
 }: {
   leadId: string;
   roleTitle: string;
@@ -27,11 +31,14 @@ export default function DashboardClient({
   initialReport: ResumeMatchReportReady | null;
   initialInterviewStatus: InterviewStatus;
   referenceCheckStatus: "none" | "in_progress" | "completed";
+  counsellingPriceLabel: string;
+  initialCounsellingRequested: boolean;
 }) {
-  const [modal, setModal] = useState<"none" | "report" | "interview">("none");
+  const [modal, setModal] = useState<"none" | "report" | "interview" | "counselling">("none");
   const [reportUnlocked, setReportUnlocked] = useState(initialReportUnlocked);
   const [report, setReport] = useState<ResumeMatchReportReady | null>(initialReport);
   const [interviewStatus, setInterviewStatus] = useState<InterviewStatus>(initialInterviewStatus);
+  const [counsellingRequested, setCounsellingRequested] = useState(initialCounsellingRequested);
 
   return (
     <>
@@ -65,9 +72,25 @@ export default function DashboardClient({
             report={report}
             onOpenReportPaywall={() => setModal("report")}
           />
+
+          <CounsellingCard
+            priceLabel={counsellingPriceLabel}
+            requested={counsellingRequested}
+            onOpenPaywall={() => setModal("counselling")}
+          />
         </div>
       </div>
 
+      {modal === "counselling" && (
+        <CounsellingPaywallModal
+          priceLabel={counsellingPriceLabel}
+          onClose={() => setModal("none")}
+          onRequested={() => {
+            setCounsellingRequested(true);
+            setModal("none");
+          }}
+        />
+      )}
       {modal === "report" && (
         <ReportPaywallModal
           leadId={leadId}
