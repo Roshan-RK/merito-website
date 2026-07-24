@@ -49,6 +49,7 @@ function buildForm(overrides: Record<string, string | Blob> = {}) {
   form.set("role", "Senior Product Manager");
   form.set("jdText", "We need a PM who can ship.");
   form.set("phone", "+919876543210");
+  form.set("candidateLevel", "senior");
   form.set("recaptchaToken", "token-123");
   form.set("cv", new Blob(["cv bytes"], { type: "application/pdf" }), "resume.pdf");
   for (const [key, value] of Object.entries(overrides)) {
@@ -58,11 +59,13 @@ function buildForm(overrides: Record<string, string | Blob> = {}) {
 }
 
 describe("POST /api/hub/fitment-check", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     insertMock.mockClear();
     insertSelectMock.mockClear();
     insertSelectSingleMock.mockClear();
     insertSelectSingleMock.mockResolvedValue({ data: { id: "lead-1" }, error: null });
+    const { addApplicant } = await import("@/lib/intervuebox/applicants");
+    vi.mocked(addApplicant).mockReset().mockResolvedValue({ ibAppliedJobId: "APJ_123" });
     vi.resetModules();
   });
 
@@ -83,6 +86,7 @@ describe("POST /api/hub/fitment-check", () => {
     expect(insertMock).toHaveBeenCalledTimes(1);
     expect(insertMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        phone: "+919876543210",
         ib_job_id: "JOB_123",
         ib_resume_id: "RES_123",
         ib_applied_job_id: "APJ_123",
@@ -172,7 +176,7 @@ describe("POST /api/hub/fitment-check", () => {
     expect(lastResponse?.status).toBe(429);
   });
 
-  it("returns 500 if any IntervueBox call in the chain fails", async () => {
+  it("returns 502 if any IntervueBox call in the chain fails", async () => {
     const { addApplicant } = await import("@/lib/intervuebox/applicants");
     vi.mocked(addApplicant).mockRejectedValueOnce(new Error("boom"));
     const { POST } = await importRoute();
@@ -181,7 +185,66 @@ describe("POST /api/hub/fitment-check", () => {
       body: buildForm(),
     });
     const response = await POST(request);
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(502);
+  });
+
+  it("returns 409 with a duplicate flag if IntervueBox reports a conflict", async () => {
+    const { addApplicant } = await import("@/lib/intervuebox/applicants");
+    const { IntervueBoxError } = await import("@/lib/intervuebox/client");
+    vi.mocked(addApplicant).mockRejectedValueOnce(
+      new IntervueBoxError({ code: "conflict", message: "Applicant already exists.", status: 409 })
+    );
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm(),
+    });
+    const response = await POST(request);
+    const data = await response.json();
+    expect(response.status).toBe(409);
+    expect(data.duplicate).toBe(true);
+  });
+
+  it("returns 409 with a duplicate flag if IntervueBox reports 'already applied' via a plain 400", async () => {
+    // Real-world race: addApplicant errors "still being parsed", our retry
+    // fires, but IntervueBox finishes linking the applicant asynchronously
+    // in between — the retry then gets this 400, not a 409. Must be treated
+    // as a duplicate, not a dead-end 502.
+    const { addApplicant } = await import("@/lib/intervuebox/applicants");
+    const { IntervueBoxError } = await import("@/lib/intervuebox/client");
+    vi.mocked(addApplicant).mockRejectedValueOnce(
+      new IntervueBoxError({ code: "unknown_error", message: "Candidate already applied for this job", status: 400 })
+    );
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm(),
+    });
+    const response = await POST(request);
+    const data = await response.json();
+    expect(response.status).toBe(409);
+    expect(data.duplicate).toBe(true);
+  });
+
+  it("returns 409 with a duplicate flag if uploadResume reports the resume was already applied to this job", async () => {
+    const { uploadResume } = await import("@/lib/intervuebox/resumes");
+    const { IntervueBoxError } = await import("@/lib/intervuebox/client");
+    vi.mocked(uploadResume).mockRejectedValueOnce(
+      new IntervueBoxError({
+        code: "unknown_error",
+        message: "An applied job has already been created for this resume and job.",
+        status: 400,
+      })
+    );
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm(),
+    });
+    const response = await POST(request);
+    const data = await response.json();
+    expect(response.status).toBe(409);
+    expect(data.duplicate).toBe(true);
   });
 
   it("retries addApplicant while the resume is still being parsed, then succeeds", async () => {
@@ -232,6 +295,92 @@ describe("POST /api/hub/fitment-check", () => {
     });
     const response = await POST(request);
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(502);
+  });
+
+  it("retries addApplicant while the job is inactive, then succeeds", async () => {
+    vi.stubEnv("JOB_INACTIVE_MAX_WAIT_MS", "200");
+    vi.stubEnv("JOB_INACTIVE_RETRY_INTERVAL_MS", "5");
+    const { addApplicant } = await import("@/lib/intervuebox/applicants");
+    const { IntervueBoxError } = await import("@/lib/intervuebox/client");
+    vi.mocked(addApplicant)
+      .mockRejectedValueOnce(
+        new IntervueBoxError({
+          code: "bad_request",
+          message: 'Cannot apply to "Test Role" because it is currently inactive or closed.',
+          status: 400,
+        })
+      )
+      .mockResolvedValueOnce({ ibAppliedJobId: "APJ_123" });
+
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm(),
+    });
+    const response = await POST(request);
+
+    // A plain rejection (no retry) would have 502'd immediately — 200 here
+    // only happens if the retry loop caught the "inactive" rejection and
+    // successfully re-called addApplicant to get the resolved value.
+    expect(response.status).toBe(200);
+  });
+
+  it("gives up and returns 502 if the job is still inactive after the max wait", async () => {
+    vi.stubEnv("JOB_INACTIVE_MAX_WAIT_MS", "20");
+    vi.stubEnv("JOB_INACTIVE_RETRY_INTERVAL_MS", "5");
+    const { addApplicant } = await import("@/lib/intervuebox/applicants");
+    const { IntervueBoxError } = await import("@/lib/intervuebox/client");
+    vi.mocked(addApplicant).mockRejectedValue(
+      new IntervueBoxError({
+        code: "bad_request",
+        message: 'Cannot apply to "Test Role" because it is currently inactive or closed.',
+        status: 400,
+      })
+    );
+
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm(),
+    });
+    const response = await POST(request);
+
+    expect(response.status).toBe(502);
+  });
+
+  it("rejects a submission with no candidateLevel", async () => {
+    const form = buildForm();
+    form.delete("candidateLevel");
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: form,
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+  });
+
+  it("rejects a submission with an unrecognized candidateLevel", async () => {
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm({ candidateLevel: "expert" }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+  });
+
+  it("stores candidateLevel on the fitment_leads insert", async () => {
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm({ candidateLevel: "entry" }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ candidate_level: "entry" })
+    );
   });
 });
