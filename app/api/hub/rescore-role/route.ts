@@ -14,6 +14,23 @@ export async function POST(request: Request) {
   const form = await request.formData();
   form.set("email", user.email);
 
+  const { data: existingLead } = await supabase
+    .from("fitment_leads")
+    .select("phone, candidate_level")
+    .eq("user_id", user.id)
+    .not("phone", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingLead?.phone) {
+    form.set("phone", existingLead.phone);
+  }
+
+  if (existingLead?.candidate_level) {
+    form.set("candidateLevel", existingLead.candidate_level);
+  }
+
   const checkResponse = await fetch(new URL("/api/hub/fitment-check", request.url), {
     method: "POST",
     body: form,
@@ -21,6 +38,16 @@ export async function POST(request: Request) {
   const checkData = await checkResponse.json();
 
   if (!checkResponse.ok) {
+    // fitment-check's duplicate message ("...Sign in to see your report.") is
+    // written for the anonymous landing flow. Here the user is already
+    // signed in and rescoring from their dashboard, so that copy is wrong —
+    // rewrite it for this context instead of forwarding it verbatim.
+    if (checkData.duplicate) {
+      return Response.json(
+        { ...checkData, error: "You've already checked your fitment for this exact role and CV — refresh the page to see the existing report." },
+        { status: checkResponse.status }
+      );
+    }
     return Response.json(checkData, { status: checkResponse.status });
   }
 
