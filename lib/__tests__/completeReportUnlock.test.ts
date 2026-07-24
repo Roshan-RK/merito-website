@@ -5,6 +5,11 @@ vi.mock("@/lib/reportUnlocks", () => ({
   unlockReport: unlockReportMock,
 }));
 
+const unlockProductMock = vi.fn();
+vi.mock("@/lib/productUnlocks", () => ({
+  unlockProduct: unlockProductMock,
+}));
+
 const getResumeMatchReportMock = vi.fn();
 vi.mock("@/lib/intervuebox/reports", () => ({
   getResumeMatchReport: getResumeMatchReportMock,
@@ -22,6 +27,8 @@ describe("completeReportUnlock", () => {
   beforeEach(() => {
     unlockReportMock.mockReset();
     unlockReportMock.mockResolvedValue(undefined);
+    unlockProductMock.mockReset();
+    unlockProductMock.mockResolvedValue(undefined);
     getResumeMatchReportMock.mockReset();
     updateEqMock.mockReset();
     updateEqMock.mockResolvedValue({ error: null });
@@ -125,5 +132,18 @@ describe("completeReportUnlock", () => {
     });
 
     expect(result).toEqual({ status: "error", message: "Unlocked, but the report failed to save — please refresh." });
+  });
+
+  it("also unlocks personality and references for a bundle completion", async () => {
+    const { completeReportUnlock } = await import("../completeReportUnlock");
+
+    await completeReportUnlock(
+      "user-1",
+      { id: "lead-1", ib_applied_job_id: "APJ_1", resume_match_status: "READY", resume_match_raw: { overallScore: 80 } },
+      "bundle"
+    );
+
+    expect(unlockProductMock).toHaveBeenCalledWith("user-1", "personality");
+    expect(unlockProductMock).toHaveBeenCalledWith("user-1", "references");
   });
 });

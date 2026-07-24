@@ -114,7 +114,8 @@ describe("POST /api/hub/unlock-report", () => {
       expect(response.status).toBe(200);
       expect(completeReportUnlockMock).toHaveBeenCalledWith(
         "user-123",
-        expect.objectContaining({ id: "lead-1", ib_applied_job_id: "APJ_1" })
+        expect.objectContaining({ id: "lead-1", ib_applied_job_id: "APJ_1" }),
+        "report"
       );
       expect(createOrderMock).not.toHaveBeenCalled();
       expect(body).toEqual({ status: "unlocked", report: storedRaw });
@@ -206,6 +207,29 @@ describe("POST /api/hub/unlock-report", () => {
         })
       );
       expect(completeReportUnlockMock).not.toHaveBeenCalled();
+    });
+
+    it("looks up the bundle price and inserts a bundle transaction when product is 'bundle'", async () => {
+      getUserMock.mockResolvedValue({ data: { user: { id: "user-123", email: "rushi@example.com" } } });
+      buildLeadChain({
+        data: { id: "lead-1", role_title: "Senior Product Manager", candidate_level: "entry", ib_applied_job_id: "APJ_1", resume_match_status: "READY", resume_match_raw: {} },
+        error: null,
+      });
+      createOrderMock.mockResolvedValue({ orderId: "order_ABC123" });
+
+      const { POST } = await importRoute();
+      const request = new Request("http://localhost/api/hub/unlock-report", {
+        method: "POST",
+        body: JSON.stringify({ leadId: "lead-1", product: "bundle" }),
+      });
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.status).toBe("checkout");
+      expect(insertMock).toHaveBeenCalledWith(
+        expect.objectContaining({ product: "bundle", amount_paise: 89700 })
+      );
     });
 
     it("returns 500 when the pending transaction insert fails", async () => {

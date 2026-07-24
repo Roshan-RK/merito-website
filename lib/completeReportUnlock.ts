@@ -1,5 +1,6 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { unlockReport } from "@/lib/reportUnlocks";
+import { unlockProduct } from "@/lib/productUnlocks";
 import { getResumeMatchReport, scoreOutOfTen, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 
 export type CompleteReportUnlockResult =
@@ -18,9 +19,17 @@ export type UnlockableLead = {
 // verify path (app/api/hub/razorpay/verify) — both need to record the
 // report_unlocks row and then hand back the actual report content, fetching
 // and caching it on fitment_leads if it wasn't already generated.
-export async function completeReportUnlock(userId: string, lead: UnlockableLead): Promise<CompleteReportUnlockResult> {
+export async function completeReportUnlock(
+  userId: string,
+  lead: UnlockableLead,
+  product: "report" | "bundle" = "report"
+): Promise<CompleteReportUnlockResult> {
   try {
     await unlockReport(userId, lead.id);
+    if (product === "bundle") {
+      await unlockProduct(userId, "personality");
+      await unlockProduct(userId, "references");
+    }
   } catch {
     return { status: "error", message: "Something went wrong unlocking the report." };
   }

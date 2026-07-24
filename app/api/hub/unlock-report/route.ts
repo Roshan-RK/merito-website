@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  let body: { leadId?: string };
+  let body: { leadId?: string; product?: string };
   try {
     body = await request.json();
   } catch {
@@ -31,6 +31,8 @@ export async function POST(request: Request) {
   if (!leadId) {
     return Response.json({ error: "leadId is required." }, { status: 400 });
   }
+
+  const product = body.product === "bundle" ? "bundle" : "report";
 
   const { data: lead, error: leadError } = await supabase
     .from("fitment_leads")
@@ -45,19 +47,20 @@ export async function POST(request: Request) {
 
   if (!isRazorpayBypassed()) {
     const level = (lead.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
-    const amountPaise = PRODUCT_PRICING.report[level];
+    const amountPaise = PRODUCT_PRICING[product][level];
 
     const { orderId } = await createOrder({
       amountPaise,
       currency: "INR",
-      receipt: `report-${leadId}`,
+      // Razorpay caps receipt at 40 chars; "report-" + a uuid leadId is 43.
+      receipt: leadId,
     });
 
     const admin = getSupabaseServerClient();
     const { error: insertError } = await admin.from("razorpay_transactions").insert({
       order_id: orderId,
       user_id: user.id,
-      product: "report",
+      product,
       level,
       lead_id: leadId,
       amount_paise: amountPaise,
@@ -75,12 +78,12 @@ export async function POST(request: Request) {
       currency: "INR",
       keyId: process.env.RAZORPAY_KEY_ID,
       name: "Merito",
-      description: "Detailed Fitment Report",
+      description: product === "bundle" ? "Full Profile Bundle" : "Detailed Fitment Report",
       prefill: { name: user.email?.split("@")[0] || "Candidate", email: user.email ?? "" },
     });
   }
 
-  const result = await completeReportUnlock(user.id, lead);
+  const result = await completeReportUnlock(user.id, lead, product);
 
   if (result.status === "error") {
     return Response.json({ error: result.message }, { status: 500 });
