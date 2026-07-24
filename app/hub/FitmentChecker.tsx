@@ -259,8 +259,8 @@ export default function FitmentChecker() {
           Your experience level
         </option>
         <option value="entry">Entry-level (0-2 years)</option>
-        <option value="mid">Mid-level (3-7 years)</option>
-        <option value="senior">Senior-level (8+ years)</option>
+        <option value="mid">Mid-level (2-10 years)</option>
+        <option value="senior">Senior-level (10+ years)</option>
       </select>
 
       <div className="flex items-center" style={{ gap: 8, marginBottom: 6 }}>
