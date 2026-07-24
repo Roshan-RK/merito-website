@@ -7,6 +7,7 @@ import type { InterviewStatus } from "./ProgressRail";
 import { getResumeMatchReport, scoreOutOfTen, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { PRODUCT_PRICING, DEFAULT_LEVEL, formatPrice, type CandidateLevel } from "@/lib/razorpay/pricing";
+import { isProductUnlocked } from "@/lib/productUnlocks";
 
 export default async function AccountPage() {
   const supabase = await createSupabaseServerClient();
@@ -106,6 +107,12 @@ export default async function AccountPage() {
   const level = (current.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
   const counsellingPriceLabel = formatPrice(PRODUCT_PRICING.counselling[level]);
 
+  const [personalityUnlocked, referencesUnlocked] = await Promise.all([
+    isProductUnlocked(user.id, "personality"),
+    isProductUnlocked(user.id, "references"),
+  ]);
+  const bundleEligible = !personalityUnlocked && !referencesUnlocked;
+
   const { data: counsellingRequest } = await supabase
     .from("counselling_requests")
     .select("id")
@@ -116,6 +123,8 @@ export default async function AccountPage() {
     <DashboardClient
       leadId={current.id}
       roleTitle={current.role_title}
+      level={level}
+      bundleEligible={bundleEligible}
       score={score}
       prevScore={prevForSameRole ? prevForSameRole.score : null}
       verdict={verdict}

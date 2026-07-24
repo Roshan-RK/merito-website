@@ -8,10 +8,13 @@ import InterviewStartModal from "./InterviewStartModal";
 import CounsellingCard from "./CounsellingCard";
 import CounsellingPaywallModal from "./CounsellingPaywallModal";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
+import type { CandidateLevel } from "@/lib/razorpay/pricing";
 
 export default function DashboardClient({
   leadId,
   roleTitle,
+  level,
+  bundleEligible,
   score,
   prevScore,
   verdict,
@@ -24,6 +27,8 @@ export default function DashboardClient({
 }: {
   leadId: string;
   roleTitle: string;
+  level: CandidateLevel;
+  bundleEligible: boolean;
   score: number;
   prevScore: number | null;
   verdict: string;
@@ -95,6 +100,8 @@ export default function DashboardClient({
         <ReportPaywallModal
           leadId={leadId}
           roleTitle={roleTitle}
+          level={level}
+          bundleEligible={bundleEligible}
           onClose={() => setModal("none")}
           onUnlocked={(unlockedReport) => {
             setReportUnlocked(true);
