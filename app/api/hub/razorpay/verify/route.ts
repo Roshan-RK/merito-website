@@ -38,11 +38,20 @@ export async function POST(request: Request) {
     return Response.json({ error: "Payment could not be verified." }, { status: 400 });
   }
 
-  // finalizeRazorpayOrder always unlocks the transaction's own user_id, not
-  // whoever calls this route — so the unlock itself is already correct even
-  // if a different signed-in user somehow posted these values. This check
-  // only stops that caller from receiving someone else's report content.
-  if (result.userId !== user.id || result.leadId === null) {
+  // finalizeRazorpayOrder always applies the effect to the transaction's own
+  // user_id, not whoever calls this route — so the effect itself is already
+  // correct even if a different signed-in user somehow posted these values.
+  // This check only stops that caller from receiving someone else's report
+  // content back in the response.
+  if (result.userId !== user.id) {
+    return Response.json({ status: result.product === "counselling" ? "requested" : "unlocked" });
+  }
+
+  if (result.product === "counselling") {
+    return Response.json({ status: "requested" });
+  }
+
+  if (result.leadId === null) {
     return Response.json({ status: "unlocked" });
   }
 
