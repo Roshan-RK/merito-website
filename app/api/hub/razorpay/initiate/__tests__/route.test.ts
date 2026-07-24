@@ -108,6 +108,22 @@ describe("POST /api/hub/razorpay/initiate", () => {
     expect(body.amountPaise).toBe(199900); // counselling @ entry level (default)
   });
 
+  it("accepts personality as an initiatable product", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "rushi@example.com" } } });
+    const { POST } = await importRoute();
+    const response = await POST(buildRequest({ product: "personality" }));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.status).toBe("checkout");
+  });
+
+  it("accepts references as an initiatable product", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "rushi@example.com" } } });
+    const { POST } = await importRoute();
+    const response = await POST(buildRequest({ product: "references" }));
+    expect(response.status).toBe(200);
+  });
+
   it("returns 500 when the pending transaction insert fails", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "rushi@example.com" } } });
     insertMock.mockResolvedValue({ error: { message: "db error" } });

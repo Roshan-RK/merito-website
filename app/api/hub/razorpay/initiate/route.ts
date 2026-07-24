@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 // "report" has its own dedicated route (app/api/hub/unlock-report) because
 // it's tied to a specific fitment_leads row (leadId) — this generic route
 // is for account-level products that aren't tied to any one lead.
-const INITIATABLE_PRODUCTS: RazorpayProduct[] = ["counselling"];
+const INITIATABLE_PRODUCTS: RazorpayProduct[] = ["counselling", "personality", "references"];
 
 function isInitiatableProduct(value: unknown): value is RazorpayProduct {
   return typeof value === "string" && (INITIATABLE_PRODUCTS as string[]).includes(value);
