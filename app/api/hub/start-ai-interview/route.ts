@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { getApplicant } from "@/lib/intervuebox/applicants";
-import { createInterviewAgent } from "@/lib/intervuebox/agents";
+import { createInterviewAgent, type CandidateLevel } from "@/lib/intervuebox/agents";
 import { sendInterviewInvitation } from "@/lib/intervuebox/invitations";
 
 export const runtime = "nodejs";
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
   const { data: lead, error: leadError } = await supabase
     .from("fitment_leads")
-    .select("ib_job_id, ib_applied_job_id")
+    .select("ib_job_id, ib_applied_job_id, candidate_level")
     .eq("user_id", user.id)
     .eq("role_title", roleTitle)
     .order("created_at", { ascending: false })
@@ -56,7 +56,8 @@ export async function POST(request: Request) {
   let ibAgentId: string;
   try {
     ({ candidateId } = await getApplicant(lead.ib_applied_job_id));
-    ({ ibAgentId } = await createInterviewAgent(lead.ib_job_id));
+    const candidateLevel = (lead.candidate_level as CandidateLevel) || "mid";
+    ({ ibAgentId } = await createInterviewAgent(lead.ib_job_id, roleTitle, candidateLevel));
     const { invited } = await sendInterviewInvitation(ibAgentId, [candidateId]);
     if (invited === 0) {
       console.error("IntervueBox interview-invite chain failed", {

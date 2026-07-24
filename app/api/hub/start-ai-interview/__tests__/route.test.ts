@@ -105,7 +105,7 @@ describe("POST /api/hub/start-ai-interview", () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     leadMaybeSingleMock.mockResolvedValue({
-      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123" },
+      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "senior" },
       error: null,
     });
     getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
@@ -117,7 +117,7 @@ describe("POST /api/hub/start-ai-interview", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "invited" });
-    expect(createInterviewAgentMock).toHaveBeenCalledWith("JOB_123");
+    expect(createInterviewAgentMock).toHaveBeenCalledWith("JOB_123", "Senior Product Manager", "senior");
     expect(sendInterviewInvitationMock).toHaveBeenCalledWith("INT_123", ["USR_123"]);
     expect(insertMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -135,7 +135,7 @@ describe("POST /api/hub/start-ai-interview", () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     leadMaybeSingleMock.mockResolvedValue({
-      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123" },
+      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
       error: null,
     });
     getApplicantMock.mockRejectedValue(new Error("boom"));
@@ -149,7 +149,7 @@ describe("POST /api/hub/start-ai-interview", () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     leadMaybeSingleMock.mockResolvedValue({
-      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123" },
+      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
       error: null,
     });
     getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
@@ -166,7 +166,7 @@ describe("POST /api/hub/start-ai-interview", () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     leadMaybeSingleMock.mockResolvedValue({
-      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123" },
+      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
       error: null,
     });
     getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
@@ -185,7 +185,7 @@ describe("POST /api/hub/start-ai-interview", () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     leadMaybeSingleMock.mockResolvedValue({
-      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123" },
+      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
       error: null,
     });
     getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
