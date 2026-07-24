@@ -23,6 +23,7 @@ export default function FitmentChecker() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
   const [phone, setPhone] = useState("");
+  const [candidateLevel, setCandidateLevel] = useState<"entry" | "mid" | "senior">("mid");
   const [jdMode, setJdMode] = useState<JdMode>("paste");
   const [jdText, setJdText] = useState("");
   const [jdUrl, setJdUrl] = useState("");
@@ -32,6 +33,7 @@ export default function FitmentChecker() {
   const [shown, setShown] = useState(0);
   const [verdict, setVerdict] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isDuplicate, setIsDuplicate] = useState(false);
   const rafRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isMountedRef = useRef(true);
@@ -82,6 +84,7 @@ export default function FitmentChecker() {
   const checkFit = async () => {
     if (!canSubmit || !cvFile) return;
     setErrorMsg(null);
+    setIsDuplicate(false);
     setChecking(true);
     setScore(null);
     setShown(0);
@@ -101,6 +104,7 @@ export default function FitmentChecker() {
     form.set("email", email.trim());
     form.set("role", role.trim());
     form.set("phone", phone.trim());
+    form.set("candidateLevel", candidateLevel);
     if (jdMode === "paste") form.set("jdText", jdText.trim());
     else form.set("jdUrl", jdUrl.trim());
     form.set("cv", cvFile);
@@ -114,10 +118,12 @@ export default function FitmentChecker() {
         verdict?: string;
         leadId?: string;
         error?: string;
+        duplicate?: boolean;
       };
       window.grecaptcha?.reset?.(widgetIdRef.current ?? undefined);
       if (!res.ok || !data.status) {
         setChecking(false);
+        setIsDuplicate(Boolean(data.duplicate));
         setErrorMsg(data.error || "Something went wrong — please try again.");
         return;
       }
@@ -198,6 +204,13 @@ export default function FitmentChecker() {
         >
           Job Fitment Score - Free
         </span>
+        <Link
+          href="/hub/login"
+          className="font-[family-name:var(--font-poppins)] font-semibold text-[#9c9c9c] hover:text-[#ed1a24] transition-colors"
+          style={{ fontSize: 12, marginLeft: "auto", textDecoration: "underline" }}
+        >
+          Log in
+        </Link>
       </div>
 
       <label className="block font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 12, marginBottom: 6 }}>
@@ -246,6 +259,20 @@ export default function FitmentChecker() {
         className="w-full box-border bg-white font-[family-name:var(--font-poppins)] text-black outline-none border border-[#dcdcdc] focus:border-[#ed1a24] transition-colors"
         style={{ padding: "13px 14px", borderRadius: 8, fontSize: 14, marginBottom: 12 }}
       />
+
+      <label className="block font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 12, marginBottom: 6 }}>
+        Your experience level
+      </label>
+      <select
+        value={candidateLevel}
+        onChange={(e) => setCandidateLevel(e.target.value as "entry" | "mid" | "senior")}
+        className="w-full box-border bg-white font-[family-name:var(--font-poppins)] text-black outline-none border border-[#dcdcdc] focus:border-[#ed1a24] transition-colors"
+        style={{ padding: "13px 14px", borderRadius: 8, fontSize: 14, marginBottom: 12 }}
+      >
+        <option value="entry">Entry-level</option>
+        <option value="mid">Mid-level</option>
+        <option value="senior">Senior</option>
+      </select>
 
       <div className="flex items-center" style={{ gap: 8, marginBottom: 6 }}>
         <label className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 12 }}>
@@ -376,6 +403,14 @@ export default function FitmentChecker() {
       {errorMsg && (
         <p className="text-center" style={{ fontSize: 12.5, color: "#ed1a24", marginTop: 10 }}>
           {errorMsg}
+          {isDuplicate && (
+            <>
+              {" "}
+              <Link href="/hub/login" style={{ textDecoration: "underline", fontWeight: 600 }}>
+                Sign in
+              </Link>
+            </>
+          )}
         </p>
       )}
 
