@@ -48,10 +48,10 @@ export async function GET(request: Request) {
         pages.push(
           <PdfPage key="fitment" title="Fitment Report">
             <FitmentPdfContent
-              displayName={current.name || user.email || "Candidate"}
+              displayName={current.name || "Candidate"}
               roleTitle={current.role_title}
               formattedDate={formattedDate}
-              score={current.score}
+              email={user.email ?? null}
               report={report}
               candidateDetails={candidateDetails}
             />
@@ -124,7 +124,7 @@ export async function GET(request: Request) {
       pages.push(
         <PdfPage key="interview" title="AI Interview Report">
           <InterviewPdfContent
-            displayName={lead?.name || user.email || "Candidate"}
+            displayName={lead?.name || nameFromEmail(user.email ?? "")}
             roleTitle={interview.role_title}
             infoLine={infoLine}
             report={report}

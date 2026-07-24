@@ -2,6 +2,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { getCandidateResumeDetails } from "@/lib/intervuebox/reports";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
+import { nameFromEmail } from "@/lib/personality";
 import InterviewReportPdf from "./InterviewReportPdf";
 
 export const runtime = "nodejs";
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
   const organisation = candidateDetails?.experience[0]?.company ?? null;
   const location = candidateDetails?.location ?? null;
   const totalExperience = candidateDetails?.totalExperience ?? null;
-  const displayName = lead?.name || user.email || "Candidate";
+  const displayName = lead?.name || nameFromEmail(user.email ?? "");
   const formattedDate = new Date(interview.updated_at).toLocaleDateString("en-IN", {
     year: "numeric",
     month: "long",
