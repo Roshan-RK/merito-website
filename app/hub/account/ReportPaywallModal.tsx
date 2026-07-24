@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
+import PriceOptionTiles from "./PriceOptionTiles";
+import type { CandidateLevel } from "@/lib/razorpay/pricing";
 
 type RazorpayHandlerResponse = {
   razorpay_order_id: string;
@@ -47,11 +49,15 @@ function loadRazorpayCheckoutScript(): Promise<void> {
 export default function ReportPaywallModal({
   leadId,
   roleTitle,
+  level,
+  bundleEligible,
   onClose,
   onUnlocked,
 }: {
   leadId: string;
   roleTitle: string;
+  level: CandidateLevel;
+  bundleEligible: boolean;
   onClose: () => void;
   onUnlocked: (report: ResumeMatchReportReady) => void;
 }) {
@@ -59,14 +65,14 @@ export default function ReportPaywallModal({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handlePay = async () => {
+  const handlePay = async (selection: "solo" | "bundle") => {
     setPaying(true);
     setError(null);
     try {
       const res = await fetch("/api/hub/unlock-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId }),
+        body: JSON.stringify({ leadId, product: selection === "bundle" ? "bundle" : "report" }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -197,17 +203,14 @@ export default function ReportPaywallModal({
               </p>
             </div>
 
-            <button
-              onClick={handlePay}
-              disabled={paying}
-              className="w-full font-[family-name:var(--font-poppins)] font-semibold text-white"
-              style={{ height: 50, borderRadius: 8, fontSize: 15, background: paying ? "#dcdcdc" : "#ed1a24", border: "none", cursor: paying ? "default" : "pointer", boxShadow: paying ? "none" : "0 4px 6px rgba(236,34,40,0.3)" }}
-            >
-              {paying ? "Unlocking…" : "Unlock full report — ₹299"}
-            </button>
-            <p className="text-[#9c9c9c]" style={{ fontSize: 11.5, textAlign: "center", margin: "10px 0 0" }}>
-              One-time payment · No subscription · UPI, card & netbanking
-            </p>
+            <PriceOptionTiles
+              soloProduct="report"
+              soloLabel="Just the Report"
+              level={level}
+              bundleEligible={bundleEligible}
+              submitting={paying}
+              onContinue={handlePay}
+            />
           </>
         )}
 
