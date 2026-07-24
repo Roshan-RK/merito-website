@@ -10,6 +10,7 @@ const txnEqMock = vi.fn();
 const txnMaybeSingleMock = vi.fn();
 const updateMock = vi.fn();
 const updateEqMock = vi.fn();
+const insertMock = vi.fn();
 const fromMock = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
@@ -28,7 +29,12 @@ describe("finalizeRazorpayOrder", () => {
     updateEqMock.mockReset();
     updateEqMock.mockResolvedValue({ error: null });
     updateMock.mockReturnValue({ eq: updateEqMock });
-    fromMock.mockReturnValue({ select: txnSelectMock, update: updateMock });
+    insertMock.mockReset();
+    insertMock.mockResolvedValue({ error: null });
+    fromMock.mockImplementation((table: string) => {
+      if (table === "counselling_requests") return { insert: insertMock };
+      return { select: txnSelectMock, update: updateMock };
+    });
     txnSelectMock.mockReturnValue({ eq: txnEqMock });
     txnEqMock.mockReturnValue({ maybeSingle: txnMaybeSingleMock });
   });
@@ -103,6 +109,33 @@ describe("finalizeRazorpayOrder", () => {
 
     expect(result).toEqual({ ok: true, product: "report", userId: "user-1", leadId: "lead-1" });
     expect(unlockReportMock).not.toHaveBeenCalled();
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("records a counselling_requests row and marks success for a counselling order", async () => {
+    txnMaybeSingleMock.mockResolvedValue({
+      data: { user_id: "user-1", product: "counselling", lead_id: null, status: "initiated" },
+      error: null,
+    });
+    const { finalizeRazorpayOrder } = await import("../finalize");
+
+    const result = await finalizeRazorpayOrder("order_1", "pay_1");
+
+    expect(result).toEqual({ ok: true, product: "counselling", userId: "user-1", leadId: null });
+    expect(insertMock).toHaveBeenCalledWith({ user_id: "user-1", order_id: "order_1" });
+    expect(unlockReportMock).not.toHaveBeenCalled();
+    expect(updateMock).toHaveBeenCalledWith({ status: "success", payment_id: "pay_1" });
+  });
+
+  it("throws and does not mark success when the counselling_requests insert fails", async () => {
+    txnMaybeSingleMock.mockResolvedValue({
+      data: { user_id: "user-1", product: "counselling", lead_id: null, status: "initiated" },
+      error: null,
+    });
+    insertMock.mockResolvedValue({ error: { message: "db error" } });
+    const { finalizeRazorpayOrder } = await import("../finalize");
+
+    await expect(finalizeRazorpayOrder("order_1", "pay_1")).rejects.toThrow("Failed to record counselling request");
     expect(updateMock).not.toHaveBeenCalled();
   });
 });

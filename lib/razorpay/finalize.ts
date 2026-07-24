@@ -27,17 +27,26 @@ export async function finalizeRazorpayOrder(orderId: string, paymentId: string):
 
   const product = txn.product as RazorpayProduct;
 
-  // Only "report" is wired up this phase — personality/references/interview/
-  // counselling/bundle each get their own case in a later plan.
-  if (product !== "report") {
+  // "report" and "counselling" are wired up so far — personality/references/
+  // interview/bundle each get their own case in a later plan.
+  if (product !== "report" && product !== "counselling") {
     return { ok: false, reason: "unsupported_product" };
   }
 
   if (txn.status !== "success") {
-    // Unlock first, then mark success — if unlockReport throws (a transient
-    // DB error), the row stays "initiated" and a retry genuinely re-attempts
-    // the unlock instead of silently skipping it on the next call.
-    await unlockReport(txn.user_id, txn.lead_id as string);
+    // Apply the product's effect first, then mark success — if the effect
+    // throws (a transient DB error), the row stays "initiated" and a retry
+    // genuinely re-attempts it instead of silently skipping it next time.
+    if (product === "report") {
+      await unlockReport(txn.user_id, txn.lead_id as string);
+    } else {
+      const { error: insertError } = await supabase
+        .from("counselling_requests")
+        .insert({ user_id: txn.user_id, order_id: orderId });
+      if (insertError) {
+        throw new Error(`Failed to record counselling request: ${insertError.message}`);
+      }
+    }
     await supabase
       .from("razorpay_transactions")
       .update({ status: "success", payment_id: paymentId })
