@@ -107,13 +107,13 @@ export default async function CombinedReportPage({
     }
   }
 
-  let interview: { roleTitle: string; report: InterviewReportReady } | null = null;
+  let interview: { roleTitle: string; report: InterviewReportReady; updatedAt: string } | null = null;
   if (include.has("interview")) {
-    let query = supabase.from("fitment_interviews").select("role_title, status, report_raw").eq("user_id", user.id);
+    let query = supabase.from("fitment_interviews").select("role_title, status, report_raw, updated_at").eq("user_id", user.id);
     if (roleTitle) query = query.eq("role_title", roleTitle);
     const { data: row } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
     if (row && row.status === "ready" && row.report_raw) {
-      interview = { roleTitle: row.role_title, report: row.report_raw as InterviewReportReady };
+      interview = { roleTitle: row.role_title, report: row.report_raw as InterviewReportReady, updatedAt: row.updated_at };
     }
   }
 
@@ -297,7 +297,23 @@ export default async function CombinedReportPage({
 
         {interview && (
           <>
-            <SectionHeading index="03" title="AI Video Interview" blurb="Structured, proctored interview scored on role-critical skills and delivery." />
+            <SectionHeading
+              index="03"
+              title="AI Video Interview"
+              blurb={[
+                "Structured, proctored interview scored on role-critical skills and delivery.",
+                [
+                  interview.report.approxDurationMinutes != null ? `~${interview.report.approxDurationMinutes} min` : null,
+                  // IntervueBox doesn't expose interview language on the report API
+                  // today — every interview run through this product is English,
+                  // so this is a static label, not a per-report field.
+                  "English",
+                  new Date(interview.updatedAt).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }),
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
+              ].join(" ")}
+            />
             <div
               className="bg-white border border-black/[0.08]"
               style={{ borderRadius: 14, padding: 20, display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr)", gap: 24, alignItems: "center", marginBottom: 20 }}
