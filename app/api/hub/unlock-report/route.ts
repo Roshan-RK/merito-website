@@ -1,7 +1,14 @@
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
-import { unlockReport } from "@/lib/reportUnlocks";
-import { getResumeMatchReport, scoreOutOfTen } from "@/lib/intervuebox/reports";
+import { completeReportUnlock } from "@/lib/completeReportUnlock";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { createOrder } from "@/lib/razorpay/client";
+import { PRODUCT_PRICING, DEFAULT_LEVEL, type CandidateLevel } from "@/lib/razorpay/pricing";
+
+export const runtime = "nodejs";
+
+function isRazorpayBypassed(): boolean {
+  return process.env.RAZORPAY_BYPASS !== "false";
+}
 
 export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
@@ -13,76 +20,76 @@ export async function POST(request: Request) {
     return Response.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  let body: { roleTitle?: string };
+  let body: { leadId?: string; product?: string };
   try {
     body = await request.json();
   } catch {
     return Response.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const roleTitle = typeof body.roleTitle === "string" ? body.roleTitle.trim() : "";
-  if (!roleTitle) {
-    return Response.json({ error: "roleTitle is required." }, { status: 400 });
+  const leadId = typeof body.leadId === "string" ? body.leadId.trim() : "";
+  if (!leadId) {
+    return Response.json({ error: "leadId is required." }, { status: 400 });
   }
+
+  const product = body.product === "bundle" ? "bundle" : "report";
 
   const { data: lead, error: leadError } = await supabase
     .from("fitment_leads")
-    .select("id, ib_applied_job_id, resume_match_status, resume_match_raw")
+    .select("id, ib_applied_job_id, resume_match_status, resume_match_raw, candidate_level")
     .eq("user_id", user.id)
-    .eq("role_title", roleTitle)
-    .order("created_at", { ascending: false })
-    .limit(1)
+    .eq("id", leadId)
     .maybeSingle();
 
   if (leadError || !lead) {
-    return Response.json({ error: "No fitment check found for this role." }, { status: 400 });
+    return Response.json({ error: "No fitment check found for this lead." }, { status: 400 });
   }
 
-  try {
-    await unlockReport(user.id, roleTitle);
-  } catch {
-    return Response.json({ error: "Something went wrong unlocking the report." }, { status: 500 });
+  if (!isRazorpayBypassed()) {
+    const level = (lead.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
+    const amountPaise = PRODUCT_PRICING[product][level];
+
+    const { orderId } = await createOrder({
+      amountPaise,
+      currency: "INR",
+      // Razorpay caps receipt at 40 chars; "report-" + a uuid leadId is 43.
+      receipt: leadId,
+    });
+
+    const admin = getSupabaseServerClient();
+    const { error: insertError } = await admin.from("razorpay_transactions").insert({
+      order_id: orderId,
+      user_id: user.id,
+      product,
+      level,
+      lead_id: leadId,
+      amount_paise: amountPaise,
+      status: "initiated",
+    });
+
+    if (insertError) {
+      return Response.json({ error: "Something went wrong starting payment." }, { status: 500 });
+    }
+
+    return Response.json({
+      status: "checkout",
+      orderId,
+      amountPaise,
+      currency: "INR",
+      keyId: process.env.RAZORPAY_KEY_ID,
+      name: "Merito",
+      description: product === "bundle" ? "Full Profile Bundle" : "Detailed Fitment Report",
+      prefill: { name: user.email?.split("@")[0] || "Candidate", email: user.email ?? "" },
+    });
   }
 
-  if (lead.resume_match_status === "READY") {
-    return Response.json({ status: "unlocked", report: lead.resume_match_raw });
-  }
+  const result = await completeReportUnlock(user.id, lead, product);
 
-  let report;
-  try {
-    report = await getResumeMatchReport(lead.ib_applied_job_id);
-  } catch {
-    return Response.json({ error: "Unlocked, but the report failed to load — please refresh." }, { status: 500 });
+  if (result.status === "error") {
+    return Response.json({ error: result.message }, { status: 500 });
   }
-
-  if (report.status === "PENDING") {
+  if (result.status === "pending") {
     return Response.json({ status: "pending" });
   }
-
-  const resumeMatchRaw = {
-    overallScore: report.overallScore,
-    rank: report.rank,
-    categories: report.categories,
-    summary: report.summary,
-    strongPoints: report.strongPoints,
-    weakPoints: report.weakPoints,
-  };
-
-  const admin = getSupabaseServerClient();
-  const { error: updateError } = await admin
-    .from("fitment_leads")
-    .update({
-      score: scoreOutOfTen(report.overallScore),
-      verdict: report.summary,
-      resume_match_status: "READY",
-      resume_match_score: report.overallScore,
-      resume_match_raw: resumeMatchRaw,
-    })
-    .eq("id", lead.id);
-
-  if (updateError) {
-    return Response.json({ error: "Unlocked, but the report failed to save — please refresh." }, { status: 500 });
-  }
-
-  return Response.json({ status: "unlocked", report: resumeMatchRaw });
+  return Response.json({ status: "unlocked", report: result.report });
 }

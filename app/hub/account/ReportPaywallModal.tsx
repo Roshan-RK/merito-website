@@ -2,13 +2,62 @@
 
 import { useState } from "react";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
+import PriceOptionTiles from "./PriceOptionTiles";
+import type { CandidateLevel } from "@/lib/razorpay/pricing";
+
+type RazorpayHandlerResponse = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+};
+
+type RazorpayCheckoutOptions = {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  prefill?: { name?: string; email?: string };
+  handler: (response: RazorpayHandlerResponse) => void;
+  modal?: { ondismiss?: () => void };
+};
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: RazorpayCheckoutOptions) => { open: () => void };
+  }
+}
+
+const CHECKOUT_SCRIPT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
+
+function loadRazorpayCheckoutScript(): Promise<void> {
+  if (window.Razorpay) return Promise.resolve();
+  const existing = document.querySelector(`script[src="${CHECKOUT_SCRIPT_SRC}"]`);
+  if (existing) {
+    return new Promise((resolve) => existing.addEventListener("load", () => resolve(), { once: true }));
+  }
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = CHECKOUT_SCRIPT_SRC;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Razorpay checkout script."));
+    document.body.appendChild(script);
+  });
+}
 
 export default function ReportPaywallModal({
+  leadId,
   roleTitle,
+  level,
+  bundleEligible,
   onClose,
   onUnlocked,
 }: {
+  leadId: string;
   roleTitle: string;
+  level: CandidateLevel;
+  bundleEligible: boolean;
   onClose: () => void;
   onUnlocked: (report: ResumeMatchReportReady) => void;
 }) {
@@ -16,14 +65,14 @@ export default function ReportPaywallModal({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handlePay = async () => {
+  const handlePay = async (selection: "solo" | "bundle") => {
     setPaying(true);
     setError(null);
     try {
       const res = await fetch("/api/hub/unlock-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roleTitle }),
+        body: JSON.stringify({ leadId, product: selection === "bundle" ? "bundle" : "report" }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -34,6 +83,61 @@ export default function ReportPaywallModal({
       if (data.status === "pending") {
         setPaying(false);
         setPending(true);
+        return;
+      }
+      if (data.status === "checkout") {
+        try {
+          await loadRazorpayCheckoutScript();
+        } catch {
+          setPaying(false);
+          setError("Could not load the payment form — please try again.");
+          return;
+        }
+        if (!window.Razorpay) {
+          setPaying(false);
+          setError("Could not load the payment form — please try again.");
+          return;
+        }
+        const rzp = new window.Razorpay({
+          key: data.keyId,
+          amount: data.amountPaise,
+          currency: data.currency,
+          name: data.name,
+          description: data.description,
+          order_id: data.orderId,
+          prefill: data.prefill,
+          handler: async (response) => {
+            try {
+              const verifyRes = await fetch("/api/hub/razorpay/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  orderId: response.razorpay_order_id,
+                  paymentId: response.razorpay_payment_id,
+                  signature: response.razorpay_signature,
+                }),
+              });
+              const verifyData = await verifyRes.json();
+              setPaying(false);
+              if (!verifyRes.ok) {
+                setError(verifyData.error || "Payment succeeded but verification failed — please contact support.");
+                return;
+              }
+              if (verifyData.status === "pending") {
+                setPending(true);
+                return;
+              }
+              onUnlocked(verifyData.report);
+            } catch {
+              setPaying(false);
+              setError("Payment succeeded but verification failed — please refresh.");
+            }
+          },
+          modal: {
+            ondismiss: () => setPaying(false),
+          },
+        });
+        rzp.open();
         return;
       }
       setPaying(false);
@@ -99,17 +203,14 @@ export default function ReportPaywallModal({
               </p>
             </div>
 
-            <button
-              onClick={handlePay}
-              disabled={paying}
-              className="w-full font-[family-name:var(--font-poppins)] font-semibold text-white"
-              style={{ height: 50, borderRadius: 8, fontSize: 15, background: paying ? "#dcdcdc" : "#ed1a24", border: "none", cursor: paying ? "default" : "pointer", boxShadow: paying ? "none" : "0 4px 6px rgba(236,34,40,0.3)" }}
-            >
-              {paying ? "Unlocking…" : "Unlock full report — ₹299"}
-            </button>
-            <p className="text-[#9c9c9c]" style={{ fontSize: 11.5, textAlign: "center", margin: "10px 0 0" }}>
-              One-time payment · No subscription · UPI, card & netbanking
-            </p>
+            <PriceOptionTiles
+              soloProduct="report"
+              soloLabel="Just the Report"
+              level={level}
+              bundleEligible={bundleEligible}
+              submitting={paying}
+              onContinue={handlePay}
+            />
           </>
         )}
 

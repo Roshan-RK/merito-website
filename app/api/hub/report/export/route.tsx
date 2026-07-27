@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("role_title, resume_match_status, resume_match_raw")
+    .select("id, role_title, resume_match_status, resume_match_raw")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(1);
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     return Response.json({ error: "No fitment report found." }, { status: 404 });
   }
 
-  const unlocked = await isReportUnlocked(user.id, current.role_title);
+  const unlocked = await isReportUnlocked(user.id, current.id);
   if (!unlocked) {
     return Response.json({ error: "Report not unlocked." }, { status: 403 });
   }

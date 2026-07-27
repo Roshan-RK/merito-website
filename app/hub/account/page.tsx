@@ -7,6 +7,8 @@ import DashboardClient from "./DashboardClient";
 import type { InterviewStatus, PersonalityStatus } from "./ProgressRail";
 import { getResumeMatchReport, scoreOutOfTen, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { PRODUCT_PRICING, DEFAULT_LEVEL, formatPrice, type CandidateLevel } from "@/lib/razorpay/pricing";
+import { isProductUnlocked } from "@/lib/productUnlocks";
 
 export default async function AccountPage() {
   const supabase = await createSupabaseServerClient();
@@ -20,7 +22,7 @@ export default async function AccountPage() {
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("id, role_title, score, verdict, resume_match_status, resume_match_raw, ib_applied_job_id, created_at")
+    .select("id, role_title, score, verdict, resume_match_status, resume_match_raw, ib_applied_job_id, created_at, candidate_level")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -47,7 +49,7 @@ export default async function AccountPage() {
   const current = leads[0];
   const prevForSameRole = leads.find((l, i) => i > 0 && l.role_title === current.role_title);
 
-  const reportUnlocked = await isReportUnlocked(user.id, current.role_title);
+  const reportUnlocked = await isReportUnlocked(user.id, current.id);
 
   let score = current.score;
   let verdict = current.verdict;
@@ -119,9 +121,27 @@ export default async function AccountPage() {
 
   const personalityStatus: PersonalityStatus = personalityRow ? "ready" : "not_started";
 
+  const level = (current.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
+  const counsellingPriceLabel = formatPrice(PRODUCT_PRICING.counselling[level]);
+
+  const [personalityUnlocked, referencesUnlocked] = await Promise.all([
+    isProductUnlocked(user.id, "personality"),
+    isProductUnlocked(user.id, "references"),
+  ]);
+  const bundleEligible = !personalityUnlocked && !referencesUnlocked;
+
+  const { data: counsellingRequest } = await supabase
+    .from("counselling_requests")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
   return (
     <DashboardClient
+      leadId={current.id}
       roleTitle={current.role_title}
+      level={level}
+      bundleEligible={bundleEligible}
       score={score}
       prevScore={prevForSameRole ? prevForSameRole.score : null}
       verdict={verdict}
@@ -130,6 +150,8 @@ export default async function AccountPage() {
       initialInterviewStatus={interviewStatus}
       referenceCheckStatus={referenceCheckStatus}
       personalityStatus={personalityStatus}
+      counsellingPriceLabel={counsellingPriceLabel}
+      initialCounsellingRequested={Boolean(counsellingRequest)}
     />
   );
 }
