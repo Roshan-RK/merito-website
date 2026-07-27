@@ -6,10 +6,10 @@ import { isReportUnlocked } from "@/lib/reportUnlocks";
 import { getReferenceCheckStatus, computeReferenceReport } from "@/lib/referenceChecks";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
-import { nameFromEmail, type Scores, type Validity } from "@/lib/personality";
+import { nameFromEmail, type Scores } from "@/lib/personality";
 import ResumeMatchGauge, { getMatchBand } from "../report/ResumeMatchGauge";
 import ResumeMatchCategoryCard from "../report/ResumeMatchCategoryCard";
-import PersonalityReport from "../personality/PersonalityReport";
+import CondensedPersonalitySection from "./CondensedPersonalitySection";
 import InterviewScoreGauge, { getScoreBand } from "../interview/InterviewScoreGauge";
 import ParameterScoreTile from "../interview/ParameterScoreTile";
 
@@ -94,7 +94,7 @@ export default async function CombinedReportPage({
 
   const roleTitle = roleTitleParam ?? fitment?.roleTitle ?? null;
 
-  let personality: { scores: Scores; validity: Validity } | null = null;
+  let personality: { scores: Scores } | null = null;
   if (include.has("personality") && roleTitle) {
     const { data: existing } = await supabase
       .from("personality_tests")
@@ -103,7 +103,7 @@ export default async function CombinedReportPage({
       .eq("role_title", roleTitle)
       .maybeSingle();
     if (existing?.scores && existing?.validity) {
-      personality = { scores: existing.scores as Scores, validity: existing.validity as Validity };
+      personality = { scores: existing.scores as Scores };
     }
   }
 
@@ -291,7 +291,7 @@ export default async function CombinedReportPage({
         {personality && (
           <>
             <SectionHeading index="02" title="Personality Profile — Big Five (OCEAN)" blurb="Five research-backed traits describing working style — no score is inherently good or bad." />
-            <PersonalityReport candidateName={displayName} roleTitle={primaryRole} scores={personality.scores} validity={personality.validity} />
+            <CondensedPersonalitySection candidateName={displayName} scores={personality.scores} />
           </>
         )}
 
