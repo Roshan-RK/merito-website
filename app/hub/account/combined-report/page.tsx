@@ -407,7 +407,7 @@ export default async function CombinedReportPage({
                 Category ratings — overall {references.overallScore.toFixed(1)}/5
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {references.categoryScores.map((cat) => (
+                {[...references.categoryScores].sort((a, b) => b.value - a.value).map((cat) => (
                   <div key={cat.category} className="flex items-center" style={{ gap: 10 }}>
                     <span className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5, width: 170, flexShrink: 0 }}>{cat.label}</span>
                     <div style={{ flex: 1, height: 8, borderRadius: 50, background: "#f0e6ea" }}>
