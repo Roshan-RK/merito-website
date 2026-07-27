@@ -240,6 +240,36 @@ export default async function CombinedReportPage({
                 <ResumeMatchGauge percent={fitment.report.overallScore} />
               </div>
             </div>
+            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20 }}>
+              <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 16px" }}>
+                Dimension scores
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {fitment.report.categories.map((category) => {
+                  const band = getMatchBand(category.score);
+                  return (
+                    <div key={category.key} className="flex items-center" style={{ gap: 10 }}>
+                      <span className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5, width: 150, flexShrink: 0 }}>
+                        {category.label}
+                      </span>
+                      <div style={{ flex: 1, height: 8, borderRadius: 50, background: "#f0e6ea" }}>
+                        <div
+                          style={{
+                            height: "100%",
+                            borderRadius: 50,
+                            width: `${Math.min(100, Math.max(0, category.score))}%`,
+                            background: band.textColor,
+                          }}
+                        />
+                      </div>
+                      <span className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 12.5, width: 40, textAlign: "right" }}>
+                        {category.score}%
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14, marginBottom: 20 }}>
               {fitment.report.categories.map((category) => (
                 <ResumeMatchCategoryCard key={category.key} category={category} />
