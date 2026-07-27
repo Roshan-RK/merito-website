@@ -442,13 +442,44 @@ export default async function CombinedReportPage({
           </>
         )}
 
-        <div style={{ borderTop: "1px solid #f0e6ea", marginTop: 48, paddingTop: 20 }}>
-          <p className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 13, margin: "0 0 4px" }}>
-            Merito HUB — the talent partner that turns job briefs into dream hires.
+        <div style={{ marginTop: 48 }}>
+          <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 14px" }}>
+            How to read this report
           </p>
-          <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, margin: 0 }}>
-            Career Corner Education Pvt. Ltd. · merito.ai · admin@merito.ai
-          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 14, marginBottom: 24 }}>
+            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "16px 18px" }}>
+              <p className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: 13.5, margin: "0 0 6px" }}>Role Fitment</p>
+              <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 11.5, lineHeight: 1.55, margin: 0 }}>
+                AI comparison of the CV against a specific job description, scored across six dimensions. Measures documented alignment, not potential.
+              </p>
+            </div>
+            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "16px 18px" }}>
+              <p className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: 13.5, margin: "0 0 6px" }}>Personality</p>
+              <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 11.5, lineHeight: 1.55, margin: 0 }}>
+                A Big Five (OCEAN) questionnaire measuring five stable dimensions of working style. Scores describe tendencies, not ability.
+              </p>
+            </div>
+            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "16px 18px" }}>
+              <p className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: 13.5, margin: "0 0 6px" }}>AI Interview</p>
+              <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 11.5, lineHeight: 1.55, margin: 0 }}>
+                Structured, proctored interview scored against role-critical competencies, with a parallel read on delivery quality.
+              </p>
+            </div>
+            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "16px 18px" }}>
+              <p className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: 13.5, margin: "0 0 6px" }}>Reference Check</p>
+              <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 11.5, lineHeight: 1.55, margin: 0 }}>
+                Independent ratings from people who have worked with the candidate, across seven standard categories on a five-point scale.
+              </p>
+            </div>
+          </div>
+          <div style={{ borderTop: "1px solid #f0e6ea", paddingTop: 20 }}>
+            <p className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 13, margin: "0 0 4px" }}>
+              Merito HUB — the talent partner that turns job briefs into dream hires.
+            </p>
+            <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, margin: 0 }}>
+              Career Corner Education Pvt. Ltd. · merito.ai · admin@merito.ai · +91 97676-63123
+            </p>
+          </div>
         </div>
       </div>
     </main>
