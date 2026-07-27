@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   const supabase = getSupabaseServerClient();
   const { data: pending, error: pendingError } = await supabase
     .from("fitment_interviews")
-    .select("user_id, role_title, ib_agent_id, ib_candidate_id")
+    .select("id, user_id, role_title, ib_agent_id, ib_candidate_id")
     .eq("status", "invited");
 
   if (pendingError || !pending) {
@@ -79,11 +79,16 @@ export async function POST(request: Request) {
                 areasOfImprovement: report.areasOfImprovement,
                 shareableReportLink: report.shareableReportLink,
                 approxDurationMinutes: report.approxDurationMinutes,
+                flagForSuspiciousActivity: report.flagForSuspiciousActivity,
+                integrityCheck: report.integrityCheck,
+                videoReport: report.videoReport,
+                feedbackToInterviewer: report.feedbackToInterviewer,
+                roadmap: report.roadmap,
+                criteriaEvaluationTable: report.criteriaEvaluationTable,
               },
               updated_at: new Date().toISOString(),
             })
-            .eq("user_id", row.user_id)
-            .eq("role_title", row.role_title);
+            .eq("id", row.id);
         } catch (err) {
           console.error("Webhook sweep: getInterviewReport failed for a pending row", { row, error: err });
         }

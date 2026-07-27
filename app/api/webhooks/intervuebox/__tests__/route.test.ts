@@ -65,8 +65,8 @@ describe("POST /api/webhooks/intervuebox", () => {
   it("sweeps invited rows, updates the one whose report is ready, and returns 200", async () => {
     selectEqMock.mockResolvedValue({
       data: [
-        { user_id: "user-1", role_title: "Senior Product Manager", ib_agent_id: "INT_1", ib_candidate_id: "USR_1" },
-        { user_id: "user-2", role_title: "Backend Engineer", ib_agent_id: "INT_2", ib_candidate_id: "USR_2" },
+        { id: "row-1", user_id: "user-1", role_title: "Senior Product Manager", ib_agent_id: "INT_1", ib_candidate_id: "USR_1" },
+        { id: "row-2", user_id: "user-2", role_title: "Backend Engineer", ib_agent_id: "INT_2", ib_candidate_id: "USR_2" },
       ],
       error: null,
     });
@@ -81,6 +81,7 @@ describe("POST /api/webhooks/intervuebox", () => {
           areasOfImprovement: "More examples.",
           shareableReportLink: "https://app.intervuebox.com/reports/ISE_1",
           approxDurationMinutes: 4,
+          criteriaEvaluationTable: [{ skill: "Ownership", commentary: "Owns outcomes end to end." }],
         };
       }
       return { status: "NOT_READY" };
@@ -102,11 +103,14 @@ describe("POST /api/webhooks/intervuebox", () => {
     expect(updateMock).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "ready",
-        report_raw: expect.objectContaining({ approxDurationMinutes: 4 }),
+        report_raw: expect.objectContaining({
+          approxDurationMinutes: 4,
+          criteriaEvaluationTable: [{ skill: "Ownership", commentary: "Owns outcomes end to end." }],
+        }),
       })
     );
-    expect(updateEq1Mock).toHaveBeenCalledWith("user_id", "user-1");
-    expect(updateEq2Mock).toHaveBeenCalledWith("role_title", "Senior Product Manager");
+    expect(updateEq1Mock).toHaveBeenCalledWith("id", "row-1");
+    expect(updateEq2Mock).not.toHaveBeenCalled();
   });
 
   it("returns 401 when the signature is validly-signed but the timestamp is outside the 5-minute replay window", async () => {
@@ -125,6 +129,7 @@ describe("POST /api/webhooks/intervuebox", () => {
   it("caps concurrent report lookups per WEBHOOK_SWEEP_CONCURRENCY instead of firing all at once", async () => {
     vi.stubEnv("WEBHOOK_SWEEP_CONCURRENCY", "2");
     const rows = Array.from({ length: 5 }, (_, i) => ({
+      id: `row-${i}`,
       user_id: `user-${i}`,
       role_title: "Role",
       ib_agent_id: `INT_${i}`,
