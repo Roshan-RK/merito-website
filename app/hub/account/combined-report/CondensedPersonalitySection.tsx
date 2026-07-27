@@ -23,7 +23,7 @@ export default function CondensedPersonalitySection({
         const s = scores[t];
         const level = traitLevel(s.pct);
         return (
-          <div key={t} className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 18 }}>
+          <div key={t} className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 18, breakInside: "avoid" }}>
             <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
               <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.05rem", margin: 0 }}>
                 {TRAIT_NAME[t]}

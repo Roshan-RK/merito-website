@@ -7,7 +7,7 @@ function titleCase(key: string): string {
 
 export default function ParameterScoreTile({ skill, score }: { skill: string; score: number }) {
   return (
-    <div className="bg-[#fdf8fb] border border-black/[0.08]" style={{ borderRadius: 12, padding: "14px 16px" }}>
+    <div className="bg-[#fdf8fb] border border-black/[0.08]" style={{ borderRadius: 12, padding: "14px 16px", breakInside: "avoid" }}>
       <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, margin: "0 0 6px" }}>
         {titleCase(skill)}
       </p>
