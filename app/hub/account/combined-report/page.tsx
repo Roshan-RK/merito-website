@@ -133,6 +133,7 @@ export default async function CombinedReportPage({
   const primaryRole = fitment?.roleTitle || interview?.roleTitle || roleTitle || "—";
   const reportDate = new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" });
   const reportId = `MH-${user.id.split("-")[0].toUpperCase()}`;
+  const sortedFitmentCategories = fitment ? [...fitment.report.categories].sort((a, b) => b.score - a.score) : [];
 
   const sections: { key: string; label: string; blurb: string }[] = [];
   if (fitment) sections.push({ key: "fitment", label: "Role Fitment Analysis", blurb: "CV matched against the job description across six dimensions" });
@@ -245,7 +246,7 @@ export default async function CombinedReportPage({
                 Dimension scores
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {fitment.report.categories.map((category) => {
+                {sortedFitmentCategories.map((category) => {
                   const band = getMatchBand(category.score);
                   return (
                     <div key={category.key} className="flex items-center" style={{ gap: 10 }}>
@@ -271,7 +272,7 @@ export default async function CombinedReportPage({
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14, marginBottom: 20 }}>
-              {fitment.report.categories.map((category) => (
+              {sortedFitmentCategories.map((category) => (
                 <ResumeMatchCategoryCard key={category.key} category={category} />
               ))}
             </div>
