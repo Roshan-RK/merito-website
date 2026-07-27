@@ -18,11 +18,17 @@ export default async function AccountLayout({
 
   const { data: lead } = await supabase
     .from("fitment_leads")
-    .select("role_title")
+    .select("role_title, name")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  return <AppShell roleTitle={lead?.role_title ?? ""}>{children}</AppShell>;
+  const userName = lead?.name || user.email?.split("@")[0] || "there";
+
+  return (
+    <AppShell roleTitle={lead?.role_title ?? ""} userName={userName}>
+      {children}
+    </AppShell>
+  );
 }

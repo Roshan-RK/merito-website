@@ -3,12 +3,14 @@
 import { useState } from "react";
 
 const FAQS = [
-  { q: "Is the fitment score really free?", a: "Yes. Upload your CV, pick a job, and get your score with no sign-up and no payment. The detailed report is free too - you just create an account to unlock it." },
-  { q: "What goes on my one-page profile?", a: "Your fitment to the role, your personality-to-job fit, your mock interview standing, verified references, and your key strengths - all on a single page you attach to job applications." },
-  { q: "Who can see my Merito HUB profile?", a: "Only what you choose to share. The profile and the recruiter extension show your verified, approved credential - never raw scores and never your development gaps. You stay in control, and you can switch sharing off any time." },
-  { q: "Do I have to leave LinkedIn to use this?", a: "No. Merito HUB makes your existing LinkedIn profile work harder - recruiters using our extension see your credential right where they already are." },
-  { q: "Is this for freshers or experienced professionals?", a: "Both. Entry-level, mid-level, or senior - the platform adapts to where you are in your career." },
-  { q: "How is this different from a resume builder?", a: "A resume builder makes your CV look nicer. Merito HUB tells you whether you actually fit the job, helps you prove it, and puts that proof in front of the people doing the hiring." },
+  { q: "Will my current employer or network see that I'm using this?", a: "No. Nothing about your Merito activity is visible to anyone unless you choose to share it. Your fitment score, reports, and profile are private by default - you decide exactly what's shown, and to whom." },
+  { q: "Who is Merito HUB actually for?", a: "Anyone trying to prove they're a stronger candidate than their CV alone suggests - from a student applying for their first role, to a manager pushing for the next step up, to a senior leader making a confidential move. The scoring changes by stage; the core idea doesn't." },
+  { q: "Is the fitment score really free?", a: "Yes. Upload your CV, name the job you're targeting, and get your score with no sign-up and no payment. Your first detailed report is free too - you just create an account to unlock it." },
+  { q: "What actually goes on my Merito profile?", a: "Whichever of your fitment score, personality-to-role map, verified references, and mock interview results you choose to include. Nothing is added without your approval." },
+  { q: "Who can see my Merito HUB profile?", a: "Only recruiters and hiring managers you've applied to, or who are hiring through Merito and viewing your LinkedIn profile via our extension - and only the parts of your profile you've approved for that. You can revoke visibility at any time." },
+  { q: "Do I have to leave LinkedIn to use this?", a: "No. Merito HUB works alongside LinkedIn; your existing profile stays exactly as it is. Recruiters hiring through Merito simply see your verified Merito credential layered alongside it." },
+  { q: "How is this different from a resume builder or LinkedIn Premium?", a: "A resume builder formats what you already claim about yourself. LinkedIn Premium gives you visibility metrics about your own profile. Neither one gives a recruiter independent, verified proof of your fit, your working style, or your references. Merito HUB does, and puts that proof directly in front of the person deciding, at the moment they're deciding." },
+  { q: "Does an AI decide whether I get hired?", a: "No. Merito HUB scores fit and surfaces evidence; it doesn't make hiring decisions. Every score is a data point a human recruiter or hiring manager reviews - it's designed to get you seen and fairly considered, not to replace their judgment." },
 ];
 
 export default function FaqAccordion() {

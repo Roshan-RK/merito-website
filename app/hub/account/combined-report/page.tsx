@@ -38,7 +38,7 @@ function SectionHeading({ index, title, blurb }: { index: string; title: string;
 
 function SummaryTile({ label, value, sub, subColor }: { label: string; value: string; sub: string; subColor: string }) {
   return (
-    <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 18 }}>
+    <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 18, breakInside: "avoid" }}>
       <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>
         {label}
       </p>
@@ -75,13 +75,13 @@ export default async function CombinedReportPage({
   if (include.has("fitment")) {
     const { data: leads } = await supabase
       .from("fitment_leads")
-      .select("role_title, name, resume_match_status, resume_match_raw")
+      .select("id, role_title, name, resume_match_status, resume_match_raw")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(1);
     const current = leads?.[0];
     if (current) {
-      const unlocked = await isReportUnlocked(user.id, current.role_title);
+      const unlocked = await isReportUnlocked(user.id, current.id);
       if (unlocked && current.resume_match_status === "READY" && current.resume_match_raw) {
         fitment = {
           roleTitle: current.role_title,
@@ -133,6 +133,7 @@ export default async function CombinedReportPage({
   const primaryRole = fitment?.roleTitle || interview?.roleTitle || roleTitle || "—";
   const reportDate = new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" });
   const reportId = `MH-${user.id.split("-")[0].toUpperCase()}`;
+  const sortedFitmentCategories = fitment ? [...fitment.report.categories].sort((a, b) => b.score - a.score) : [];
 
   const sections: { key: string; label: string; blurb: string }[] = [];
   if (fitment) sections.push({ key: "fitment", label: "Role Fitment Analysis", blurb: "CV matched against the job description across six dimensions" });
@@ -211,7 +212,7 @@ export default async function CombinedReportPage({
           {personality && <SummaryTile label="Personality profile" value="5/5" sub="Traits measured" subColor="#9c9c9c" />}
         </div>
 
-        <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 12 }}>
+        <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 12, breakInside: "avoid" }}>
           <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 12px" }}>
             What&apos;s inside
           </p>
@@ -233,19 +234,19 @@ export default async function CombinedReportPage({
             <SectionHeading index="01" title="Role Fitment Analysis" blurb={`CV and experience matched against the ${fitment.roleTitle} job description across six weighted dimensions.`} />
             <div
               className="bg-white border border-black/[0.08]"
-              style={{ borderRadius: 14, padding: 20, display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr)", gap: 24, alignItems: "center", marginBottom: 20 }}
+              style={{ borderRadius: 14, padding: 20, display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr)", gap: 24, alignItems: "center", marginBottom: 20, breakInside: "avoid" }}
             >
               <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14.5, lineHeight: 1.7, margin: 0 }}>{fitment.report.summary}</p>
               <div className="flex items-center justify-center">
                 <ResumeMatchGauge percent={fitment.report.overallScore} />
               </div>
             </div>
-            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20 }}>
+            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20, breakInside: "avoid" }}>
               <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 16px" }}>
                 Dimension scores
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {fitment.report.categories.map((category) => {
+                {sortedFitmentCategories.map((category) => {
                   const band = getMatchBand(category.score);
                   return (
                     <div key={category.key} className="flex items-center" style={{ gap: 10 }}>
@@ -271,12 +272,12 @@ export default async function CombinedReportPage({
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14, marginBottom: 20 }}>
-              {fitment.report.categories.map((category) => (
+              {sortedFitmentCategories.map((category) => (
                 <ResumeMatchCategoryCard key={category.key} category={category} />
               ))}
             </div>
             {fitment.report.strongPoints.length > 0 && (
-              <div className="bg-[#eefdf1]" style={{ borderRadius: 14, padding: "14px 16px" }}>
+              <div className="bg-[#eefdf1]" style={{ borderRadius: 14, padding: "14px 16px", breakInside: "avoid" }}>
                 <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#16803c]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>
                   Strong points
                 </p>
@@ -285,6 +286,9 @@ export default async function CombinedReportPage({
                 ))}
               </div>
             )}
+            <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, lineHeight: 1.6, margin: "12px 0 0" }}>
+              Fitment is computed by matching CV content against the job description. Dimensions below 100% usually indicate information missing from the CV rather than an absence of capability.
+            </p>
           </>
         )}
 
@@ -316,7 +320,7 @@ export default async function CombinedReportPage({
             />
             <div
               className="bg-white border border-black/[0.08]"
-              style={{ borderRadius: 14, padding: 20, display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr)", gap: 24, alignItems: "center", marginBottom: 20 }}
+              style={{ borderRadius: 14, padding: 20, display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr)", gap: 24, alignItems: "center", marginBottom: 20, breakInside: "avoid" }}
             >
               <div>
                 <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 12px" }}>
@@ -333,14 +337,14 @@ export default async function CombinedReportPage({
               </div>
             </div>
 
-            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20 }}>
+            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20, breakInside: "avoid" }}>
               <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>AI overview</p>
               <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14.5, lineHeight: 1.7, margin: 0 }}>{interview.report.overallSummary}</p>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14, marginBottom: 20 }}>
               {interview.report.strengths && (
-                <div className="bg-[#eefdf1]" style={{ borderRadius: 14, padding: "14px 16px" }}>
+                <div className="bg-[#eefdf1]" style={{ borderRadius: 14, padding: "14px 16px", breakInside: "avoid" }}>
                   <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#16803c]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>Strengths</p>
                   {splitBullets(interview.report.strengths).map((point, i) => (
                     <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: "0 0 8px" }}>✓ {point}</p>
@@ -348,7 +352,7 @@ export default async function CombinedReportPage({
                 </div>
               )}
               {interview.report.areasOfImprovement && (
-                <div className="bg-[#fdeced]" style={{ borderRadius: 14, padding: "14px 16px" }}>
+                <div className="bg-[#fdeced]" style={{ borderRadius: 14, padding: "14px 16px", breakInside: "avoid" }}>
                   <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#ed1a24]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>Areas to improve</p>
                   {splitBullets(interview.report.areasOfImprovement).map((point, i) => (
                     <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: "0 0 8px" }}>✗ {point}</p>
@@ -358,14 +362,14 @@ export default async function CombinedReportPage({
             </div>
 
             {interview.report.roadmap && (
-              <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20 }}>
+              <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20, breakInside: "avoid" }}>
                 <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>Improvement roadmap</p>
                 <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13.5, lineHeight: 1.75, margin: 0, whiteSpace: "pre-wrap" }}>{interview.report.roadmap}</p>
               </div>
             )}
 
             {interview.report.feedbackToInterviewer && (
-              <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20 }}>
+              <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20, breakInside: "avoid" }}>
                 <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>
                   Evaluator notes for hiring teams
                 </p>
@@ -377,7 +381,7 @@ export default async function CombinedReportPage({
 
             <div
               className={interview.report.flagForSuspiciousActivity ? "bg-[#fdeced]" : "bg-[#eefdf1]"}
-              style={{ borderRadius: 14, padding: "14px 16px", marginBottom: 20 }}
+              style={{ borderRadius: 14, padding: "14px 16px", marginBottom: 20, breakInside: "avoid" }}
             >
               <p
                 className="font-[family-name:var(--font-poppins)] font-bold uppercase"
@@ -391,18 +395,21 @@ export default async function CombinedReportPage({
             </div>
 
             {interview.report.videoReport && (
-              <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20 }}>
+              <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20, breakInside: "avoid" }}>
                 <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>Video &amp; delivery notes</p>
                 <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13.5, lineHeight: 1.75, margin: 0, whiteSpace: "pre-wrap" }}>{interview.report.videoReport}</p>
               </div>
             )}
+            <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, lineHeight: 1.6, margin: "12px 0 0" }}>
+              Interview conducted on an AI-proctored platform. Scores are generated from the recorded session; the full video transcript is available to hiring teams on request.
+            </p>
           </>
         )}
 
         {references && (
           <>
             <SectionHeading index="04" title="Reference Check" blurb="Verified former colleagues independently rated the candidate across seven categories. Respondent identities are withheld in this shareable version." />
-            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20 }}>
+            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20, breakInside: "avoid" }}>
               <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 16px" }}>
                 Category ratings — overall {references.overallScore.toFixed(1)}/5
               </p>
@@ -428,17 +435,20 @@ export default async function CombinedReportPage({
               </div>
             </div>
             {references.referees.some((r) => r.overallFeedback?.trim()) && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 8 }}>
                 {references.referees
                   .filter((r) => r.overallFeedback?.trim())
                   .map((r, i) => (
-                    <div key={i} className="bg-[#fdeced]" style={{ borderRadius: 10, padding: "12px 16px" }}>
+                    <div key={i} className="bg-[#fdeced]" style={{ borderRadius: 10, padding: "12px 16px", breakInside: "avoid" }}>
                       <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, fontStyle: "italic", margin: 0 }}>&ldquo;{r.overallFeedback}&rdquo;</p>
                       <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, margin: "4px 0 0" }}>— Reference {i + 1} · Verified</p>
                     </div>
                   ))}
               </div>
             )}
+            <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, lineHeight: 1.6, margin: "12px 0 0" }}>
+              Each reference was invited by the candidate and completed the rating independently through Merito HUB. Respondent names, email addresses and employer details are held on record and disclosed only to a hiring employer on request, with the candidate&apos;s consent.
+            </p>
           </>
         )}
 
@@ -447,25 +457,25 @@ export default async function CombinedReportPage({
             How to read this report
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 14, marginBottom: 24 }}>
-            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "16px 18px" }}>
+            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "16px 18px", breakInside: "avoid" }}>
               <p className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: 13.5, margin: "0 0 6px" }}>Role Fitment</p>
               <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 11.5, lineHeight: 1.55, margin: 0 }}>
                 AI comparison of the CV against a specific job description, scored across six dimensions. Measures documented alignment, not potential.
               </p>
             </div>
-            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "16px 18px" }}>
+            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "16px 18px", breakInside: "avoid" }}>
               <p className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: 13.5, margin: "0 0 6px" }}>Personality</p>
               <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 11.5, lineHeight: 1.55, margin: 0 }}>
                 A Big Five (OCEAN) questionnaire measuring five stable dimensions of working style. Scores describe tendencies, not ability.
               </p>
             </div>
-            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "16px 18px" }}>
+            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "16px 18px", breakInside: "avoid" }}>
               <p className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: 13.5, margin: "0 0 6px" }}>AI Interview</p>
               <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 11.5, lineHeight: 1.55, margin: 0 }}>
                 Structured, proctored interview scored against role-critical competencies, with a parallel read on delivery quality.
               </p>
             </div>
-            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "16px 18px" }}>
+            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "16px 18px", breakInside: "avoid" }}>
               <p className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: 13.5, margin: "0 0 6px" }}>Reference Check</p>
               <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 11.5, lineHeight: 1.55, margin: 0 }}>
                 Independent ratings from people who have worked with the candidate, across seven standard categories on a five-point scale.

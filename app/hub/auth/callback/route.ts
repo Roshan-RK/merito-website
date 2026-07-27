@@ -1,16 +1,18 @@
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { claimFitmentLeads } from "@/lib/claimFitmentLeads";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
+  const token_hash = searchParams.get("token_hash");
+  const type = searchParams.get("type") as EmailOtpType | null;
 
-  if (!code) {
+  if (!token_hash || !type) {
     return Response.redirect(`${origin}/hub/login?error=expired`, 307);
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  const { data, error } = await supabase.auth.verifyOtp({ token_hash, type });
 
   if (error || !data.user) {
     return Response.redirect(`${origin}/hub/login?error=expired`, 307);

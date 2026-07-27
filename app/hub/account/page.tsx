@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { isReportUnlocked } from "@/lib/reportUnlocks";
 import { getReferenceCheckStatus } from "@/lib/referenceChecks";
@@ -34,6 +35,13 @@ export default async function AccountPage() {
         <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 14 }}>
           Head back to the HUB to check your fit for a role.
         </p>
+        <Link
+          href="/hub#fit-checker"
+          className="inline-block font-[family-name:var(--font-poppins)] font-semibold text-white text-center"
+          style={{ marginTop: 18, padding: "12px 22px", borderRadius: 8, fontSize: 14, background: "#ed1a24" }}
+        >
+          Check my fitment
+        </Link>
       </main>
     );
   }
@@ -104,6 +112,15 @@ export default async function AccountPage() {
   const referenceCheckStatus: "none" | "in_progress" | "completed" =
     !referenceCheck ? "none" : referenceCheck.status === "completed" ? "completed" : "in_progress";
 
+  const { data: personalityRow } = await supabase
+    .from("personality_tests")
+    .select("role_title")
+    .eq("user_id", user.id)
+    .eq("role_title", current.role_title)
+    .maybeSingle();
+
+  const personalityStatus: PersonalityStatus = personalityRow ? "ready" : "not_started";
+
   const level = (current.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
   const counsellingPriceLabel = formatPrice(PRODUCT_PRICING.counselling[level]);
 
@@ -118,15 +135,6 @@ export default async function AccountPage() {
     .select("id")
     .eq("user_id", user.id)
     .maybeSingle();
-
-  const { data: personalityRow } = await supabase
-    .from("personality_tests")
-    .select("role_title")
-    .eq("user_id", user.id)
-    .eq("role_title", current.role_title)
-    .maybeSingle();
-
-  const personalityStatus: PersonalityStatus = personalityRow ? "ready" : "not_started";
 
   return (
     <DashboardClient

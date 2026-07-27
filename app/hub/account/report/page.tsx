@@ -21,7 +21,7 @@ export default async function FullReportPage() {
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("role_title, score, name, resume_match_status, resume_match_raw, ib_applied_job_id")
+    .select("id, role_title, score, name, resume_match_status, resume_match_raw, ib_applied_job_id")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 

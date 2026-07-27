@@ -42,11 +42,16 @@ export async function createInterviewAgent(
     body: JSON.stringify({
       maxInterviewMinutes: durationForLevel(candidateLevel),
       interviewType: inferInterviewType(roleTitle),
-      isCriteriaMatch: false,
-      // Vendor-confirmed (2026-07-26) for skill-based interviews with
-      // isCriteriaMatch: false. Only "medium" is confirmed so far — not
-      // mapped to candidateLevel yet, since the full enum (low/high?) isn't
-      // vendor-confirmed. Map once confirmed, per
+      // Vendor's prose (2026-07-26, 2026-07-27) both times said "set
+      // isCriteriaMatch to false" for skill-based interviews, but the
+      // literal example JSON in the 2026-07-27 email shows `true` — and two
+      // live interviews under `false` came back with `criteriaEvaluationTable: []`
+      // both times (see memory intervuebox-interview-modes). Trusting the
+      // JSON over the contradictory prose; re-verify with one more real
+      // interview before treating this as settled.
+      isCriteriaMatch: true,
+      // "medium" is vendor-confirmed but not mapped to candidateLevel yet —
+      // full enum (low/high?) unconfirmed. Map once confirmed, per
       // specs/2026-07-24-ai-interview-difficulty-design.md's open item.
       complexity: "medium",
       isQuickApplyEnabled: true,

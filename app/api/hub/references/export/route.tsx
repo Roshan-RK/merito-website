@@ -1,0 +1,35 @@
+import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
+import { getReferenceCheckStatus } from "@/lib/referenceChecks";
+import { renderPageToPdf, requestCookiesFor } from "@/lib/pdf/renderPageToPdf";
+
+export const runtime = "nodejs";
+export const maxDuration = 30;
+
+export async function GET(request: Request) {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return Response.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  const status = await getReferenceCheckStatus(user.id);
+  if (!status || status.status !== "completed") {
+    return Response.json({ error: "Reference check not completed yet." }, { status: 404 });
+  }
+
+  const url = new URL(request.url);
+  const pageCookies = requestCookiesFor(request, url.hostname);
+
+  const buffer = await renderPageToPdf(`${url.origin}/hub/account/references`, pageCookies);
+
+  return new Response(new Uint8Array(buffer), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="reference-check-report.pdf"`,
+    },
+  });
+}

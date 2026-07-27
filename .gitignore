@@ -101,3 +101,6 @@ public/plat-and-tools-click.md
 public/reputation-index.md
 
 .worktrees/
+
+# Supabase CLI local cache (project ref, pooler URL, version pins)
+supabase/.temp/

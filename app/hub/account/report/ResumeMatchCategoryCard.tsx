@@ -4,7 +4,7 @@ import { getMatchBand } from "./ResumeMatchGauge";
 export default function ResumeMatchCategoryCard({ category }: { category: ResumeMatchCategory }) {
   const band = getMatchBand(category.score);
   return (
-    <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "16px 18px" }}>
+    <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "16px 18px", breakInside: "avoid" }}>
       <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
         <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.05rem", margin: 0 }}>
           {category.label}

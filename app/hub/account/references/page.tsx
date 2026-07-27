@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { getReferenceCheckStatus } from "@/lib/referenceChecks";
 import ReferencesClient from "./ReferencesClient";
@@ -17,6 +18,25 @@ export default async function ReferencesPage() {
 
   return (
     <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
+      <div className="print:hidden">
+        <Link
+          href="/hub/account"
+          className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+          style={{ fontSize: 13, display: "inline-block", marginBottom: 16 }}
+        >
+          ← Back to dashboard
+        </Link>
+        {status?.status === "completed" && (
+          <a
+            href="/api/hub/references/export"
+            download
+            className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+            style={{ fontSize: 13, display: "inline-block", marginBottom: 16, marginLeft: 16 }}
+          >
+            Download PDF
+          </a>
+        )}
+      </div>
       <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.6rem", margin: "0 0 6px" }}>
         Reference checks
       </h1>

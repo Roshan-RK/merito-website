@@ -140,6 +140,7 @@ export default function DashboardClient({
           reportUnlocked={reportUnlocked}
           personalityStatus={personalityStatus}
           interviewStatus={interviewStatus}
+          referenceCheckStatus={referenceCheckStatus}
           onClose={() => setModal("none")}
         />
       )}

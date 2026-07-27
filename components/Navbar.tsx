@@ -186,23 +186,14 @@ export default function Navbar() {
           })}
         </div>
 
-        {session !== "loading" &&
-          (session ? (
-            <Link
-              href="/hub/account"
-              aria-label="My account"
-              className="hidden h-9 w-9 items-center justify-center rounded-full bg-[#fdeced] font-[family-name:var(--font-poppins)] text-[13px] font-bold text-[#ed1a24] md:flex"
-            >
-              {(session.user.email ?? "M").charAt(0).toUpperCase()}
-            </Link>
-          ) : (
-            <Link
-              href="/hub/login"
-              className="hidden whitespace-nowrap px-[9px] py-[10px] font-[family-name:var(--font-gabarito)] text-[17px] font-medium text-black transition-colors hover:text-[#ed1a24] md:block"
-            >
-              Log in
-            </Link>
-          ))}
+        {session === null && (
+          <Link
+            href="/hub/login"
+            className="hidden whitespace-nowrap px-[9px] py-[10px] font-[family-name:var(--font-gabarito)] text-[17px] font-medium text-black transition-colors hover:text-[#ed1a24] md:block"
+          >
+            Log in
+          </Link>
+        )}
 
         {/* CTA */}
         <Link
@@ -264,24 +255,15 @@ export default function Navbar() {
               </Link>
             );
           })}
-          {session !== "loading" &&
-            (session ? (
-              <Link
-                href="/hub/account"
-                onClick={() => setOpen(false)}
-                className="font-[family-name:var(--font-gabarito)] font-medium text-[18px] text-black hover:text-[#ed1a24] transition-colors"
-              >
-                My account
-              </Link>
-            ) : (
-              <Link
-                href="/hub/login"
-                onClick={() => setOpen(false)}
-                className="font-[family-name:var(--font-gabarito)] font-medium text-[18px] text-black hover:text-[#ed1a24] transition-colors"
-              >
-                Log in
-              </Link>
-            ))}
+          {session === null && (
+            <Link
+              href="/hub/login"
+              onClick={() => setOpen(false)}
+              className="font-[family-name:var(--font-gabarito)] font-medium text-[18px] text-black hover:text-[#ed1a24] transition-colors"
+            >
+              Log in
+            </Link>
+          )}
           <Link
             href="/contact"
             onClick={() => setOpen(false)}

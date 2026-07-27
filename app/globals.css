@@ -62,3 +62,15 @@
     perspective: 1000px;
   }
 }
+
+/* Zoho SalesIQ injects its floating chat widget outside the React tree
+   (app/layout.tsx's zsiqscript), so it can't be hidden with print:hidden on
+   any component — it bleeds into every headless-Chromium PDF export
+   otherwise (see lib/pdf/renderPageToPdf.ts). */
+@media print {
+  #zsiq_float,
+  [id^="zsiq"],
+  iframe[id*="siq"] {
+    display: none !important;
+  }
+}
