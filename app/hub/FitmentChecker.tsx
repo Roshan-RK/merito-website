@@ -23,7 +23,7 @@ export default function FitmentChecker() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
   const [phone, setPhone] = useState("");
-  const [candidateLevel, setCandidateLevel] = useState<"entry" | "mid" | "senior">("mid");
+  const [candidateLevel, setCandidateLevel] = useState<"" | "entry" | "mid" | "senior">("");
   const [jdMode, setJdMode] = useState<JdMode>("paste");
   const [jdText, setJdText] = useState("");
   const [jdUrl, setJdUrl] = useState("");
@@ -68,7 +68,7 @@ export default function FitmentChecker() {
   }, [recaptchaEnabled, recaptchaSiteKey]);
 
   const roleLabel = role.trim() || "your target role";
-  const canSubmit = email.trim() && role.trim() && phone.trim() && (jdMode === "paste" ? jdText.trim() : jdUrl.trim()) && cvFile && !checking;
+  const canSubmit = email.trim() && role.trim() && phone.trim() && candidateLevel && (jdMode === "paste" ? jdText.trim() : jdUrl.trim()) && cvFile && !checking;
 
   const animateScore = (target: number) => {
     const t0 = performance.now();
@@ -260,18 +260,18 @@ export default function FitmentChecker() {
         style={{ padding: "13px 14px", borderRadius: 8, fontSize: 14, marginBottom: 12 }}
       />
 
-      <label className="block font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 12, marginBottom: 6 }}>
-        Your experience level
-      </label>
       <select
         value={candidateLevel}
         onChange={(e) => setCandidateLevel(e.target.value as "entry" | "mid" | "senior")}
-        className="w-full box-border bg-white font-[family-name:var(--font-poppins)] text-black outline-none border border-[#dcdcdc] focus:border-[#ed1a24] transition-colors"
+        className="w-full box-border bg-white font-[family-name:var(--font-poppins)] text-black outline-none border border-[#dcdcdc] focus:border-[#ed1a24]"
         style={{ padding: "13px 14px", borderRadius: 8, fontSize: 14, marginBottom: 12 }}
       >
-        <option value="entry">Entry-level</option>
-        <option value="mid">Mid-level</option>
-        <option value="senior">Senior</option>
+        <option value="" disabled>
+          Your experience level
+        </option>
+        <option value="entry">Entry-level (0-2 years)</option>
+        <option value="mid">Mid-level (2-10 years)</option>
+        <option value="senior">Senior-level (10+ years)</option>
       </select>
 
       <div className="flex items-center" style={{ gap: 8, marginBottom: 6 }}>

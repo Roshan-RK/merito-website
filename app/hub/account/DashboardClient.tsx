@@ -6,10 +6,16 @@ import ScoreCard from "./ScoreCard";
 import ReportPaywallModal from "./ReportPaywallModal";
 import InterviewStartModal from "./InterviewStartModal";
 import CombinedExportModal from "./CombinedExportModal";
+import CounsellingCard from "./CounsellingCard";
+import CounsellingPaywallModal from "./CounsellingPaywallModal";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
+import type { CandidateLevel } from "@/lib/razorpay/pricing";
 
 export default function DashboardClient({
+  leadId,
   roleTitle,
+  level,
+  bundleEligible,
   score,
   prevScore,
   verdict,
@@ -18,8 +24,13 @@ export default function DashboardClient({
   initialInterviewStatus,
   referenceCheckStatus,
   personalityStatus,
+  counsellingPriceLabel,
+  initialCounsellingRequested,
 }: {
+  leadId: string;
   roleTitle: string;
+  level: CandidateLevel;
+  bundleEligible: boolean;
   score: number;
   prevScore: number | null;
   verdict: string;
@@ -28,11 +39,14 @@ export default function DashboardClient({
   initialInterviewStatus: InterviewStatus;
   referenceCheckStatus: "none" | "in_progress" | "completed";
   personalityStatus: PersonalityStatus;
+  counsellingPriceLabel: string;
+  initialCounsellingRequested: boolean;
 }) {
-  const [modal, setModal] = useState<"none" | "report" | "interview" | "export">("none");
+  const [modal, setModal] = useState<"none" | "report" | "interview" | "export" | "counselling">("none");
   const [reportUnlocked, setReportUnlocked] = useState(initialReportUnlocked);
   const [report, setReport] = useState<ResumeMatchReportReady | null>(initialReport);
   const [interviewStatus, setInterviewStatus] = useState<InterviewStatus>(initialInterviewStatus);
+  const [counsellingRequested, setCounsellingRequested] = useState(initialCounsellingRequested);
 
   return (
     <>
@@ -67,6 +81,12 @@ export default function DashboardClient({
             report={report}
             onOpenReportPaywall={() => setModal("report")}
           />
+
+          <CounsellingCard
+            priceLabel={counsellingPriceLabel}
+            requested={counsellingRequested}
+            onOpenPaywall={() => setModal("counselling")}
+          />
         </div>
       </div>
 
@@ -80,9 +100,22 @@ export default function DashboardClient({
         </button>
       </div>
 
+      {modal === "counselling" && (
+        <CounsellingPaywallModal
+          priceLabel={counsellingPriceLabel}
+          onClose={() => setModal("none")}
+          onRequested={() => {
+            setCounsellingRequested(true);
+            setModal("none");
+          }}
+        />
+      )}
       {modal === "report" && (
         <ReportPaywallModal
+          leadId={leadId}
           roleTitle={roleTitle}
+          level={level}
+          bundleEligible={bundleEligible}
           onClose={() => setModal("none")}
           onUnlocked={(unlockedReport) => {
             setReportUnlocked(true);

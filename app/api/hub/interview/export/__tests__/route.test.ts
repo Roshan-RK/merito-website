@@ -9,16 +9,8 @@ const interviewEqMock = vi.fn();
 interviewEqMock.mockReturnValue({ eq: interviewEqMock, order: interviewOrderMock });
 const interviewSelectMock = vi.fn().mockReturnValue({ eq: interviewEqMock });
 
-const leadMaybeSingleMock = vi.fn();
-const leadLimitMock = vi.fn().mockReturnValue({ maybeSingle: leadMaybeSingleMock });
-const leadOrderMock = vi.fn().mockReturnValue({ limit: leadLimitMock });
-const leadEq2Mock = vi.fn().mockReturnValue({ order: leadOrderMock });
-const leadEq1Mock = vi.fn().mockReturnValue({ eq: leadEq2Mock });
-const leadSelectMock = vi.fn().mockReturnValue({ eq: leadEq1Mock });
-
 const fromMock = vi.fn((table: string) => {
   if (table === "fitment_interviews") return { select: interviewSelectMock };
-  if (table === "fitment_leads") return { select: leadSelectMock };
   throw new Error(`Unexpected table ${table}`);
 });
 
@@ -26,11 +18,11 @@ vi.mock("@/lib/supabaseAuthServer", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser: getUserMock }, from: fromMock }),
 }));
 
-const getCandidateResumeDetailsMock = vi.fn();
-vi.mock("@/lib/intervuebox/reports", async () => {
-  const actual = await vi.importActual("@/lib/intervuebox/reports");
-  return { ...actual, getCandidateResumeDetails: getCandidateResumeDetailsMock };
-});
+const renderPageToPdfMock = vi.fn();
+vi.mock("@/lib/pdf/renderPageToPdf", () => ({
+  renderPageToPdf: renderPageToPdfMock,
+  requestCookiesFor: () => [],
+}));
 
 async function importRoute() {
   return await import("../route");
@@ -44,17 +36,8 @@ describe("GET /api/hub/interview/export", () => {
   beforeEach(() => {
     getUserMock.mockReset();
     interviewMaybeSingleMock.mockReset();
-    leadMaybeSingleMock.mockReset();
-    getCandidateResumeDetailsMock.mockReset();
-    getCandidateResumeDetailsMock.mockResolvedValue({
-      skills: [],
-      education: [],
-      experience: [],
-      certifications: [],
-      phoneNumber: null,
-      location: null,
-      totalExperience: null,
-    });
+    renderPageToPdfMock.mockReset();
+    renderPageToPdfMock.mockResolvedValue(Buffer.from("%PDF-1.4 fake"));
   });
 
   it("returns 401 when not signed in", async () => {
@@ -79,7 +62,7 @@ describe("GET /api/hub/interview/export", () => {
   it("returns 404 when the interview isn't ready yet", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "roshan@merito.in" } } });
     interviewMaybeSingleMock.mockResolvedValue({
-      data: { role_title: "HR Business Partner", status: "invited", report_raw: null, updated_at: "2026-07-23T06:00:00Z" },
+      data: { role_title: "HR Business Partner", status: "invited", report_raw: null },
       error: null,
     });
     const { GET } = await importRoute();
@@ -89,32 +72,26 @@ describe("GET /api/hub/interview/export", () => {
     expect(response.status).toBe(404);
   });
 
-  it("returns a PDF when the interview report is ready", async () => {
+  it("returns a PDF rendered from the live interview page when ready", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "roshan@merito.in" } } });
     interviewMaybeSingleMock.mockResolvedValue({
       data: {
         role_title: "HR Business Partner",
         status: "ready",
-        updated_at: "2026-07-23T06:54:26.588Z",
-        report_raw: {
-          overallScore: 8,
-          skillMetrics: { relevance: 9, confidence: 10 },
-          overallSummary: "Solid overall.",
-          strengths: "- Listens well",
-          areasOfImprovement: "- Needs more examples",
-          shareableReportLink: "https://hogsmeade.intervuebox.ai/interview-report/abc",
-          approxDurationMinutes: 4,
-        },
+        report_raw: { overallScore: 8 },
       },
       error: null,
     });
-    leadMaybeSingleMock.mockResolvedValue({ data: { name: "Roshan", ib_applied_job_id: "AJ_1" }, error: null });
     const { GET } = await importRoute();
 
     const response = await GET(buildRequest());
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("application/pdf");
+    expect(renderPageToPdfMock).toHaveBeenCalledWith(
+      "http://localhost/hub/account/interview?role=HR%20Business%20Partner",
+      []
+    );
     const buffer = await response.arrayBuffer();
     expect(buffer.byteLength).toBeGreaterThan(0);
   });

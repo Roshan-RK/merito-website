@@ -14,6 +14,7 @@ export default function ChangeRoleModal({
 }) {
   const router = useRouter();
   const [role, setRole] = useState("");
+  const [candidateLevel, setCandidateLevel] = useState<"" | "entry" | "mid" | "senior">("");
   const [jdMode, setJdMode] = useState<JdMode>("paste");
   const [jdText, setJdText] = useState("");
   const [jdUrl, setJdUrl] = useState("");
@@ -22,7 +23,7 @@ export default function ChangeRoleModal({
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const canSubmit = role.trim() && (jdMode === "paste" ? jdText.trim() : jdUrl.trim()) && cvFile && !busy;
+  const canSubmit = role.trim() && candidateLevel && (jdMode === "paste" ? jdText.trim() : jdUrl.trim()) && cvFile && !busy;
 
   const handleSubmit = async () => {
     if (!canSubmit || !cvFile) return;
@@ -31,6 +32,7 @@ export default function ChangeRoleModal({
 
     const form = new FormData();
     form.set("role", role.trim());
+    form.set("candidateLevel", candidateLevel);
     if (jdMode === "paste") form.set("jdText", jdText.trim());
     else form.set("jdUrl", jdUrl.trim());
     form.set("cv", cvFile);
@@ -77,6 +79,20 @@ export default function ChangeRoleModal({
           className="w-full box-border bg-white font-[family-name:var(--font-poppins)] text-black outline-none border border-[#dcdcdc] focus:border-[#ed1a24]"
           style={{ padding: "13px 14px", borderRadius: 8, fontSize: 14, marginBottom: 12 }}
         />
+
+        <select
+          value={candidateLevel}
+          onChange={(e) => setCandidateLevel(e.target.value as "entry" | "mid" | "senior")}
+          className="w-full box-border bg-white font-[family-name:var(--font-poppins)] text-black outline-none border border-[#dcdcdc] focus:border-[#ed1a24]"
+          style={{ padding: "13px 14px", borderRadius: 8, fontSize: 14, marginBottom: 12 }}
+        >
+          <option value="" disabled>
+            Your experience level
+          </option>
+          <option value="entry">Entry-level (0-2 years)</option>
+          <option value="mid">Mid-level (2-10 years)</option>
+          <option value="senior">Senior-level (10+ years)</option>
+        </select>
 
         <div className="flex" style={{ gap: 8, marginBottom: 6 }}>
           <button type="button" onClick={() => setJdMode("paste")} style={{ fontSize: 11, padding: "5px 12px", borderRadius: 50, border: "1px solid #dcdcdc", background: jdMode === "paste" ? "#ed1a24" : "#fff", color: jdMode === "paste" ? "#fff" : "#4b4b4d", cursor: "pointer" }}>

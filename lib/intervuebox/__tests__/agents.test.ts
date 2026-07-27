@@ -49,6 +49,8 @@ describe("createInterviewAgent", () => {
       maxInterviewMinutes: 30,
       interviewType: "technical",
       isCriteriaMatch: false,
+      complexity: "medium",
+      isQuickApplyEnabled: true,
     });
   });
 
@@ -71,6 +73,8 @@ describe("createInterviewAgent", () => {
       maxInterviewMinutes: 30,
       interviewType: "technical",
       isCriteriaMatch: false,
+      complexity: "medium",
+      isQuickApplyEnabled: true,
     });
   });
 

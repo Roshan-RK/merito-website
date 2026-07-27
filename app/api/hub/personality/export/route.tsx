@@ -1,9 +1,8 @@
-import { renderToBuffer } from "@react-pdf/renderer";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
-import { nameFromEmail, type Scores, type Validity } from "@/lib/personality";
-import PersonalityReportPdf from "./PersonalityReportPdf";
+import { renderPageToPdf, requestCookiesFor } from "@/lib/pdf/renderPageToPdf";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
@@ -44,15 +43,11 @@ export async function GET(request: Request) {
     return Response.json({ error: "Personality test not completed yet." }, { status: 404 });
   }
 
-  const candidateName = nameFromEmail(user.email ?? "");
+  const pageCookies = requestCookiesFor(request, url.hostname);
 
-  const buffer = await renderToBuffer(
-    <PersonalityReportPdf
-      candidateName={candidateName}
-      roleTitle={roleTitle}
-      scores={existing.scores as Scores}
-      validity={existing.validity as Validity}
-    />
+  const buffer = await renderPageToPdf(
+    `${url.origin}/hub/account/personality?role=${encodeURIComponent(roleTitle)}`,
+    pageCookies
   );
 
   return new Response(new Uint8Array(buffer), {

@@ -33,7 +33,61 @@ export type RefereeRow = {
   email: string;
   status: "pending" | "completed" | "rejected";
   reminder_count: number;
+  role: RefereeRole;
+  organization: string | null;
+  ratings: { category: string; value: number }[] | null;
+  overall_feedback: string | null;
 };
+
+export const REFERENCE_CATEGORIES: { value: string; label: string }[] = [
+  { value: "knowledge-application", label: "Knowledge application" },
+  { value: "initiative", label: "Initiative" },
+  { value: "teamwork", label: "Teamwork" },
+  { value: "communication", label: "Communication" },
+  { value: "discipline", label: "Discipline" },
+  { value: "problem-solving", label: "Problem-solving" },
+  { value: "leadership-skills", label: "Leadership skills" },
+];
+
+export type ReferenceReport = {
+  overallScore: number;
+  categoryScores: { category: string; label: string; value: number }[];
+  referees: {
+    name: string;
+    role: RefereeRole;
+    organization: string | null;
+    overallFeedback: string | null;
+  }[];
+};
+
+export function computeReferenceReport(referees: RefereeRow[]): ReferenceReport {
+  const completed = referees.filter((r) => r.status === "completed" && r.ratings);
+
+  const categoryScores = REFERENCE_CATEGORIES.map(({ value, label }) => {
+    const values = completed
+      .flatMap((r) => r.ratings ?? [])
+      .filter((r) => r.category === value)
+      .map((r) => r.value);
+    const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+    return { category: value, label, value: Math.round(avg * 10) / 10 };
+  });
+
+  const scoredCategories = categoryScores.filter((c) => c.value > 0);
+  const overallScore = scoredCategories.length
+    ? Math.round((scoredCategories.reduce((a, c) => a + c.value, 0) / scoredCategories.length) * 10) / 10
+    : 0;
+
+  return {
+    overallScore,
+    categoryScores,
+    referees: completed.map((r) => ({
+      name: r.name,
+      role: r.role,
+      organization: r.organization,
+      overallFeedback: r.overall_feedback,
+    })),
+  };
+}
 
 export type ReferenceCheckStatusResult = {
   checkId: string;
@@ -154,7 +208,7 @@ export async function getReferenceCheckStatus(userId: string): Promise<Reference
 
   const { data: referees, error: refereesError } = await supabase
     .from("referees")
-    .select("id, name, email, status, reminder_count")
+    .select("id, name, email, status, reminder_count, role, organization, ratings, overall_feedback")
     .eq("reference_check_id", check.id)
     .order("created_at", { ascending: true });
 

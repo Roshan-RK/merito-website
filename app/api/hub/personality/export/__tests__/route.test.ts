@@ -23,6 +23,12 @@ vi.mock("@/lib/supabaseAuthServer", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser: getUserMock }, from: fromMock }),
 }));
 
+const renderPageToPdfMock = vi.fn();
+vi.mock("@/lib/pdf/renderPageToPdf", () => ({
+  renderPageToPdf: renderPageToPdfMock,
+  requestCookiesFor: () => [],
+}));
+
 async function importRoute() {
   return await import("../route");
 }
@@ -36,6 +42,8 @@ describe("GET /api/hub/personality/export", () => {
     getUserMock.mockReset();
     leadMaybeSingleMock.mockReset();
     testMaybeSingleMock.mockReset();
+    renderPageToPdfMock.mockReset();
+    renderPageToPdfMock.mockResolvedValue(Buffer.from("%PDF-1.4 fake"));
   });
 
   it("returns 401 when not signed in", async () => {

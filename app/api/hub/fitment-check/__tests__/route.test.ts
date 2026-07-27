@@ -95,6 +95,36 @@ describe("POST /api/hub/fitment-check", () => {
     );
   });
 
+  it("returns 400 when candidateLevel is missing", async () => {
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm({ candidateLevel: "" }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 400 when candidateLevel isn't one of entry/mid/senior", async () => {
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm({ candidateLevel: "expert" }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+  });
+
+  it("saves candidateLevel on the inserted lead", async () => {
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm({ candidateLevel: "senior" }),
+    });
+    await POST(request);
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ candidate_level: "senior" }));
+  });
+
   it("returns 200 pending with a leadId when the resume-match report isn't ready yet", async () => {
     const { getResumeMatchReport } = await import("@/lib/intervuebox/reports");
     vi.mocked(getResumeMatchReport).mockResolvedValueOnce({ status: "PENDING" });
