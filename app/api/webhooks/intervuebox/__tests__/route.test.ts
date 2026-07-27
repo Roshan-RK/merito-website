@@ -81,6 +81,7 @@ describe("POST /api/webhooks/intervuebox", () => {
           areasOfImprovement: "More examples.",
           shareableReportLink: "https://app.intervuebox.com/reports/ISE_1",
           approxDurationMinutes: 4,
+          criteriaEvaluationTable: [{ skill: "Ownership", commentary: "Owns outcomes end to end." }],
         };
       }
       return { status: "NOT_READY" };
@@ -102,7 +103,10 @@ describe("POST /api/webhooks/intervuebox", () => {
     expect(updateMock).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "ready",
-        report_raw: expect.objectContaining({ approxDurationMinutes: 4 }),
+        report_raw: expect.objectContaining({
+          approxDurationMinutes: 4,
+          criteriaEvaluationTable: [{ skill: "Ownership", commentary: "Owns outcomes end to end." }],
+        }),
       })
     );
     expect(updateEq1Mock).toHaveBeenCalledWith("user_id", "user-1");

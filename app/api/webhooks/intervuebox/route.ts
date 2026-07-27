@@ -84,6 +84,7 @@ export async function POST(request: Request) {
                 videoReport: report.videoReport,
                 feedbackToInterviewer: report.feedbackToInterviewer,
                 roadmap: report.roadmap,
+                criteriaEvaluationTable: report.criteriaEvaluationTable,
               },
               updated_at: new Date().toISOString(),
             })
