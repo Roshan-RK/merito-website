@@ -4,7 +4,7 @@ import { useState } from "react";
 import ProgressRail, { type InterviewStatus, type PersonalityStatus } from "./ProgressRail";
 import ScoreCard from "./ScoreCard";
 import ReportPaywallModal from "./ReportPaywallModal";
-import InterviewStartModal from "./InterviewStartModal";
+import InterviewPaywallModal from "./InterviewPaywallModal";
 import CombinedExportModal from "./CombinedExportModal";
 import CounsellingCard from "./CounsellingCard";
 import CounsellingPaywallModal from "./CounsellingPaywallModal";
@@ -125,7 +125,7 @@ export default function DashboardClient({
         />
       )}
       {modal === "interview" && (
-        <InterviewStartModal
+        <InterviewPaywallModal
           roleTitle={roleTitle}
           onClose={() => setModal("none")}
           onStarted={(status) => {
