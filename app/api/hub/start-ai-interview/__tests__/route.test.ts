@@ -9,7 +9,8 @@ vi.mock("@/lib/supabaseAuthServer", () => ({
 }));
 
 const existingMaybeSingleMock = vi.fn();
-const existingEq2Mock = vi.fn().mockReturnValue({ maybeSingle: existingMaybeSingleMock });
+const existingEq3Mock = vi.fn().mockReturnValue({ maybeSingle: existingMaybeSingleMock });
+const existingEq2Mock = vi.fn().mockReturnValue({ eq: existingEq3Mock });
 const existingEq1Mock = vi.fn().mockReturnValue({ eq: existingEq2Mock });
 const existingSelectMock = vi.fn().mockReturnValue({ eq: existingEq1Mock });
 
@@ -28,12 +29,29 @@ const sessionFromMock = vi.fn((table: string) => {
 
 const insertMock = vi.fn().mockResolvedValue({ error: null });
 const adminReselectMaybeSingleMock = vi.fn();
-const adminReselectEq2Mock = vi.fn().mockReturnValue({ maybeSingle: adminReselectMaybeSingleMock });
+const adminReselectEq3Mock = vi.fn().mockReturnValue({ maybeSingle: adminReselectMaybeSingleMock });
+const adminReselectEq2Mock = vi.fn().mockReturnValue({ eq: adminReselectEq3Mock });
 const adminReselectEq1Mock = vi.fn().mockReturnValue({ eq: adminReselectEq2Mock });
 const adminReselectSelectMock = vi.fn().mockReturnValue({ eq: adminReselectEq1Mock });
+
+const creditMaybeSingleMock = vi.fn();
+const creditLimitMock = vi.fn().mockReturnValue({ maybeSingle: creditMaybeSingleMock });
+const creditOrderMock = vi.fn().mockReturnValue({ limit: creditLimitMock });
+const creditIsMock = vi.fn().mockReturnValue({ order: creditOrderMock });
+const creditEq3Mock = vi.fn().mockReturnValue({ is: creditIsMock });
+const creditEq2Mock = vi.fn().mockReturnValue({ eq: creditEq3Mock });
+const creditEq1Mock = vi.fn().mockReturnValue({ eq: creditEq2Mock });
+const creditSelectMock = vi.fn().mockReturnValue({ eq: creditEq1Mock });
+
+const consumeUpdateEqMock = vi.fn().mockResolvedValue({ error: null });
+const consumeUpdateMock = vi.fn().mockReturnValue({ eq: consumeUpdateEqMock });
+
 vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({
-    from: () => ({ insert: insertMock, select: adminReselectSelectMock }),
+    from: (table: string) => {
+      if (table === "razorpay_transactions") return { select: creditSelectMock, update: consumeUpdateMock };
+      return { insert: insertMock, select: adminReselectSelectMock };
+    },
   }),
 }));
 
@@ -66,6 +84,11 @@ describe("POST /api/hub/start-ai-interview", () => {
     getApplicantMock.mockReset();
     createInterviewAgentMock.mockReset();
     sendInterviewInvitationMock.mockReset();
+    creditMaybeSingleMock.mockReset();
+    creditMaybeSingleMock.mockResolvedValue({ data: { order_id: "order_credit_1" }, error: null });
+    consumeUpdateEqMock.mockClear();
+    consumeUpdateEqMock.mockResolvedValue({ error: null });
+    delete process.env.RAZORPAY_BYPASS;
   });
 
   it("returns 401 when there is no session", async () => {
@@ -82,14 +105,33 @@ describe("POST /api/hub/start-ai-interview", () => {
     expect(response.status).toBe(400);
   });
 
-  it("returns the existing status idempotently without re-inviting when a row already exists", async () => {
+  it("returns the existing status idempotently without re-inviting when an invited attempt is still pending", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    existingMaybeSingleMock.mockResolvedValue({ data: { status: "ready" }, error: null });
+    existingMaybeSingleMock.mockResolvedValue({ data: { status: "invited" }, error: null });
     const { POST } = await importRoute();
     const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "ready" });
+    expect(await response.json()).toEqual({ status: "invited" });
     expect(sendInterviewInvitationMock).not.toHaveBeenCalled();
+  });
+
+  it("starts a new attempt (bypassed) even when the latest attempt for this role is already ready", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+    leadMaybeSingleMock.mockResolvedValue({
+      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
+      error: null,
+    });
+    getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
+    createInterviewAgentMock.mockResolvedValue({ ibAgentId: "INT_123" });
+    sendInterviewInvitationMock.mockResolvedValue({ invited: 1, failed: 0 });
+
+    const { POST } = await importRoute();
+    const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "invited" });
+    expect(sendInterviewInvitationMock).toHaveBeenCalled();
   });
 
   it("returns 400 when no fitment_leads row exists for this role", async () => {
@@ -181,7 +223,43 @@ describe("POST /api/hub/start-ai-interview", () => {
     expect(adminReselectSelectMock).not.toHaveBeenCalled();
   });
 
-  it("treats a 23505 primary-key conflict on insert as an idempotent success and returns the existing row's status", async () => {
+  it("rejects with 402 when not bypassed and there is no unconsumed successful interview transaction", async () => {
+    process.env.RAZORPAY_BYPASS = "false";
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+    creditMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+
+    const { POST } = await importRoute();
+    const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
+
+    expect(response.status).toBe(402);
+    expect(sendInterviewInvitationMock).not.toHaveBeenCalled();
+    delete process.env.RAZORPAY_BYPASS;
+  });
+
+  it("consumes the oldest unconsumed interview credit and proceeds when not bypassed", async () => {
+    process.env.RAZORPAY_BYPASS = "false";
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+    creditMaybeSingleMock.mockResolvedValue({ data: { order_id: "order_credit_1" }, error: null });
+    leadMaybeSingleMock.mockResolvedValue({
+      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "senior" },
+      error: null,
+    });
+    getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
+    createInterviewAgentMock.mockResolvedValue({ ibAgentId: "INT_123" });
+    sendInterviewInvitationMock.mockResolvedValue({ invited: 1, failed: 0 });
+
+    const { POST } = await importRoute();
+    const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
+
+    expect(response.status).toBe(200);
+    expect(consumeUpdateMock).toHaveBeenCalledWith(expect.objectContaining({ consumed_at: expect.any(String) }));
+    expect(consumeUpdateEqMock).toHaveBeenCalledWith("order_id", "order_credit_1");
+    delete process.env.RAZORPAY_BYPASS;
+  });
+
+  it("treats a 23505 unique-index conflict on insert as an idempotent success and returns invited (the partial index only ever conflicts on an invited row)", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     leadMaybeSingleMock.mockResolvedValue({
@@ -194,13 +272,13 @@ describe("POST /api/hub/start-ai-interview", () => {
     insertMock.mockResolvedValue({
       error: { code: "23505", message: "duplicate key value violates unique constraint" },
     });
-    adminReselectMaybeSingleMock.mockResolvedValue({ data: { status: "ready" }, error: null });
+    adminReselectMaybeSingleMock.mockResolvedValue({ data: { status: "invited" }, error: null });
 
     const { POST } = await importRoute();
     const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "ready" });
+    expect(await response.json()).toEqual({ status: "invited" });
     expect(adminReselectSelectMock).toHaveBeenCalled();
   });
 });

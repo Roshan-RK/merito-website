@@ -6,6 +6,10 @@ import { sendInterviewInvitation } from "@/lib/intervuebox/invitations";
 
 export const runtime = "nodejs";
 
+function isRazorpayBypassed(): boolean {
+  return process.env.RAZORPAY_BYPASS !== "false";
+}
+
 export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
   const {
@@ -33,10 +37,38 @@ export async function POST(request: Request) {
     .select("status")
     .eq("user_id", user.id)
     .eq("role_title", roleTitle)
+    .eq("status", "invited")
     .maybeSingle();
 
   if (existing) {
-    return Response.json({ status: existing.status === "ready" ? "ready" : "invited" });
+    return Response.json({ status: "invited" });
+  }
+
+  const admin = getSupabaseServerClient();
+
+  if (!isRazorpayBypassed()) {
+    const { data: credit } = await admin
+      .from("razorpay_transactions")
+      .select("order_id")
+      .eq("user_id", user.id)
+      .eq("product", "interview")
+      .eq("status", "success")
+      .is("consumed_at", null)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (!credit) {
+      return Response.json(
+        { error: "Payment required to start a mock interview — please pay first." },
+        { status: 402 }
+      );
+    }
+
+    await admin
+      .from("razorpay_transactions")
+      .update({ consumed_at: new Date().toISOString() })
+      .eq("order_id", credit.order_id);
   }
 
   const { data: lead, error: leadError } = await supabase
@@ -77,7 +109,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const admin = getSupabaseServerClient();
   const { error: insertError } = await admin.from("fitment_interviews").insert({
     user_id: user.id,
     role_title: roleTitle,
@@ -88,22 +119,23 @@ export async function POST(request: Request) {
   });
 
   if (insertError) {
-    // Postgres unique-violation on the (user_id, role_title) primary key —
-    // a realistic double-click race where two concurrent requests both pass
-    // the "no existing row" check above. The IntervueBox-side invite already
-    // succeeded (possibly twice) either way, so treat this as an idempotent
-    // success: re-select the row a concurrent request already inserted and
-    // return its status instead of failing the request.
+    // Postgres unique-violation on the partial (user_id, role_title) WHERE
+    // status='invited' index — a realistic double-click race where two
+    // concurrent requests both pass the "no existing row" check above. The
+    // IntervueBox-side invite already succeeded (possibly twice) either way,
+    // so treat this as an idempotent success: re-select the row a concurrent
+    // request already inserted and return its status instead of failing.
     if (insertError.code === "23505") {
       const { data: existingRow } = await admin
         .from("fitment_interviews")
         .select("status")
         .eq("user_id", user.id)
         .eq("role_title", roleTitle)
+        .eq("status", "invited")
         .maybeSingle();
 
       if (existingRow) {
-        return Response.json({ status: existingRow.status === "ready" ? "ready" : "invited" });
+        return Response.json({ status: "invited" });
       }
     }
 
