@@ -79,6 +79,11 @@ export async function POST(request: Request) {
                 areasOfImprovement: report.areasOfImprovement,
                 shareableReportLink: report.shareableReportLink,
                 approxDurationMinutes: report.approxDurationMinutes,
+                flagForSuspiciousActivity: report.flagForSuspiciousActivity,
+                integrityCheck: report.integrityCheck,
+                videoReport: report.videoReport,
+                feedbackToInterviewer: report.feedbackToInterviewer,
+                roadmap: report.roadmap,
               },
               updated_at: new Date().toISOString(),
             })

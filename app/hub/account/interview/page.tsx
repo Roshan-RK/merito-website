@@ -93,21 +93,23 @@ export default async function InterviewReportPage({
   return (
     <main className="bg-[#fdf8fb]" style={{ minHeight: "60vh", padding: "48px 20px" }}>
       <div className="mx-auto" style={{ maxWidth: 900 }}>
-        <Link
-          href="/hub/account"
-          className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-          style={{ fontSize: 13 }}
-        >
-          ← Back to dashboard
-        </Link>
-        <a
-          href={`/api/hub/interview/export?role=${encodeURIComponent(interview.role_title)}`}
-          download
-          className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-          style={{ fontSize: 13, marginLeft: 16 }}
-        >
-          Download PDF
-        </a>
+        <div className="print:hidden">
+          <Link
+            href="/hub/account"
+            className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+            style={{ fontSize: 13 }}
+          >
+            ← Back to dashboard
+          </Link>
+          <a
+            href={`/api/hub/interview/export?role=${encodeURIComponent(interview.role_title)}`}
+            download
+            className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+            style={{ fontSize: 13, marginLeft: 16 }}
+          >
+            Download PDF
+          </a>
+        </div>
 
         <div className="flex items-center justify-between flex-wrap" style={{ margin: "14px 0 4px", gap: 12 }}>
           <div>

@@ -45,3 +45,25 @@ export async function getApplicant(appliedJobId: string): Promise<{ candidateId:
   const response = await intervueBoxFetch<GetApplicantResponse>(`/public/applicants/${appliedJobId}`);
   return { candidateId: response.candidateId };
 }
+
+// Undocumented but live-confirmed (2026-07-22): GET mirrors the documented
+// POST /public/jobs/:jobId/applicants path. Used to recover the applicantId
+// after a duplicate-applicant error — see isDuplicateApplicantError in
+// app/api/hub/fitment-check/route.ts and open item #10 in
+// specs/2026-07-17-intervuebox-integration-design.md.
+type ListApplicantsForJobResponse = {
+  total: number;
+  page: number;
+  limit: number;
+  applicants: Array<{
+    applicantId: string;
+    candidateId: string;
+    candidateName: string;
+    candidateEmail: string;
+    resumeMatchScore: number | null;
+  }>;
+};
+
+export async function listApplicantsForJob(jobId: string): Promise<ListApplicantsForJobResponse> {
+  return intervueBoxFetch<ListApplicantsForJobResponse>(`/public/jobs/${jobId}/applicants`);
+}

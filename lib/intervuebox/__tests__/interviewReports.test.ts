@@ -56,6 +56,9 @@ describe("getInterviewReport", () => {
           sessionDetails: {
             skillReport: {},
             answers: [{ timestamp: "00:00:24" }, { timestamp: "00:03:27" }],
+            flagForSuspiciousActivity: true,
+            integrityCheck: "No tab changes detected.",
+            videoReport: "Confident, appropriate dress code.",
             overallReport: {
               score: 8,
               metrics: { technical: 8, communication: 9, problemSolving: 8 },
@@ -63,6 +66,7 @@ describe("getInterviewReport", () => {
               strengths: "Clear technical explanations.",
               areasOfImprovement: "Could give more concrete examples.",
               feedbackToInterviewer: "Recommend advancing.",
+              roadmap: "Short-term: practice mock interviews.",
               rank: 1,
             },
           },
@@ -88,6 +92,11 @@ describe("getInterviewReport", () => {
       areasOfImprovement: "Could give more concrete examples.",
       shareableReportLink: "https://app.intervuebox.com/reports/ISE_123",
       approxDurationMinutes: 4,
+      flagForSuspiciousActivity: true,
+      integrityCheck: "No tab changes detected.",
+      videoReport: "Confident, appropriate dress code.",
+      feedbackToInterviewer: "Recommend advancing.",
+      roadmap: "Short-term: practice mock interviews.",
     });
   });
 

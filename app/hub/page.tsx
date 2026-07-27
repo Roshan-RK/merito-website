@@ -6,6 +6,7 @@ import { getAbsoluteUrl } from "@/lib/site";
 import FitmentChecker from "./FitmentChecker";
 import ProblemCards from "./ProblemCards";
 import FaqAccordion from "./FaqAccordion";
+import TestimonialCarousel from "./TestimonialCarousel";
 import HubCountUp from "./HubCountUp";
 
 export const metadata: Metadata = {
@@ -25,23 +26,16 @@ export const metadata: Metadata = {
 const STATS = [
   { num: 1000, prefix: "", suffix: "+", label: "professionals placed" },
   { num: 100, prefix: "", suffix: "+", label: "companies hiring through Merito" },
-  { num: 60, prefix: "", suffix: " sec", label: "to your first fitment score" },
-  { num: 0, prefix: "₹", suffix: "", label: "to start - free, no sign-up" },
-];
-
-const SHIFT_STEPS = [
-  { n: "1", title: "Know your fit", body: "Score your CV against the exact job you want." },
-  { n: "2", title: "Fix the gaps", body: "See what's holding you back and how to fix it." },
-  { n: "3", title: "Prove your strengths", body: "Personality, a mock interview, and verified references." },
-  { n: "4", title: "Get found", body: "One recruiter-ready profile that travels with every application." },
+  { num: 60, prefix: "", suffix: " seconds", label: "to your first fitment score" },
+  { num: 0, prefix: "₹", suffix: "", label: "to start" },
 ];
 
 const OFFERINGS = [
-  { n: "1", name: "CV Fitment", tag: "Free · No sign-up", free: true, span: 2, benefit: "Find out where you stand in 60 seconds.", body: "Upload your CV, tell us the role you're aiming for, and get an instant fitment score. Create a free account to unlock the full report - strengths, gaps, and exactly how to rework your CV to close them.", cta: "Check my fitment - free", href: "#fit-checker" },
-  { n: "2", name: "Personality Fitment", tag: "Builds your profile", free: false, span: 2, benefit: "Recruiters hire for fit, not just skills. Show them yours.", body: "Take a structured personality assessment and see how your working style maps to the role - the same psychometric signal that makes Merito's hiring nearly 2x more predictive than gut feel.", cta: "Discover my fit", href: "#pricing" },
-  { n: "3", name: "Mock AI Interview", tag: "Builds your profile", free: false, span: 2, benefit: "Walk into the real interview knowing you'll nail it.", body: "Sit a realistic 30-minute AI mock interview whenever you want, as many times as you want - with a detailed report on where you're strong, where you're losing the room, and what to say differently.", cta: "Practise my interview", href: "#pricing" },
-  { n: "4", name: "References Feedback", tag: "Builds your profile", free: false, span: 3, benefit: "Let the people who've worked with you do the vouching.", body: "Invite managers, teammates, or clients to rate your soft skills across 7 parameters. Verified, structured references that carry the kind of credibility a CV never can.", cta: "Invite my references", href: "#pricing" },
-  { n: "5", name: "1:1 Expert Guidance", tag: "1:1 guidance", free: false, span: 3, benefit: "A real expert, in your corner, telling you what to do next.", body: "Book a one-on-one with a Merito career expert who reads your fitment, your personality fit, and your mock interview performance - then gives you a straight, personalised plan to improve your odds.", cta: "Book my expert call", href: "#pricing" },
+  { n: "1", name: "CV Fitment", tag: "Free · No sign-up", free: true, span: 2, feature: "Instant fitment score against the exact job you're targeting.", benefit: "You know precisely where you stand, no more guessing why an application went quiet.", body: "You either apply with confidence, or you fix the gap before you do - either way, you stop wasting applications.", cta: "Check my fitment - free", href: "#fit-checker" },
+  { n: "2", name: "Personality Fitment", tag: "Builds your profile", free: false, span: 2, feature: "A structured assessment mapping your working style to the role.", benefit: "Recruiters hire for fit, not just skill - now they can see yours, not just guess at it in an interview.", body: "You get considered for roles where “will they fit the team” was the real, unspoken question.", cta: "Discover my fit", href: "#fit-checker" },
+  { n: "3", name: "Mock AI Interview", tag: "Builds your profile", free: false, span: 2, feature: "A realistic 30-minute AI interview, on demand, with a full performance report.", benefit: "You find your weak answers in a practice room, not the real one.", body: "You walk into the actual interview already knowing what you're strong at and what to say differently.", cta: "Practise my interview", href: "#fit-checker" },
+  { n: "4", name: "References Feedback", tag: "Builds your profile", free: false, span: 3, feature: "Structured feedback from managers, peers, or clients who've actually worked with you.", benefit: "Your soft skills are vouched for by someone else, not just claimed by you.", body: "A hiring manager gets the one kind of proof a CV genuinely cannot fake.", cta: "Invite my references", href: "#fit-checker" },
+  { n: "5", name: "1:1 Expert Guidance", tag: "1:1 guidance", free: false, span: 3, feature: "A real career expert who's already read your fitment, personality, and interview results.", benefit: "You get a specific plan, not generic advice, because they're working from your actual data.", body: "You stop guessing what to fix next and start acting on it.", cta: "Book my expert session", href: "#fit-checker" },
 ];
 
 const PROFILE_CHIPS = ["Fitment to the role", "Personality-to-job map", "Verified references", "Mock interview standing", "Key strengths"];
@@ -54,9 +48,9 @@ const EXT_POINTS = [
 ];
 
 const AUDIENCES = [
-  { title: "Students & Freshers", body: "No experience to point to yet? Show fit, personality, and potential instead - and walk into campus placements with a profile most graduates don't have.", href: "/hub/freshers" },
-  { title: "Mid-Level Professionals", body: "Stuck getting ignored despite a solid track record? Find the gaps between your CV and the roles you want, and close them fast.", href: "/hub/managers" },
-  { title: "Senior & Leadership", body: "Moving quietly and selectively? Get a sharp, credible profile and expert guidance that matches the level you're playing at.", href: "/hub/leaders" },
+  { title: "Students & Freshers", body: "No track record yet to point to. Show fit, personality, and potential, not just a blank work history - a fitment score and a verified profile give recruiters something concrete to evaluate you on.", cta: "See how it helps freshers", href: "/hub/freshers" },
+  { title: "Mid-Level Professionals", body: "Delivering consistently, but stuck for the next step up. Turn “I think I'm ready” into evidence an employer can actually trust - a managerial and role-fitment score proves readiness a CV full of past output never can.", cta: "See how it helps professionals", href: "/hub/managers" },
+  { title: "Senior & Leadership", body: "Moving quietly, on your own terms, without tipping your hand. A sharp, credible, fully discreet profile reaches the right people without broadcasting that you're open - you control exactly what's visible and to whom.", cta: "See how it helps leaders", href: "/hub/leaders" },
 ];
 
 const HOW_STEPS = [
@@ -64,16 +58,6 @@ const HOW_STEPS = [
   { n: "2", title: "See what to fix.", body: "Sign in for the full report - strengths, gaps, and how to improve your CV." },
   { n: "3", title: "Build your profile.", body: "Add your personality test, mock interview, and references." },
   { n: "4", title: "Apply and get found.", body: "Send your one-page profile with every application - and let recruiters discover you on LinkedIn." },
-];
-
-const PRICING: { name: string; price: string; red: boolean; badge?: string; highlight?: boolean }[] = [
-  { name: "Job Fitment Score", price: "Free · no sign-up", red: true },
-  { name: "Detailed Fitment Report", price: "₹299", red: false },
-  { name: "Personality Test & Job Fit", price: "₹299", red: false },
-  { name: "30-Minute Mock Interview + report", price: "₹999", red: false },
-  { name: "Invited References", price: "₹299", red: false },
-  { name: "All three - build your full profile", price: "₹1499", red: true, badge: "Save ₹398", highlight: true },
-  { name: "Career Expert Session (30 mins)", price: "₹1999", red: false },
 ];
 
 /* ─── Shared bits ─── */
@@ -103,7 +87,7 @@ export default function HubPage() {
     <main>
       <style>{`
         html { scroll-behavior: smooth; }
-        #fit-checker, #how-it-works, #pricing { scroll-margin-top: 110px; }
+        #fit-checker, #how-it-works { scroll-margin-top: 110px; }
       `}</style>
 
       {/* ══════════ HERO ══════════ */}
@@ -117,13 +101,13 @@ export default function HubPage() {
                   className="font-[family-name:var(--font-gabarito)] font-semibold text-black"
                   style={{ fontSize: "clamp(2.4rem,4vw,3.7rem)", lineHeight: 1.04, letterSpacing: "-0.04em", margin: "24px 0 0" }}
                 >
-                  Stop applying into the void. <span className="text-[#ed1a24]">Start getting shortlisted.</span>
+                  Your CV says what you did. <span className="text-[#ed1a24]">Merito HUB proves what you&apos;re worth.</span>
                 </h1>
                 <p
                   className="font-[family-name:var(--font-poppins)] font-medium text-[#4b4b4d]"
                   style={{ fontSize: 18, lineHeight: 1.65, margin: "20px 0 0", maxWidth: 540 }}
                 >
-                  You&apos;ve sent your CV to twenty jobs and heard back from none. It&apos;s not that you&apos;re not good enough - it&apos;s that no one can see it. Merito HUB shows you exactly where you stand for the job you want, helps you fix the gaps, and builds you a profile recruiters can&apos;t ignore.
+                  Whether you&apos;re applying for your first job, pushing for your next promotion, or making a quiet move to something bigger, Merito HUB scores your fit, shows you what to fix, and gets that proof in front of the people deciding.
                 </p>
                 <div className="flex flex-wrap items-center" style={{ gap: 12, marginTop: 28 }}>
                   <a
@@ -131,7 +115,7 @@ export default function HubPage() {
                     className="inline-flex items-center gap-2 font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors w-full sm:w-auto justify-center"
                     style={{ height: 52, padding: "0 26px", borderRadius: 8, fontSize: 16, boxShadow: "0px 4px 6px rgba(236,34,40,0.3)" }}
                   >
-                    Check your fitment score - free
+                    Check my fitment score - free
                     <ArrowChip />
                   </a>
                   <a
@@ -192,10 +176,10 @@ export default function HubPage() {
               className="font-[family-name:var(--font-gabarito)] font-semibold text-black"
               style={{ fontSize: "clamp(2rem,3.5vw,3rem)", lineHeight: 1.08, letterSpacing: "-0.03em", margin: "24px 0 0", maxWidth: 900 }}
             >
-              You&apos;re not applying too little. <span className="text-[#ed1a24]">You&apos;re applying blind.</span>
+              You&apos;re not being rejected. <span className="text-[#ed1a24]">You&apos;re being unseen.</span>
             </h2>
             <p className="font-[family-name:var(--font-poppins)] font-medium text-[#4b4b4d]" style={{ fontSize: 18, lineHeight: 1.7, margin: "18px 0 0", maxWidth: 840 }}>
-              Every job posting pulls in 200 to 500 applications. Fewer than 1 in 10 make the shortlist. And if you&apos;re one of the other nine, you get the same thing every time: silence. No score. No feedback. No idea what to fix. So you tweak the same CV, send it to ten more roles, and wait for a reply that never comes.
+              The visibility problem looks different at every stage, but no job board has ever solved it at any of them.
             </p>
             <p className="font-[family-name:var(--font-poppins)] font-semibold text-[#0a0a0a]" style={{ fontSize: 18, lineHeight: 1.7, margin: "14px 0 0", maxWidth: 840 }}>
               That&apos;s not a you problem. That&apos;s a visibility problem - and it&apos;s the one thing no job board has ever solved.
@@ -205,46 +189,63 @@ export default function HubPage() {
             <div style={{ marginTop: 40 }}>
               <ProblemCards />
             </div>
+            <div className="flex justify-center" style={{ marginTop: 36 }}>
+              <a
+                href="#fit-checker"
+                className="inline-flex items-center gap-2 font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
+                style={{ height: 52, padding: "0 28px", borderRadius: 8, fontSize: 16, boxShadow: "0px 4px 6px rgba(236,34,40,0.3)" }}
+              >
+                Check my fitment score - free
+                <ArrowChip />
+              </a>
+            </div>
           </RevealOnScroll>
         </div>
       </section>
 
-      {/* ══════════ THE SHIFT ══════════ */}
-      <section className="bg-[#fdf8fb]" style={{ padding: "56px 0" }}>
+      {/* ══════════ HOW IT WORKS ══════════ */}
+      <section id="how-it-works" className="bg-white" style={{ padding: "56px 0" }}>
         <div className="max-w-[1340px] mx-auto px-5">
-          <RevealOnScroll>
-            <div className="flex flex-col items-center text-center" style={{ gap: 16 }}>
-              <Eyebrow>How Merito HUB Helps</Eyebrow>
-              <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "clamp(2rem,3.5vw,3rem)", lineHeight: 1.08, letterSpacing: "-0.03em", margin: 0 }}>
-                Stop guessing. <span className="text-[#ed1a24]">Start knowing.</span>
-              </h2>
-              <p className="font-[family-name:var(--font-poppins)] font-medium text-[#4b4b4d]" style={{ fontSize: 18, lineHeight: 1.65, margin: 0, maxWidth: 820 }}>
-                Merito HUB is the candidate side of Merito - the same skill-based platform companies already hire through, pointed back at you. It closes the feedback loop the job market forgot. In four steps you go from invisible and guessing to informed, coached, and impossible to overlook.
-              </p>
-            </div>
-          </RevealOnScroll>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: 16, marginTop: 44 }}>
-            {SHIFT_STEPS.map((s, i) => (
-              <RevealOnScroll key={s.n} delay={i * 0.08}>
-                <div
-                  className="bg-white border border-black/[0.08] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0px_20px_80px_rgba(237,26,36,0.10)]"
-                  style={{ borderRadius: 20, padding: 24, boxShadow: "0px 18px 50px rgba(17,35,89,0.05)" }}
+          <div className="grid grid-cols-1 lg:grid-cols-2 items-start" style={{ gap: 52 }}>
+            <RevealOnScroll>
+              <div>
+                <Eyebrow>How It Works</Eyebrow>
+                <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "clamp(2rem,3.2vw,2.8rem)", lineHeight: 1.12, letterSpacing: "-0.03em", margin: "22px 0 0" }}>
+                  From &ldquo;no idea where I stand&rdquo; to <span className="text-[#ed1a24]">&ldquo;shortlist-ready&rdquo;</span> in four steps.
+                </h2>
+                <a
+                  href="#fit-checker"
+                  className="inline-flex items-center gap-2 font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
+                  style={{ marginTop: 28, height: 52, padding: "0 28px", borderRadius: 8, fontSize: 16, boxShadow: "0px 4px 6px rgba(236,34,40,0.3)" }}
                 >
-                  <div
-                    className="flex items-center justify-center font-[family-name:var(--font-gabarito)] font-bold text-[#ed1a24] border-2 border-[#ed1a24] rounded-full"
-                    style={{ width: 40, height: 40, fontSize: 15 }}
-                  >
-                    {s.n}
+                  Start free
+                  <ArrowChip />
+                </a>
+              </div>
+            </RevealOnScroll>
+            <RevealOnScroll delay={0.1}>
+              <div className="flex flex-col relative" style={{ gap: 26, paddingLeft: 6 }}>
+                <span className="absolute hidden sm:block" style={{ left: 27, top: 24, bottom: 24, width: 2, background: "rgba(237,26,36,0.2)" }} />
+                {HOW_STEPS.map((h) => (
+                  <div key={h.n} className="flex items-start relative" style={{ gap: 20, zIndex: 1 }}>
+                    <span
+                      className="flex items-center justify-center flex-shrink-0 bg-white border-2 border-[#ed1a24] font-[family-name:var(--font-gabarito)] font-bold rounded-full box-border"
+                      style={{ width: 44, height: 44, fontSize: 15 }}
+                    >
+                      {h.n}
+                    </span>
+                    <div>
+                      <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.2rem", margin: "8px 0 0" }}>
+                        {h.title}
+                      </h3>
+                      <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 14, lineHeight: 1.65, margin: "6px 0 0", maxWidth: 440 }}>
+                        {h.body}
+                      </p>
+                    </div>
                   </div>
-                  <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.3rem", margin: "16px 0 0", lineHeight: 1.2 }}>
-                    {s.title}
-                  </h3>
-                  <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 14, lineHeight: 1.7, margin: "8px 0 0" }}>
-                    {s.body}
-                  </p>
-                </div>
-              </RevealOnScroll>
-            ))}
+                ))}
+              </div>
+            </RevealOnScroll>
           </div>
         </div>
       </section>
@@ -259,8 +260,11 @@ export default function HubPage() {
                 className="font-[family-name:var(--font-gabarito)] font-semibold text-black"
                 style={{ fontSize: "clamp(2rem,3.5vw,3rem)", lineHeight: 1.08, letterSpacing: "-0.03em", margin: 0, maxWidth: 860 }}
               >
-                Everything you need to turn <span className="text-[#ed1a24]">&ldquo;applied&rdquo;</span> into <span className="text-[#ed1a24]">&ldquo;shortlisted.&rdquo;</span>
+                Everything that turns <span className="text-[#ed1a24]">&ldquo;applied&rdquo;</span> into <span className="text-[#ed1a24]">&ldquo;shortlisted.&rdquo;</span>
               </h2>
+              <p className="font-[family-name:var(--font-poppins)] font-medium text-[#4b4b4d]" style={{ fontSize: 18, lineHeight: 1.65, margin: 0, maxWidth: 820 }}>
+                Five tools. One profile. Built once, used everywhere you apply.
+              </p>
             </div>
           </RevealOnScroll>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6" style={{ gap: 18, marginTop: 44 }}>
@@ -300,6 +304,9 @@ export default function HubPage() {
                   <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.35rem", margin: "18px 0 0", lineHeight: 1.2 }}>
                     {o.name}
                   </h3>
+                  <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 12.5, lineHeight: 1.5, margin: "6px 0 0" }}>
+                    {o.feature}
+                  </p>
                   <p className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 14, lineHeight: 1.5, margin: "8px 0 0" }}>
                     {o.benefit}
                   </p>
@@ -331,7 +338,7 @@ export default function HubPage() {
                 Every step builds your profile recruiters <span className="text-[#ed1a24]">actually read.</span>
               </h2>
               <p className="font-[family-name:var(--font-poppins)] font-medium" style={{ fontSize: 17, lineHeight: 1.75, color: "rgba(255,255,255,0.75)", margin: 0, maxWidth: 840 }}>
-                Your fitment score, personality fit, mock interview result, and references roll up into one recruiter-ready Merito profile. Attach it to any application - and stop being one anonymous CV in a stack of 500.
+                Every one of these rolls into one recruiter-ready Merito profile, attached to your application, and visible to recruiters on LinkedIn - working for you before the interview has even started.
               </p>
               <p className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.3rem", margin: "6px 0 0", maxWidth: 720, lineHeight: 1.4 }}>
                 One profile. Every proof point that matters. Sent with your application, working for you before you&apos;ve even had the interview.
@@ -348,6 +355,14 @@ export default function HubPage() {
                   </span>
                 ))}
               </div>
+              <a
+                href="#fit-checker"
+                className="inline-flex items-center gap-2 font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
+                style={{ marginTop: 10, height: 52, padding: "0 28px", borderRadius: 8, fontSize: 16, boxShadow: "0px 4px 6px rgba(236,34,40,0.3)" }}
+              >
+                Build my profile
+                <ArrowChip />
+              </a>
             </div>
           </RevealOnScroll>
         </div>
@@ -361,10 +376,13 @@ export default function HubPage() {
               <div>
                 <Eyebrow>The Unfair Advantage</Eyebrow>
                 <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "clamp(2rem,3.2vw,2.8rem)", lineHeight: 1.08, letterSpacing: "-0.03em", margin: "22px 0 0" }}>
-                  Get discovered on LinkedIn - <span className="text-[#ed1a24]">not filtered out.</span>
+                  Get discovered on LinkedIn. <span className="text-[#ed1a24]">Not filtered out of it.</span>
                 </h2>
                 <p className="font-[family-name:var(--font-poppins)] font-medium text-[#4b4b4d]" style={{ fontSize: 16, lineHeight: 1.7, margin: "16px 0 0" }}>
-                  This is the part no other platform gives you. Recruiters at companies hiring through Merito use the Merito HUB browser extension. When they open your LinkedIn profile, they don&apos;t just see your headline - they see your Merito HUB credential right alongside it:
+                  No resume builder, job board, or LinkedIn add-on does this: recruiters hiring through Merito see your fitment score, personality-to-role map, references, and interview standing right on your LinkedIn profile, at the exact moment they&apos;re deciding whether to reach out.
+                </p>
+                <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 15, lineHeight: 1.7, margin: "14px 0 0" }}>
+                  This is the one thing on this page you can&apos;t get anywhere else. When a recruiter hiring through Merito opens your profile, our browser extension shows them what a resume can&apos;t: how you match this specific role, how your working style fits the team, what three people who&apos;ve worked with you actually said, and how you performed in a real mock interview.
                 </p>
                 <div className="flex flex-col" style={{ gap: 14, marginTop: 24 }}>
                   {EXT_POINTS.map((pt) => (
@@ -386,9 +404,17 @@ export default function HubPage() {
                 </p>
                 <div className="bg-[#fdf8fb] border border-black/[0.08]" style={{ marginTop: 20, borderLeft: "6px solid #ed1a24", borderRadius: 12, padding: "16px 18px" }}>
                   <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>
-                    <strong className="text-black">You&apos;re always in control.</strong> Your profile only ever shows what you choose to share - your verified, approved credential. Never raw scores. Never your gaps.
+                    <strong className="text-black">You choose what&apos;s shown. Always.</strong> Your Merito credential displays only the verified, approved information you&apos;ve chosen to share - never raw scores, never your gaps, and never a signal to anyone you haven&apos;t chosen to show it to. That&apos;s true on your very first job search, and it&apos;s just as true on your quietest, most selective move.
                   </p>
                 </div>
+                <a
+                  href="#fit-checker"
+                  className="inline-flex items-center gap-2 font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
+                  style={{ marginTop: 24, height: 52, padding: "0 26px", borderRadius: 8, fontSize: 16, boxShadow: "0px 4px 6px rgba(236,34,40,0.3)" }}
+                >
+                  Build my profile free to start
+                  <ArrowChip />
+                </a>
               </div>
             </RevealOnScroll>
 
@@ -506,8 +532,11 @@ export default function HubPage() {
             <div className="flex flex-col items-center text-center" style={{ gap: 16 }}>
               <Eyebrow>Built For Every Stage</Eyebrow>
               <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "clamp(2rem,3.5vw,3rem)", lineHeight: 1.08, letterSpacing: "-0.03em", margin: 0 }}>
-                Whether it&apos;s your first job <span className="text-[#ed1a24]">or your next big move.</span>
+                Built for every stage <span className="text-[#ed1a24]">of the climb.</span>
               </h2>
+              <p className="font-[family-name:var(--font-poppins)] font-medium text-[#4b4b4d]" style={{ fontSize: 18, lineHeight: 1.65, margin: 0, maxWidth: 820 }}>
+                Different stage, different proof needed. Merito HUB adapts to where you actually are.
+              </p>
             </div>
           </RevealOnScroll>
           <div className="grid grid-cols-1 sm:grid-cols-3" style={{ gap: 20, marginTop: 44 }}>
@@ -532,112 +561,13 @@ export default function HubPage() {
                     className="inline-flex items-center gap-1.5 font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24] group-hover:text-[#c8151e]"
                     style={{ fontSize: 13, marginTop: "auto", paddingTop: 16 }}
                   >
-                    See how it helps
+                    {a.cta}
                     <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M7 17L17 7" /><path d="M9 7h8v8" /></svg>
                   </span>
                 </Link>
               </RevealOnScroll>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ══════════ HOW IT WORKS ══════════ */}
-      <section id="how-it-works" className="bg-white" style={{ padding: "56px 0" }}>
-        <div className="max-w-[1340px] mx-auto px-5">
-          <div className="grid grid-cols-1 lg:grid-cols-2 items-start" style={{ gap: 52 }}>
-            <RevealOnScroll>
-              <div>
-                <Eyebrow>How It Works</Eyebrow>
-                <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "clamp(2rem,3.2vw,2.8rem)", lineHeight: 1.12, letterSpacing: "-0.03em", margin: "22px 0 0" }}>
-                  From &ldquo;no idea where I stand&rdquo; to <span className="text-[#ed1a24]">&ldquo;shortlist-ready&rdquo;</span> in four steps.
-                </h2>
-                <a
-                  href="#fit-checker"
-                  className="inline-flex items-center gap-2 font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
-                  style={{ marginTop: 28, height: 52, padding: "0 28px", borderRadius: 8, fontSize: 16, boxShadow: "0px 4px 6px rgba(236,34,40,0.3)" }}
-                >
-                  Start free
-                  <ArrowChip />
-                </a>
-              </div>
-            </RevealOnScroll>
-            <RevealOnScroll delay={0.1}>
-              <div className="flex flex-col relative" style={{ gap: 26, paddingLeft: 6 }}>
-                <span className="absolute hidden sm:block" style={{ left: 27, top: 24, bottom: 24, width: 2, background: "rgba(237,26,36,0.2)" }} />
-                {HOW_STEPS.map((h) => (
-                  <div key={h.n} className="flex items-start relative" style={{ gap: 20, zIndex: 1 }}>
-                    <span
-                      className="flex items-center justify-center flex-shrink-0 bg-white border-2 border-[#ed1a24] font-[family-name:var(--font-gabarito)] font-bold rounded-full box-border"
-                      style={{ width: 44, height: 44, fontSize: 15 }}
-                    >
-                      {h.n}
-                    </span>
-                    <div>
-                      <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.2rem", margin: "8px 0 0" }}>
-                        {h.title}
-                      </h3>
-                      <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 14, lineHeight: 1.65, margin: "6px 0 0", maxWidth: 440 }}>
-                        {h.body}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </RevealOnScroll>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════ PRICING ══════════ */}
-      <section id="pricing" className="bg-[#fdf8fb]" style={{ padding: "56px 0" }}>
-        <div className="max-w-[1340px] mx-auto px-5">
-          <RevealOnScroll>
-            <div className="flex flex-col items-center text-center" style={{ gap: 16 }}>
-              <Eyebrow>Simple, Honest Pricing</Eyebrow>
-              <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "clamp(2rem,3.5vw,3rem)", lineHeight: 1.08, letterSpacing: "-0.03em", margin: 0 }}>
-                Start free. <span className="text-[#ed1a24]">Pay only when you&apos;re ready to go further.</span>
-              </h2>
-            </div>
-          </RevealOnScroll>
-          <RevealOnScroll delay={0.1}>
-            <div className="bg-white border border-black/[0.08] overflow-hidden mx-auto" style={{ maxWidth: 820, marginTop: 40, borderRadius: 24, boxShadow: "0px 18px 50px rgba(17,35,89,0.05)" }}>
-              <div className="flex justify-between bg-[#0a0a0a]" style={{ padding: "16px 28px" }}>
-                <span className="font-bold uppercase" style={{ fontSize: 12, letterSpacing: "0.08em", color: "rgba(255,255,255,0.7)" }}>What you get</span>
-                <span className="font-bold uppercase" style={{ fontSize: 12, letterSpacing: "0.08em", color: "rgba(255,255,255,0.7)" }}>Price</span>
-              </div>
-              {PRICING.map((row, i) => (
-                <div
-                  key={row.name}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between"
-                  style={{
-                    gap: 8,
-                    padding: row.highlight ? "16px 28px 16px 22px" : "16px 28px",
-                    borderBottom: i < PRICING.length - 1 ? "1px solid rgba(0,0,0,0.06)" : "none",
-                    background: row.highlight ? "#fdf8fb" : undefined,
-                    borderLeft: row.highlight ? "6px solid #ed1a24" : undefined,
-                  }}
-                >
-                  <div className="flex items-center flex-wrap" style={{ gap: 10 }}>
-                    <span className="font-semibold text-black" style={{ fontSize: 15 }}>{row.name}</span>
-                    {row.badge && (
-                      <span className="font-bold uppercase text-[#ed1a24] bg-[#fdeced]" style={{ fontSize: 10, letterSpacing: "0.05em", borderRadius: 50, padding: "3px 10px" }}>
-                        {row.badge}
-                      </span>
-                    )}
-                  </div>
-                  <span className="font-[family-name:var(--font-gabarito)] font-bold whitespace-nowrap sm:text-right" style={{ fontSize: 17, color: row.red ? "#ed1a24" : "#000" }}>
-                    {row.price}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </RevealOnScroll>
-          <RevealOnScroll delay={0.15}>
-            <p className="text-center font-[family-name:var(--font-poppins)] font-medium text-[#4b4b4d]" style={{ fontSize: 14, margin: "22px 0 0" }}>
-              No subscriptions. No lock-in. Check your fit for free - and add what helps, when it helps.
-            </p>
-          </RevealOnScroll>
         </div>
       </section>
 
@@ -659,62 +589,7 @@ export default function HubPage() {
       <section className="bg-[#fdf8fb]" style={{ padding: "64px 0" }}>
         <div className="max-w-[1340px] mx-auto px-5">
           <RevealOnScroll>
-            <div className="grid grid-cols-1 lg:grid-cols-2 items-center" style={{ gap: 52 }}>
-              {/* Quote */}
-              <div>
-                <span className="inline-flex items-center font-[family-name:var(--font-poppins)] font-bold text-[#ed1a24] bg-[#fdeced]" style={{ borderRadius: 50, padding: "6px 16px", fontSize: 11, letterSpacing: "0.04em" }}>
-                  Candidate Story
-                </span>
-                <svg width="42" height="32" viewBox="0 0 42 32" fill="none" style={{ display: "block", margin: "22px 0 0" }} aria-hidden="true">
-                  <path d="M0 32V19.2C0 8.6 6.8 1.4 17 0l2 5.2c-6 1.6-9.4 5.2-9.8 9.8H18V32H0Zm24 0V19.2C24 8.6 30.8 1.4 41 0l1 5.2c-6 1.6-9.4 5.2-9.8 9.8H42V32H24Z" fill="#ed1a24" />
-                </svg>
-                <blockquote className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "clamp(1.5rem,2.4vw,2.1rem)", letterSpacing: "-0.03em", lineHeight: 1.3, margin: "18px 0 0" }}>
-                  I applied to 40 jobs and heard nothing. With my Merito profile, I got 3 interview calls in two weeks - and an offer for the exact role I wanted.
-                </blockquote>
-                <div className="flex items-center" style={{ gap: 14, marginTop: 26 }}>
-                  <span className="flex items-center justify-center flex-shrink-0 font-[family-name:var(--font-gabarito)] font-bold text-[#ed1a24] bg-[#fdeced] rounded-full" style={{ width: 48, height: 48, fontSize: 17 }}>
-                    RK
-                  </span>
-                  <div>
-                    <p className="font-semibold text-black" style={{ fontSize: 15, margin: 0 }}>
-                      Rahul K. <span className="font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 11, letterSpacing: "0.05em", marginLeft: 8 }}>Placeholder</span>
-                    </p>
-                    <p className="text-[#4b4b4d]" style={{ fontSize: 13, margin: "2px 0 0" }}>Placed as Product Analyst · Fitment score 8.4</p>
-                  </div>
-                </div>
-              </div>
-              {/* Video */}
-              <div>
-                <div
-                  className="relative overflow-hidden flex items-center justify-center cursor-pointer group"
-                  style={{
-                    aspectRatio: "16 / 10",
-                    borderRadius: 20,
-                    background: "linear-gradient(to bottom right, #000, #1a1a1a, #2d0a0c)",
-                    border: "1px solid rgba(0,0,0,0.08)",
-                    boxShadow: "0px 30px 80px rgba(17,35,89,0.12)",
-                  }}
-                >
-                  <span className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(to right, rgba(237,26,36,0.18), transparent)" }} />
-                  <span className="absolute font-bold uppercase" style={{ top: 16, left: 16, fontSize: 10, letterSpacing: "0.06em", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 50, padding: "4px 11px" }}>
-                    Video placeholder · 1:32
-                  </span>
-                  <span
-                    className="relative flex items-center justify-center rounded-full bg-[#ed1a24] transition-transform duration-300 group-hover:scale-110"
-                    style={{ width: 76, height: 76, boxShadow: "0px 8px 30px rgba(237,26,36,0.45)" }}
-                  >
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff" style={{ marginLeft: 4 }}><path d="M8 5v14l11-7L8 5Z" /></svg>
-                  </span>
-                  <span className="absolute flex items-center" style={{ bottom: 16, left: 16, right: 16, gap: 10 }}>
-                    <span className="flex-1 overflow-hidden block rounded-full" style={{ height: 4, background: "rgba(255,255,255,0.2)" }}>
-                      <span className="block h-full rounded-full bg-[#ed1a24]" style={{ width: "22%" }} />
-                    </span>
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>0:20 / 1:32</span>
-                  </span>
-                </div>
-                <p className="text-center text-[#9c9c9c]" style={{ fontSize: 11, margin: "12px 0 0" }}>Placeholder - final candidate video to be added.</p>
-              </div>
-            </div>
+            <TestimonialCarousel />
           </RevealOnScroll>
         </div>
       </section>
@@ -737,10 +612,10 @@ export default function HubPage() {
                 Ready?
               </span>
               <h2 className="relative font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "clamp(2rem,3.5vw,3rem)", lineHeight: 1.1, letterSpacing: "-0.03em", margin: 0, maxWidth: 760 }}>
-                Stop wondering why. <span className="text-[#ed1a24]">Start getting shortlisted.</span>
+                Stop wondering why. <span className="text-[#ed1a24]">Start being chosen.</span>
               </h2>
               <p className="relative font-[family-name:var(--font-poppins)] font-medium" style={{ fontSize: 16, lineHeight: 1.7, color: "rgba(255,255,255,0.75)", margin: 0, maxWidth: 640 }}>
-                Your next application doesn&apos;t have to disappear into a stack of 500. Check your fitment score in 60 seconds - free - and see exactly where you stand for the job you want.
+                Whether it&apos;s your first offer or your next big move, it starts with knowing exactly where you stand.
               </p>
               <div className="relative flex flex-wrap justify-center" style={{ gap: 12, marginTop: 8 }}>
                 <a

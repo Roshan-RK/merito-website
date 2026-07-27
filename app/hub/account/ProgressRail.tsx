@@ -12,11 +12,13 @@ const STEPS = [
 ] as const;
 
 export type InterviewStatus = "not_started" | "invited" | "ready";
+export type PersonalityStatus = "not_started" | "ready";
 
 export default function ProgressRail({
   reportUnlocked,
   interviewStatus,
   referenceCheckStatus,
+  personalityStatus,
   roleTitle,
   onOpenReportPaywall,
   onOpenInterviewStart,
@@ -24,13 +26,18 @@ export default function ProgressRail({
   reportUnlocked: boolean;
   interviewStatus: InterviewStatus;
   referenceCheckStatus: "none" | "in_progress" | "completed";
+  personalityStatus: PersonalityStatus;
   roleTitle: string;
   onOpenReportPaywall: () => void;
   onOpenInterviewStart: () => void;
 }) {
   const referencesDone = referenceCheckStatus === "completed";
   const doneCount =
-    1 + (reportUnlocked ? 1 : 0) + (referencesDone ? 1 : 0) + (interviewStatus === "ready" ? 1 : 0);
+    1 +
+    (reportUnlocked ? 1 : 0) +
+    (personalityStatus === "ready" ? 1 : 0) +
+    (referencesDone ? 1 : 0) +
+    (interviewStatus === "ready" ? 1 : 0);
   const percent = Math.round((doneCount / STEPS.length) * 100);
   const circumference = 2 * Math.PI * 31;
   const dashoffset = circumference - (percent / 100) * circumference;
@@ -72,21 +79,22 @@ export default function ProgressRail({
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {STEPS.map((step, i) => {
           const isReportLocked = step.key === "report" && !reportUnlocked;
-          const isComingSoon = step.key === "personality";
           const isInterviewStep = step.key === "interview";
           const isReferencesStep = step.key === "references";
+          const isPersonalityStep = step.key === "personality";
 
           const isDone =
             step.key === "score" ||
             (step.key === "report" && reportUnlocked) ||
+            (isPersonalityStep && personalityStatus === "ready") ||
             (isReferencesStep && referencesDone) ||
             (isInterviewStep && interviewStatus === "ready");
 
           let rightBadge: ReactNode = null;
-          if (isComingSoon) {
+          if (isPersonalityStep && personalityStatus === "not_started") {
             rightBadge = (
-              <span className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11 }}>
-                Coming soon
+              <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 11 }}>
+                Start
               </span>
             );
           } else if (isReportLocked) {
@@ -115,8 +123,14 @@ export default function ProgressRail({
             );
           }
 
-          const isClickable = isReportLocked || (isInterviewStep && interviewStatus === "not_started");
-          const isLinkable = isReferencesStep || (isInterviewStep && interviewStatus === "ready");
+          const isClickable =
+            isReportLocked ||
+            (isInterviewStep && interviewStatus === "not_started") ||
+            (isPersonalityStep && personalityStatus === "not_started");
+          const isLinkable =
+            isReferencesStep ||
+            (isInterviewStep && interviewStatus === "ready") ||
+            isPersonalityStep;
 
           const rowStyle: CSSProperties = {
             display: "flex",
@@ -133,7 +147,7 @@ export default function ProgressRail({
           const content = (
             <>
               <div
-                className={isDone ? "bg-[#eefdf1] text-[#16803c]" : isComingSoon ? "bg-[#f0e6ea] text-[#9c9c9c]" : "bg-[#fdeced] text-[#ed1a24]"}
+                className={isDone ? "bg-[#eefdf1] text-[#16803c]" : "bg-[#fdeced] text-[#ed1a24]"}
                 style={{ width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}
               >
                 {isDone ? "✓" : i + 1}
@@ -146,17 +160,13 @@ export default function ProgressRail({
           );
 
           if (isLinkable) {
+            const href = isReferencesStep
+              ? "/hub/account/references"
+              : isPersonalityStep
+                ? `/hub/account/personality?role=${encodeURIComponent(roleTitle)}`
+                : `/hub/account/interview?role=${encodeURIComponent(roleTitle)}`;
             return (
-              <Link
-                key={step.key}
-                href={
-                  isReferencesStep
-                    ? "/hub/account/references"
-                    : `/hub/account/interview?role=${encodeURIComponent(roleTitle)}`
-                }
-                className={rowClassName}
-                style={rowStyle}
-              >
+              <Link key={step.key} href={href} className={rowClassName} style={rowStyle}>
                 {content}
               </Link>
             );

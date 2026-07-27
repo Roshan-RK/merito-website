@@ -3,9 +3,9 @@
 import { useState } from "react";
 
 const CARDS = [
-  { quote: "I've applied to 30 jobs and heard nothing.", reality: "You're not being rejected. You're being missed - lost in a stack of 500 look-alike CVs a recruiter skims in seconds." },
-  { quote: "I don't know why I'm not getting shortlisted.", reality: "Because no one tells you. There's no feedback loop between “Apply” and “We regret to inform you.”" },
-  { quote: "My CV looks fine to me.", reality: "Fine isn't the bar. The bar is fit - how closely you match this specific role. And you've never had a way to measure it." },
+  { label: "Students & Freshers", quote: "I've applied to 30 jobs and heard nothing.", reality: "You're not being rejected, you're one of 500 look-alike CVs a recruiter skims in seconds, with no way to show what a CV alone never could." },
+  { label: "Mid-Level Professionals", quote: "My work speaks for itself. So why does the promotion keep going to someone else?", reality: "Your delivery is obvious. Your readiness for more isn't, and nothing about a standard CV proves it." },
+  { label: "Senior & Leadership", quote: "I used to get approached. Lately, nothing.", reality: "Hiring at your level runs on quiet signal and trusted networks. There's no way to stay visible on your own terms, without accidentally tipping your hand to the wrong people." },
 ];
 
 export default function ProblemCards() {
@@ -38,7 +38,7 @@ export default function ProblemCards() {
                 style={{ borderRadius: 18, padding: 22, backfaceVisibility: "hidden", gap: 14, boxShadow: "0px 18px 50px rgba(17,35,89,0.04)" }}
               >
                 <span className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#ed1a24]" style={{ fontSize: 11, letterSpacing: "0.05em" }}>
-                  Sound familiar?
+                  {c.label}
                 </span>
                 <p className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.25rem", lineHeight: 1.35, margin: 0 }}>
                   &ldquo;{c.quote}&rdquo;

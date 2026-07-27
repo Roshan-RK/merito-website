@@ -43,6 +43,13 @@ export async function createInterviewAgent(
       maxInterviewMinutes: durationForLevel(candidateLevel),
       interviewType: inferInterviewType(roleTitle),
       isCriteriaMatch: false,
+      // Vendor-confirmed (2026-07-26) for skill-based interviews with
+      // isCriteriaMatch: false. Only "medium" is confirmed so far — not
+      // mapped to candidateLevel yet, since the full enum (low/high?) isn't
+      // vendor-confirmed. Map once confirmed, per
+      // specs/2026-07-24-ai-interview-difficulty-design.md's open item.
+      complexity: "medium",
+      isQuickApplyEnabled: true,
     }),
   });
   return { ibAgentId: response.interviewId };

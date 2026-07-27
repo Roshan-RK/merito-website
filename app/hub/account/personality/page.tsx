@@ -53,21 +53,23 @@ export default async function PersonalityTestPage({
   return (
     <main className="bg-[#fdf8fb]" style={{ minHeight: "60vh", padding: "48px 20px" }}>
       <div className="mx-auto" style={{ maxWidth: 820 }}>
-        <Link
-          href="/hub/account"
-          className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-          style={{ fontSize: 13, display: "inline-block", marginBottom: 16 }}
-        >
-          ← Back to dashboard
-        </Link>
-        <a
-          href={`/api/hub/personality/export?role=${encodeURIComponent(roleTitle)}`}
-          download
-          className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-          style={{ fontSize: 13, display: "inline-block", marginBottom: 16, marginLeft: 16 }}
-        >
-          Download PDF
-        </a>
+        <div className="print:hidden">
+          <Link
+            href="/hub/account"
+            className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+            style={{ fontSize: 13, display: "inline-block", marginBottom: 16 }}
+          >
+            ← Back to dashboard
+          </Link>
+          <a
+            href={`/api/hub/personality/export?role=${encodeURIComponent(roleTitle)}`}
+            download
+            className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+            style={{ fontSize: 13, display: "inline-block", marginBottom: 16, marginLeft: 16 }}
+          >
+            Download PDF
+          </a>
+        </div>
         <PersonalityTestClient roleTitle={roleTitle} candidateName={candidateName} initialResult={initialResult} />
       </div>
     </main>

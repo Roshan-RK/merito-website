@@ -3,25 +3,28 @@
 import { useState } from "react";
 import type { InterviewStatus, PersonalityStatus } from "./ProgressRail";
 
-type ReportType = "fitment" | "personality" | "interview";
+type ReportType = "fitment" | "personality" | "interview" | "references";
 
 export default function CombinedExportModal({
   roleTitle,
   reportUnlocked,
   personalityStatus,
   interviewStatus,
+  referenceCheckStatus,
   onClose,
 }: {
   roleTitle: string;
   reportUnlocked: boolean;
   personalityStatus: PersonalityStatus;
   interviewStatus: InterviewStatus;
+  referenceCheckStatus: "none" | "in_progress" | "completed";
   onClose: () => void;
 }) {
   const availability: Record<ReportType, boolean> = {
     fitment: reportUnlocked,
     personality: personalityStatus === "ready",
     interview: interviewStatus === "ready",
+    references: referenceCheckStatus === "completed",
   };
 
   const [selected, setSelected] = useState<Set<ReportType>>(new Set());
@@ -40,6 +43,7 @@ export default function CombinedExportModal({
     fitment: "Fitment report",
     personality: "Personality report",
     interview: "AI interview report",
+    references: "Reference check report",
   };
 
   const canGenerate = selected.size > 0;

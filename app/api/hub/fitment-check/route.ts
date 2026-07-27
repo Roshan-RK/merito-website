@@ -143,6 +143,9 @@ export async function POST(request: Request) {
   const recaptchaToken = normalize(form.get("recaptchaToken"));
   const cv = form.get("cv");
 
+  if (!name) {
+    return Response.json({ error: "Full name is required." }, { status: 400 });
+  }
   if (!email || !isValidEmail(email)) {
     return Response.json({ error: "A valid email is required." }, { status: 400 });
   }

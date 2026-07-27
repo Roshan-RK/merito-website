@@ -10,6 +10,17 @@ export type InterviewReportReady = {
   areasOfImprovement: string | null;
   shareableReportLink: string | null;
   approxDurationMinutes: number | null;
+  // Live-confirmed against two real interviews (2026-07-27): proctoring/
+  // integrity data lives on sessionDetails, not overallReport.
+  flagForSuspiciousActivity: boolean;
+  integrityCheck: string | null;
+  videoReport: string | null;
+  // Deliberately recruiter-facing (blunt hire/no-hire read + SWOT) — callers
+  // must decide per-surface whether it's appropriate to show (e.g. excluded
+  // from the candidate's own /hub/account/interview view, but included in
+  // the employer-shareable combined report per 2026-07-27 product decision).
+  feedbackToInterviewer: string | null;
+  roadmap: string | null;
 };
 
 export type InterviewReport = { status: "NOT_READY" } | ({ status: "READY" } & InterviewReportReady);
@@ -29,12 +40,17 @@ type RawInterviewReportResponse = {
     // timestamp is a proxy for total elapsed time, not a true recording-length
     // field (IntervueBox doesn't expose one). Never presented as exact.
     answers?: Array<{ timestamp: string }>;
+    flagForSuspiciousActivity?: boolean;
+    integrityCheck?: string;
+    videoReport?: string;
     overallReport: {
       score: number;
       metrics: Record<string, number>;
       overallSummary: string;
       strengths?: string;
       areasOfImprovement?: string;
+      feedbackToInterviewer?: string;
+      roadmap?: string;
     };
   };
 };
@@ -139,6 +155,11 @@ export async function getInterviewReport(interviewId: string, candidateId: strin
       areasOfImprovement: overallReport.areasOfImprovement ?? null,
       shareableReportLink: response.shareableReportLink,
       approxDurationMinutes: computeApproxDurationMinutes(response.sessionDetails.answers),
+      flagForSuspiciousActivity: response.sessionDetails.flagForSuspiciousActivity ?? false,
+      integrityCheck: response.sessionDetails.integrityCheck ?? null,
+      videoReport: response.sessionDetails.videoReport ?? null,
+      feedbackToInterviewer: overallReport.feedbackToInterviewer ?? null,
+      roadmap: overallReport.roadmap ?? null,
     };
   } catch (err) {
     if (err instanceof IntervueBoxError && err.status === 404) {

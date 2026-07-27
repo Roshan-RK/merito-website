@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { ReferenceCheckStatusResult, RefereeRole } from "@/lib/referenceChecks";
+import { computeReferenceReport } from "@/lib/referenceChecks";
 
 const ROLE_OPTIONS: { value: RefereeRole; label: string }[] = [
   { value: "manager", label: "Manager" },
@@ -100,9 +102,67 @@ export default function ReferencesClient({ initialStatus }: { initialStatus: Ref
   }
 
   const completedCount = status.referees.filter((r) => r.status === "completed").length;
+  const isDone = status.status === "completed";
+  const report = isDone ? computeReferenceReport(status.referees) : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {report && (
+        <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 20, padding: 24 }}>
+          <p className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 14, margin: "0 0 4px" }}>
+            Reference check report
+          </p>
+          <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 12, margin: "0 0 16px" }}>
+            Overall score: {report.overallScore.toFixed(1)} / 5 — based on {report.referees.length} completed reference{report.referees.length === 1 ? "" : "s"}
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {report.categoryScores.map((cat) => (
+              <div key={cat.category} className="flex items-center" style={{ gap: 10 }}>
+                <span className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5, width: 160, flexShrink: 0 }}>
+                  {cat.label}
+                </span>
+                <div style={{ flex: 1, height: 8, borderRadius: 50, background: "#f0e6ea" }}>
+                  <div
+                    style={{
+                      height: "100%",
+                      borderRadius: 50,
+                      width: `${(cat.value / 5) * 100}%`,
+                      background: cat.value >= 4 ? "#16803c" : cat.value >= 3 ? "#ed1a24" : "#9c9c9c",
+                    }}
+                  />
+                </div>
+                <span className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 12.5, width: 28, textAlign: "right" }}>
+                  {cat.value > 0 ? cat.value.toFixed(1) : "—"}
+                </span>
+              </div>
+            ))}
+          </div>
+          {report.referees.some((r) => r.overallFeedback?.trim()) && (
+            <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 8 }}>
+              {report.referees
+                .filter((r) => r.overallFeedback?.trim())
+                .map((r, i) => (
+                  <div key={i} className="bg-[#fdeced]" style={{ borderRadius: 10, padding: "10px 14px" }}>
+                    <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5, fontStyle: "italic", margin: 0 }}>
+                      &ldquo;{r.overallFeedback}&rdquo;
+                    </p>
+                    <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, margin: "4px 0 0" }}>
+                      — {r.name}{r.organization ? `, ${r.organization}` : ""}
+                    </p>
+                  </div>
+                ))}
+            </div>
+          )}
+          <Link
+            href="/hub/account"
+            className="font-[family-name:var(--font-poppins)] font-semibold text-white inline-flex items-center justify-center"
+            style={{ height: 44, padding: "0 20px", borderRadius: 8, background: "#ed1a24", marginTop: 20, textDecoration: "none" }}
+          >
+            Done — back to dashboard
+          </Link>
+        </div>
+      )}
+
       <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 20, padding: 24 }}>
         <p className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 14, margin: "0 0 12px" }}>
           {completedCount} of {status.minReferences} completed — status: {status.status}
@@ -141,7 +201,7 @@ export default function ReferencesClient({ initialStatus }: { initialStatus: Ref
         ))}
       </div>
 
-      {status.referees.length < 10 && (
+      {!isDone && status.referees.length < 10 && (
         <form onSubmit={handleAddReferee} className="bg-white border border-black/[0.08]" style={{ borderRadius: 20, padding: 24, display: "flex", flexDirection: "column", gap: 10 }}>
           <input
             placeholder="Referee name"

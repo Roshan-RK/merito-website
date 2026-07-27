@@ -1,10 +1,9 @@
-import { renderToBuffer } from "@react-pdf/renderer";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { isReportUnlocked } from "@/lib/reportUnlocks";
-import { getCandidateResumeDetails, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
-import FitmentReportPdf from "./FitmentReportPdf";
+import { renderPageToPdf, requestCookiesFor } from "@/lib/pdf/renderPageToPdf";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
@@ -18,7 +17,7 @@ export async function GET(request: Request) {
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("role_title, score, name, resume_match_status, resume_match_raw, ib_applied_job_id")
+    .select("role_title, resume_match_status, resume_match_raw")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(1);
@@ -37,25 +36,10 @@ export async function GET(request: Request) {
     return Response.json({ error: "Report not ready yet." }, { status: 404 });
   }
 
-  const report = current.resume_match_raw as ResumeMatchReportReady;
+  const url = new URL(request.url);
+  const pageCookies = requestCookiesFor(request, url.hostname);
 
-  const candidateDetails = current.ib_applied_job_id
-    ? await getCandidateResumeDetails(current.ib_applied_job_id).catch(() => null)
-    : null;
-
-  const displayName = current.name || user.email || "Candidate";
-  const formattedDate = new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" });
-
-  const buffer = await renderToBuffer(
-    <FitmentReportPdf
-      displayName={displayName}
-      roleTitle={current.role_title}
-      formattedDate={formattedDate}
-      score={current.score}
-      report={report}
-      candidateDetails={candidateDetails}
-    />
-  );
+  const buffer = await renderPageToPdf(`${url.origin}/hub/account/report`, pageCookies);
 
   return new Response(new Uint8Array(buffer), {
     status: 200,
