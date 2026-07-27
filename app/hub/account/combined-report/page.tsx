@@ -286,6 +286,9 @@ export default async function CombinedReportPage({
                 ))}
               </div>
             )}
+            <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, lineHeight: 1.6, margin: "12px 0 0" }}>
+              Fitment is computed by matching CV content against the job description. Dimensions below 100% usually indicate information missing from the CV rather than an absence of capability.
+            </p>
           </>
         )}
 
@@ -397,6 +400,9 @@ export default async function CombinedReportPage({
                 <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13.5, lineHeight: 1.75, margin: 0, whiteSpace: "pre-wrap" }}>{interview.report.videoReport}</p>
               </div>
             )}
+            <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, lineHeight: 1.6, margin: "12px 0 0" }}>
+              Interview conducted on an AI-proctored platform. Scores are generated from the recorded session; the full video transcript is available to hiring teams on request.
+            </p>
           </>
         )}
 
@@ -440,6 +446,9 @@ export default async function CombinedReportPage({
                   ))}
               </div>
             )}
+            <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, lineHeight: 1.6, margin: "12px 0 0" }}>
+              Each reference was invited by the candidate and completed the rating independently through Merito HUB. Respondent names, email addresses and employer details are held on record and disclosed only to a hiring employer on request, with the candidate&apos;s consent.
+            </p>
           </>
         )}
 
