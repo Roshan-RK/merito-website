@@ -21,6 +21,10 @@ export type InterviewReportReady = {
   // the employer-shareable combined report per 2026-07-27 product decision).
   feedbackToInterviewer: string | null;
   roadmap: string | null;
+  // Unconfirmed shape — two live interviews under isCriteriaMatch:false both
+  // returned []. Typed permissively until a populated example is observed
+  // (see memory intervuebox-interview-modes).
+  criteriaEvaluationTable: unknown[];
 };
 
 export type InterviewReport = { status: "NOT_READY" } | ({ status: "READY" } & InterviewReportReady);
@@ -51,6 +55,7 @@ type RawInterviewReportResponse = {
       areasOfImprovement?: string;
       feedbackToInterviewer?: string;
       roadmap?: string;
+      criteriaEvaluationTable?: unknown[];
     };
   };
 };
@@ -160,6 +165,7 @@ export async function getInterviewReport(interviewId: string, candidateId: strin
       videoReport: response.sessionDetails.videoReport ?? null,
       feedbackToInterviewer: overallReport.feedbackToInterviewer ?? null,
       roadmap: overallReport.roadmap ?? null,
+      criteriaEvaluationTable: overallReport.criteriaEvaluationTable ?? [],
     };
   } catch (err) {
     if (err instanceof IntervueBoxError && err.status === 404) {

@@ -97,7 +97,60 @@ describe("getInterviewReport", () => {
       videoReport: "Confident, appropriate dress code.",
       feedbackToInterviewer: "Recommend advancing.",
       roadmap: "Short-term: practice mock interviews.",
+      criteriaEvaluationTable: [],
     });
+  });
+
+  it("maps criteriaEvaluationTable when the upstream report includes it", async () => {
+    respond = (_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          shareableReportLink: null,
+          sessionDetails: {
+            skillReport: {},
+            overallReport: {
+              score: 7,
+              metrics: {},
+              overallSummary: "Criteria-based interview.",
+              criteriaEvaluationTable: [
+                { skill: "Stakeholder Management", commentary: "Handled pushback well." },
+              ],
+            },
+          },
+        })
+      );
+    };
+    const { getInterviewReport } = await import("../interviewReports");
+
+    const result = await getInterviewReport("INT_123", "USR_123");
+
+    expect(result).toMatchObject({
+      status: "READY",
+      criteriaEvaluationTable: [
+        { skill: "Stakeholder Management", commentary: "Handled pushback well." },
+      ],
+    });
+  });
+
+  it("defaults criteriaEvaluationTable to an empty array when the upstream report omits it", async () => {
+    respond = (_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          shareableReportLink: null,
+          sessionDetails: {
+            skillReport: {},
+            overallReport: { score: 5, metrics: {}, overallSummary: "No table." },
+          },
+        })
+      );
+    };
+    const { getInterviewReport } = await import("../interviewReports");
+
+    const result = await getInterviewReport("INT_123", "USR_123");
+
+    expect(result).toMatchObject({ status: "READY", criteriaEvaluationTable: [] });
   });
 
   it("returns null approxDurationMinutes when the session has no answers", async () => {
