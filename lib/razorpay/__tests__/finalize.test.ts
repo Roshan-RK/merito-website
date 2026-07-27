@@ -106,7 +106,7 @@ describe("finalizeRazorpayOrder", () => {
     expect(updateMock).toHaveBeenCalledWith({ status: "success", payment_id: "pay_1" });
   });
 
-  it("rejects with unsupported_product for interview (not yet wired)", async () => {
+  it("marks an interview transaction success (the credit becomes available to consume later)", async () => {
     txnMaybeSingleMock.mockResolvedValue({
       data: { user_id: "user-1", product: "interview", lead_id: null, status: "initiated" },
       error: null,
@@ -115,7 +115,10 @@ describe("finalizeRazorpayOrder", () => {
 
     const result = await finalizeRazorpayOrder("order_1", "pay_1");
 
-    expect(result).toEqual({ ok: false, reason: "unsupported_product" });
+    expect(result).toEqual({ ok: true, product: "interview", userId: "user-1", leadId: null });
+    expect(updateMock).toHaveBeenCalledWith({ status: "success", payment_id: "pay_1" });
+    expect(unlockReportMock).not.toHaveBeenCalled();
+    expect(unlockProductMock).not.toHaveBeenCalled();
   });
 
   it("unlocks the report before marking the transaction success (retry-safety)", async () => {

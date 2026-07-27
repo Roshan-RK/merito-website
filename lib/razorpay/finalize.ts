@@ -37,11 +37,6 @@ export async function finalizeRazorpayOrder(orderId: string, paymentId: string):
 
   const product = txn.product as RazorpayProduct;
 
-  // "interview" is not wired up yet — a later plan.
-  if (product === "interview") {
-    return { ok: false, reason: "unsupported_product" };
-  }
-
   if (txn.status !== "success") {
     // Apply the product's effect first, then mark success — if the effect
     // throws (a transient DB error), the row stays "initiated" and a retry
