@@ -435,7 +435,7 @@ export default async function CombinedReportPage({
               </div>
             </div>
             {references.referees.some((r) => r.overallFeedback?.trim()) && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 8 }}>
                 {references.referees
                   .filter((r) => r.overallFeedback?.trim())
                   .map((r, i) => (
