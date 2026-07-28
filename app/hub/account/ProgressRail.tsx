@@ -2,6 +2,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
+import { PRODUCT_PRICING, formatPrice, type CandidateLevel } from "@/lib/razorpay/pricing";
 
 const STEPS = [
   { key: "score", label: "Job fitment score" },
@@ -19,16 +20,26 @@ export default function ProgressRail({
   interviewStatus,
   referenceCheckStatus,
   personalityStatus,
+  personalityUnlocked,
+  referencesUnlocked,
+  level,
   roleTitle,
   onOpenReportPaywall,
+  onOpenPersonalityPaywall,
+  onOpenReferencesPaywall,
   onOpenInterviewStart,
 }: {
   reportUnlocked: boolean;
   interviewStatus: InterviewStatus;
   referenceCheckStatus: "none" | "in_progress" | "completed";
   personalityStatus: PersonalityStatus;
+  personalityUnlocked: boolean;
+  referencesUnlocked: boolean;
+  level: CandidateLevel;
   roleTitle: string;
   onOpenReportPaywall: () => void;
+  onOpenPersonalityPaywall: () => void;
+  onOpenReferencesPaywall: () => void;
   onOpenInterviewStart: () => void;
 }) {
   const referencesDone = referenceCheckStatus === "completed";
@@ -82,6 +93,8 @@ export default function ProgressRail({
           const isInterviewStep = step.key === "interview";
           const isReferencesStep = step.key === "references";
           const isPersonalityStep = step.key === "personality";
+          const isPersonalityLocked = isPersonalityStep && !personalityUnlocked;
+          const isReferencesLocked = isReferencesStep && !referencesUnlocked;
 
           const isDone =
             step.key === "score" ||
@@ -91,7 +104,19 @@ export default function ProgressRail({
             (isInterviewStep && interviewStatus === "ready");
 
           let rightBadge: ReactNode = null;
-          if (isPersonalityStep && personalityStatus === "not_started") {
+          if (isPersonalityLocked) {
+            rightBadge = (
+              <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 11 }}>
+                {formatPrice(PRODUCT_PRICING.personality[level])}
+              </span>
+            );
+          } else if (isReferencesLocked) {
+            rightBadge = (
+              <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 11 }}>
+                {formatPrice(PRODUCT_PRICING.references[level])}
+              </span>
+            );
+          } else if (isPersonalityStep && personalityStatus === "not_started") {
             rightBadge = (
               <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 11 }}>
                 Start
@@ -139,12 +164,13 @@ export default function ProgressRail({
 
           const isClickable =
             isReportLocked ||
-            (isInterviewStep && interviewStatus === "not_started") ||
-            (isPersonalityStep && personalityStatus === "not_started");
+            isPersonalityLocked ||
+            isReferencesLocked ||
+            (isInterviewStep && interviewStatus === "not_started");
           const isLinkable =
-            isReferencesStep ||
+            (isReferencesStep && referencesUnlocked) ||
             (isInterviewStep && interviewStatus === "ready") ||
-            isPersonalityStep;
+            (isPersonalityStep && personalityUnlocked);
 
           const rowStyle: CSSProperties = {
             display: "flex",
@@ -192,9 +218,13 @@ export default function ProgressRail({
               onClick={
                 isReportLocked
                   ? onOpenReportPaywall
-                  : isInterviewStep && interviewStatus === "not_started"
-                    ? onOpenInterviewStart
-                    : undefined
+                  : isPersonalityLocked
+                    ? onOpenPersonalityPaywall
+                    : isReferencesLocked
+                      ? onOpenReferencesPaywall
+                      : isInterviewStep && interviewStatus === "not_started"
+                        ? onOpenInterviewStart
+                        : undefined
               }
               className={rowClassName}
               style={rowStyle}

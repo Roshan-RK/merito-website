@@ -144,6 +144,8 @@ export default async function AccountPage() {
       roleTitle={current.role_title}
       level={level}
       bundleEligible={bundleEligible}
+      personalityUnlocked={personalityUnlocked}
+      referencesUnlocked={referencesUnlocked}
       score={score}
       prevScore={prevForSameRole ? prevForSameRole.score : null}
       verdict={verdict}

@@ -4,6 +4,8 @@ import { useState } from "react";
 import ProgressRail, { type InterviewStatus, type PersonalityStatus } from "./ProgressRail";
 import ScoreCard from "./ScoreCard";
 import ReportPaywallModal from "./ReportPaywallModal";
+import PersonalityPaywallModal from "./PersonalityPaywallModal";
+import ReferencesPaywallModal from "./ReferencesPaywallModal";
 import InterviewPaywallModal from "./InterviewPaywallModal";
 import CombinedExportModal from "./CombinedExportModal";
 import CounsellingCard from "./CounsellingCard";
@@ -16,6 +18,8 @@ export default function DashboardClient({
   roleTitle,
   level,
   bundleEligible,
+  personalityUnlocked,
+  referencesUnlocked,
   score,
   prevScore,
   verdict,
@@ -31,6 +35,8 @@ export default function DashboardClient({
   roleTitle: string;
   level: CandidateLevel;
   bundleEligible: boolean;
+  personalityUnlocked: boolean;
+  referencesUnlocked: boolean;
   score: number;
   prevScore: number | null;
   verdict: string;
@@ -42,11 +48,13 @@ export default function DashboardClient({
   counsellingPriceLabel: string;
   initialCounsellingRequested: boolean;
 }) {
-  const [modal, setModal] = useState<"none" | "report" | "interview" | "export" | "counselling">("none");
+  const [modal, setModal] = useState<"none" | "report" | "personality" | "references" | "interview" | "export" | "counselling">("none");
   const [reportUnlocked, setReportUnlocked] = useState(initialReportUnlocked);
   const [report, setReport] = useState<ResumeMatchReportReady | null>(initialReport);
   const [interviewStatus, setInterviewStatus] = useState<InterviewStatus>(initialInterviewStatus);
   const [counsellingRequested, setCounsellingRequested] = useState(initialCounsellingRequested);
+  const [personalityUnlockedState, setPersonalityUnlockedState] = useState(personalityUnlocked);
+  const [referencesUnlockedState, setReferencesUnlockedState] = useState(referencesUnlocked);
 
   return (
     <>
@@ -59,8 +67,13 @@ export default function DashboardClient({
           interviewStatus={interviewStatus}
           referenceCheckStatus={referenceCheckStatus}
           personalityStatus={personalityStatus}
+          personalityUnlocked={personalityUnlockedState}
+          referencesUnlocked={referencesUnlockedState}
+          level={level}
           roleTitle={roleTitle}
           onOpenReportPaywall={() => setModal("report")}
+          onOpenPersonalityPaywall={() => setModal("personality")}
+          onOpenReferencesPaywall={() => setModal("references")}
           onOpenInterviewStart={() => setModal("interview")}
         />
 
@@ -121,6 +134,33 @@ export default function DashboardClient({
             setReportUnlocked(true);
             setReport(unlockedReport);
             setModal("none");
+          }}
+        />
+      )}
+      {modal === "personality" && (
+        <PersonalityPaywallModal
+          leadId={leadId}
+          roleTitle={roleTitle}
+          level={level}
+          bundleEligible={bundleEligible}
+          onClose={() => setModal("none")}
+          onUnlocked={() => {
+            setPersonalityUnlockedState(true);
+            setModal("none");
+            window.location.href = `/hub/account/personality?role=${encodeURIComponent(roleTitle)}`;
+          }}
+        />
+      )}
+      {modal === "references" && (
+        <ReferencesPaywallModal
+          leadId={leadId}
+          level={level}
+          bundleEligible={bundleEligible}
+          onClose={() => setModal("none")}
+          onUnlocked={() => {
+            setReferencesUnlockedState(true);
+            setModal("none");
+            window.location.href = "/hub/account/references";
           }}
         />
       )}
