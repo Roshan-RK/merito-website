@@ -12,6 +12,7 @@ import ResumeMatchCategoryCard from "../report/ResumeMatchCategoryCard";
 import CondensedPersonalitySection from "./CondensedPersonalitySection";
 import InterviewScoreGauge, { getScoreBand } from "../interview/InterviewScoreGauge";
 import ParameterScoreTile from "../interview/ParameterScoreTile";
+import { getCriteriaStatusColor } from "@/lib/criteriaStatus";
 
 function splitBullets(text: string): string[] {
   return text
@@ -356,7 +357,7 @@ export default async function CombinedReportPage({
                         </h3>
                         <span
                           className="font-[family-name:var(--font-poppins)] font-semibold uppercase"
-                          style={{ fontSize: 10.5, letterSpacing: "0.04em", color: entry.status === "Matched" ? "#16803c" : "#ed1a24" }}
+                          style={{ fontSize: 10.5, letterSpacing: "0.04em", color: getCriteriaStatusColor(entry.status) }}
                         >
                           {entry.status}
                         </span>

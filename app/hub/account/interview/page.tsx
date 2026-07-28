@@ -6,6 +6,7 @@ import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import { getCandidateResumeDetails } from "@/lib/intervuebox/reports";
 import InterviewScoreGauge from "./InterviewScoreGauge";
 import ParameterScoreTile from "./ParameterScoreTile";
+import { getCriteriaStatusColor } from "@/lib/criteriaStatus";
 
 // report.strengths/areasOfImprovement arrive as a single "- point\n- point"
 // string (IntervueBox's own format), not an array like the fitment report's
@@ -231,7 +232,7 @@ export default async function InterviewReportPage({
                     </h3>
                     <span
                       className="font-[family-name:var(--font-poppins)] font-semibold uppercase"
-                      style={{ fontSize: 10.5, letterSpacing: "0.04em", color: entry.status === "Matched" ? "#16803c" : "#ed1a24" }}
+                      style={{ fontSize: 10.5, letterSpacing: "0.04em", color: getCriteriaStatusColor(entry.status) }}
                     >
                       {entry.status}
                     </span>
