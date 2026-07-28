@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       .select("ib_agent_id")
       .eq("user_id", user.id)
       .eq("role_title", roleTitle)
-      .order("created_at", { ascending: false })
+      .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
