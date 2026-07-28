@@ -52,6 +52,7 @@ next-env.d.ts
 
 # Session planning artifacts (local-only)
 docs/
+.superpowers/
 
 # Dev/generated artifacts
 graphify-out/
