@@ -159,7 +159,18 @@ export async function getInterviewReport(interviewId: string, candidateId: strin
     const overallReport = response.sessionDetails.overallReport;
     return {
       status: "READY",
+      // Live-confirmed 2026-07-28 against two real reports (one per
+      // isCriteriaMatch mode): overallReport.score is 0-100 (39, 100 seen),
+      // not the 0-10 this file's type comment previously claimed. Passed
+      // through as-is (0-100) — display sites (InterviewScoreGauge,
+      // ParameterScoreTile, combined-report's percent tile) are the ones
+      // that now assume 0-100, not this mapping.
       overallScore: overallReport.score,
+      // NOT on the same confirmed scale: under isCriteriaMatch:true, metrics
+      // is a single { criteriaMatch: 100 } aggregate, not skill-based mode's
+      // per-skill breakdown — ParameterScoreTile's "skill grid" doesn't
+      // semantically fit either shape well for that mode. Needs its own
+      // product decision (see memory intervuebox-interview-modes).
       skillMetrics: overallReport.metrics,
       overallSummary: overallReport.overallSummary,
       strengths: overallReport.strengths ?? null,

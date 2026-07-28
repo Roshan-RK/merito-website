@@ -12,8 +12,7 @@ export default function ParameterScoreTile({ skill, score }: { skill: string; sc
         {titleCase(skill)}
       </p>
       <p className="font-[family-name:var(--font-gabarito)] font-semibold text-[#ed1a24]" style={{ fontSize: "1.4rem", margin: 0 }}>
-        {score}
-        <span style={{ fontSize: 13, color: "#9c9c9c", fontWeight: 400 }}>/10</span>
+        {Math.round(score)}%
       </p>
     </div>
   );

@@ -196,7 +196,7 @@ export default async function CombinedReportPage({
           {interview && (
             <SummaryTile
               label="AI interview score"
-              value={`${Math.round(interview.report.overallScore * 10)}%`}
+              value={`${Math.round(interview.report.overallScore)}%`}
               sub={getScoreBand(interview.report.overallScore).label}
               subColor={getScoreBand(interview.report.overallScore).textColor}
             />

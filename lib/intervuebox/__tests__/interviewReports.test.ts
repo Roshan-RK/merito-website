@@ -153,6 +153,26 @@ describe("getInterviewReport", () => {
     expect(result).toMatchObject({ status: "READY", criteriaEvaluationTable: [] });
   });
 
+  it("passes overallScore through as-is (real API scale is 0-100, not 0-10)", async () => {
+    respond = (_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          shareableReportLink: null,
+          sessionDetails: {
+            skillReport: {},
+            overallReport: { score: 100, metrics: {}, overallSummary: "Perfect criteria match." },
+          },
+        })
+      );
+    };
+    const { getInterviewReport } = await import("../interviewReports");
+
+    const result = await getInterviewReport("INT_123", "USR_123");
+
+    expect(result).toMatchObject({ status: "READY", overallScore: 100 });
+  });
+
   it("returns null approxDurationMinutes when the session has no answers", async () => {
     respond = (_req, res) => {
       res.writeHead(200, { "Content-Type": "application/json" });
