@@ -88,8 +88,27 @@ export async function POST(request: Request) {
   let ibAgentId: string;
   try {
     ({ candidateId } = await getApplicant(lead.ib_applied_job_id));
-    const candidateLevel = (lead.candidate_level as CandidateLevel) || "mid";
-    ({ ibAgentId } = await createInterviewAgent(lead.ib_job_id, roleTitle, candidateLevel));
+
+    // IntervueBox allows exactly one interview agent per job, ever —
+    // calling createInterviewAgent again on a retake 400s with "An
+    // interview already exists for this job." (confirmed live 2026-07-28).
+    // Reuse the prior attempt's agent instead of creating a new one.
+    const { data: priorAttempt } = await admin
+      .from("fitment_interviews")
+      .select("ib_agent_id")
+      .eq("user_id", user.id)
+      .eq("role_title", roleTitle)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (priorAttempt?.ib_agent_id) {
+      ibAgentId = priorAttempt.ib_agent_id;
+    } else {
+      const candidateLevel = (lead.candidate_level as CandidateLevel) || "mid";
+      ({ ibAgentId } = await createInterviewAgent(lead.ib_job_id, roleTitle, candidateLevel));
+    }
+
     const { invited } = await sendInterviewInvitation(ibAgentId, [candidateId]);
     if (invited === 0) {
       console.error("IntervueBox interview-invite chain failed", {

@@ -30,7 +30,10 @@ const sessionFromMock = vi.fn((table: string) => {
 const insertMock = vi.fn().mockResolvedValue({ error: null });
 const adminReselectMaybeSingleMock = vi.fn();
 const adminReselectEq3Mock = vi.fn().mockReturnValue({ maybeSingle: adminReselectMaybeSingleMock });
-const adminReselectEq2Mock = vi.fn().mockReturnValue({ eq: adminReselectEq3Mock });
+const priorAttemptMaybeSingleMock = vi.fn();
+const priorAttemptLimitMock = vi.fn().mockReturnValue({ maybeSingle: priorAttemptMaybeSingleMock });
+const priorAttemptOrderMock = vi.fn().mockReturnValue({ limit: priorAttemptLimitMock });
+const adminReselectEq2Mock = vi.fn().mockReturnValue({ eq: adminReselectEq3Mock, order: priorAttemptOrderMock });
 const adminReselectEq1Mock = vi.fn().mockReturnValue({ eq: adminReselectEq2Mock });
 const adminReselectSelectMock = vi.fn().mockReturnValue({ eq: adminReselectEq1Mock });
 
@@ -81,6 +84,8 @@ describe("POST /api/hub/start-ai-interview", () => {
     insertMock.mockClear();
     insertMock.mockResolvedValue({ error: null });
     adminReselectMaybeSingleMock.mockReset();
+    priorAttemptMaybeSingleMock.mockReset();
+    priorAttemptMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     getApplicantMock.mockReset();
     createInterviewAgentMock.mockReset();
     sendInterviewInvitationMock.mockReset();
@@ -132,6 +137,27 @@ describe("POST /api/hub/start-ai-interview", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "invited" });
     expect(sendInterviewInvitationMock).toHaveBeenCalled();
+  });
+
+  it("reuses the prior attempt's ib_agent_id on retake instead of creating a new interview agent (IntervueBox allows only one agent per job)", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+    priorAttemptMaybeSingleMock.mockResolvedValue({ data: { ib_agent_id: "INT_PRIOR" }, error: null });
+    leadMaybeSingleMock.mockResolvedValue({
+      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
+      error: null,
+    });
+    getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
+    sendInterviewInvitationMock.mockResolvedValue({ invited: 1, failed: 0 });
+
+    const { POST } = await importRoute();
+    const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "invited" });
+    expect(createInterviewAgentMock).not.toHaveBeenCalled();
+    expect(sendInterviewInvitationMock).toHaveBeenCalledWith("INT_PRIOR", ["USR_123"]);
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ ib_agent_id: "INT_PRIOR" }));
   });
 
   it("returns 400 when no fitment_leads row exists for this role", async () => {
@@ -220,7 +246,7 @@ describe("POST /api/hub/start-ai-interview", () => {
     const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
 
     expect(response.status).toBe(500);
-    expect(adminReselectSelectMock).not.toHaveBeenCalled();
+    expect(adminReselectMaybeSingleMock).not.toHaveBeenCalled();
   });
 
   it("rejects with 402 when not bypassed and there is no unconsumed successful interview transaction", async () => {
