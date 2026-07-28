@@ -6,6 +6,7 @@ import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import { getCandidateResumeDetails } from "@/lib/intervuebox/reports";
 import InterviewScoreGauge from "./InterviewScoreGauge";
 import ParameterScoreTile from "./ParameterScoreTile";
+import CriteriaMatchCard from "./CriteriaMatchCard";
 import { getCriteriaStatusColor } from "@/lib/criteriaStatus";
 
 // report.strengths/areasOfImprovement arrive as a single "- point\n- point"
@@ -214,6 +215,10 @@ export default async function InterviewReportPage({
             </div>
           )}
         </div>
+
+        {typeof report.skillMetrics?.criteriaMatch === "number" && (
+          <CriteriaMatchCard criteriaMatchScore={report.skillMetrics.criteriaMatch} criteriaEvaluationTable={report.criteriaEvaluationTable} />
+        )}
 
         {report.criteriaEvaluationTable.length > 0 && (
           <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, margin: "0 0 32px" }}>
