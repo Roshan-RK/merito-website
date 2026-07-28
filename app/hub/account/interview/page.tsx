@@ -76,6 +76,7 @@ export default async function InterviewReportPage({
   const organisation = candidateDetails?.experience[0]?.company ?? null;
   const location = candidateDetails?.location ?? null;
   const totalExperience = candidateDetails?.totalExperience ?? null;
+  const phoneNumber = candidateDetails?.phoneNumber ?? null;
 
   const displayName = lead?.name || user.email || "Candidate";
   const formattedDate = new Date(interview.updated_at).toLocaleDateString("en-IN", {
@@ -88,6 +89,7 @@ export default async function InterviewReportPage({
     organisation,
     totalExperience != null ? `${totalExperience} yrs experience` : null,
     location,
+    phoneNumber,
     formattedDate,
     report.approxDurationMinutes != null ? `~${report.approxDurationMinutes} min` : null,
   ].filter((part): part is string => Boolean(part));
