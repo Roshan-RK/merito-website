@@ -75,7 +75,7 @@ export default function PriceOptionTiles({
           className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]"
           style={{ fontSize: 12, textDecoration: "underline", cursor: submitting ? "default" : "pointer" }}
         >
-          Just {soloLabel} for {formatPrice(soloPrice)} instead →
+          {soloLabel} for {formatPrice(soloPrice)} instead →
         </span>
       </p>
 
