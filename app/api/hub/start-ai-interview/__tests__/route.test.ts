@@ -64,6 +64,8 @@ const createInterviewAgentMock = vi.fn();
 vi.mock("@/lib/intervuebox/agents", () => ({ createInterviewAgent: createInterviewAgentMock }));
 const sendInterviewInvitationMock = vi.fn();
 vi.mock("@/lib/intervuebox/invitations", () => ({ sendInterviewInvitation: sendInterviewInvitationMock }));
+const createJobMock = vi.fn();
+vi.mock("@/lib/intervuebox/jobs", () => ({ createJob: createJobMock }));
 
 async function importRoute() {
   return await import("../route");
@@ -89,6 +91,7 @@ describe("POST /api/hub/start-ai-interview", () => {
     getApplicantMock.mockReset();
     createInterviewAgentMock.mockReset();
     sendInterviewInvitationMock.mockReset();
+    createJobMock.mockReset();
     creditMaybeSingleMock.mockReset();
     creditMaybeSingleMock.mockResolvedValue({ data: { order_id: "order_credit_1" }, error: null });
     consumeUpdateEqMock.mockClear();
@@ -139,15 +142,22 @@ describe("POST /api/hub/start-ai-interview", () => {
     expect(sendInterviewInvitationMock).toHaveBeenCalled();
   });
 
-  it("reuses the prior attempt's ib_agent_id on retake instead of creating a new interview agent (IntervueBox allows only one agent per job)", async () => {
+  it("creates a new job and a new interview agent on retake instead of reusing the prior job (IntervueBox ties one interview to one job permanently)", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
-    priorAttemptMaybeSingleMock.mockResolvedValue({ data: { ib_agent_id: "INT_PRIOR" }, error: null });
+    priorAttemptMaybeSingleMock.mockResolvedValue({ data: { id: "row-prior" }, error: null });
     leadMaybeSingleMock.mockResolvedValue({
-      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
+      data: {
+        ib_job_id: "JOB_ORIGINAL",
+        ib_applied_job_id: "APJ_123",
+        candidate_level: "mid",
+        jd_text: "We need a Senior Product Manager...",
+      },
       error: null,
     });
     getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
+    createJobMock.mockResolvedValue({ ibJobId: "JOB_RETAKE" });
+    createInterviewAgentMock.mockResolvedValue({ ibAgentId: "INT_RETAKE" });
     sendInterviewInvitationMock.mockResolvedValue({ invited: 1, failed: 0 });
 
     const { POST } = await importRoute();
@@ -155,9 +165,38 @@ describe("POST /api/hub/start-ai-interview", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "invited" });
-    expect(createInterviewAgentMock).not.toHaveBeenCalled();
-    expect(sendInterviewInvitationMock).toHaveBeenCalledWith("INT_PRIOR", ["USR_123"]);
-    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ ib_agent_id: "INT_PRIOR" }));
+    expect(createJobMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Senior Product Manager",
+        jobDescription: expect.stringContaining("We need a Senior Product Manager..."),
+      })
+    );
+    expect(createInterviewAgentMock).toHaveBeenCalledWith("JOB_RETAKE", "Senior Product Manager", "mid");
+    expect(sendInterviewInvitationMock).toHaveBeenCalledWith("INT_RETAKE", ["USR_123"]);
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ ib_job_id: "JOB_RETAKE", ib_agent_id: "INT_RETAKE" })
+    );
+  });
+
+  it("does not create a new job on a first-time attempt (no prior interview row for this role)", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+    priorAttemptMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+    leadMaybeSingleMock.mockResolvedValue({
+      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid", jd_text: "JD text" },
+      error: null,
+    });
+    getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
+    createInterviewAgentMock.mockResolvedValue({ ibAgentId: "INT_123" });
+    sendInterviewInvitationMock.mockResolvedValue({ invited: 1, failed: 0 });
+
+    const { POST } = await importRoute();
+    const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
+
+    expect(response.status).toBe(200);
+    expect(createJobMock).not.toHaveBeenCalled();
+    expect(createInterviewAgentMock).toHaveBeenCalledWith("JOB_123", "Senior Product Manager", "mid");
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ ib_job_id: "JOB_123" }));
   });
 
   it("returns 400 when no fitment_leads row exists for this role", async () => {

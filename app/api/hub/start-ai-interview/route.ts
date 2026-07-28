@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { getApplicant } from "@/lib/intervuebox/applicants";
 import { createInterviewAgent, type CandidateLevel } from "@/lib/intervuebox/agents";
 import { sendInterviewInvitation } from "@/lib/intervuebox/invitations";
+import { createJob } from "@/lib/intervuebox/jobs";
 
 export const runtime = "nodejs";
 
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
 
   const { data: lead, error: leadError } = await supabase
     .from("fitment_leads")
-    .select("ib_job_id, ib_applied_job_id, candidate_level")
+    .select("ib_job_id, ib_applied_job_id, candidate_level, jd_text")
     .eq("user_id", user.id)
     .eq("role_title", roleTitle)
     .order("created_at", { ascending: false })
@@ -86,33 +87,37 @@ export async function POST(request: Request) {
 
   let candidateId: string;
   let ibAgentId: string;
+  let ibJobId = lead.ib_job_id;
   try {
     ({ candidateId } = await getApplicant(lead.ib_applied_job_id));
 
-    // IntervueBox allows exactly one interview agent per job, ever —
-    // calling createInterviewAgent again on a retake 400s with "An
-    // interview already exists for this job." (confirmed live 2026-07-28).
-    // Reuse the prior attempt's agent instead of creating a new one.
+    // IntervueBox permanently ties one interview to one job (vendor-
+    // confirmed 2026-07-28 by Krupal) and won't re-invite a candidate who
+    // already has a completed interview on an agent either — reusing the
+    // agent silently 0-invites. A retake needs a genuinely new job. Vary
+    // the JD text so IntervueBox's content-based job dedup doesn't collide
+    // with the original job.
     const { data: priorAttempt } = await admin
       .from("fitment_interviews")
-      .select("ib_agent_id")
+      .select("id")
       .eq("user_id", user.id)
       .eq("role_title", roleTitle)
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (priorAttempt?.ib_agent_id) {
-      ibAgentId = priorAttempt.ib_agent_id;
-    } else {
-      const candidateLevel = (lead.candidate_level as CandidateLevel) || "mid";
-      ({ ibAgentId } = await createInterviewAgent(lead.ib_job_id, roleTitle, candidateLevel));
+    if (priorAttempt) {
+      const retakeJD = `${lead.jd_text}\n\n(Retake attempt — ${new Date().toISOString()})`;
+      ({ ibJobId } = await createJob({ title: roleTitle, jobDescription: retakeJD }));
     }
+
+    const candidateLevel = (lead.candidate_level as CandidateLevel) || "mid";
+    ({ ibAgentId } = await createInterviewAgent(ibJobId, roleTitle, candidateLevel));
 
     const { invited } = await sendInterviewInvitation(ibAgentId, [candidateId]);
     if (invited === 0) {
       console.error("IntervueBox interview-invite chain failed", {
-        jobId: lead.ib_job_id,
+        jobId: ibJobId,
         error: "sendInterviewInvitation reported zero invited",
       });
       return Response.json(
@@ -121,7 +126,7 @@ export async function POST(request: Request) {
       );
     }
   } catch (err) {
-    console.error("IntervueBox interview-invite chain failed", { jobId: lead.ib_job_id, error: err });
+    console.error("IntervueBox interview-invite chain failed", { jobId: ibJobId, error: err });
     return Response.json(
       { error: "Something went wrong starting your AI interview — please try again." },
       { status: 500 }
@@ -131,7 +136,7 @@ export async function POST(request: Request) {
   const { error: insertError } = await admin.from("fitment_interviews").insert({
     user_id: user.id,
     role_title: roleTitle,
-    ib_job_id: lead.ib_job_id,
+    ib_job_id: ibJobId,
     ib_agent_id: ibAgentId,
     ib_candidate_id: candidateId,
     status: "invited",
@@ -161,7 +166,7 @@ export async function POST(request: Request) {
     // IntervueBox-side records now exist with no Merito row pointing at
     // them — log the IDs so this can be manually traced and reconciled.
     console.error("fitment_interviews insert failed after IntervueBox invite chain succeeded", {
-      ib_job_id: lead.ib_job_id,
+      ib_job_id: ibJobId,
       ib_agent_id: ibAgentId,
       ib_candidate_id: candidateId,
       error: insertError,
