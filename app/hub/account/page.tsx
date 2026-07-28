@@ -100,6 +100,8 @@ export default async function AccountPage() {
     .select("status")
     .eq("user_id", user.id)
     .eq("role_title", current.role_title)
+    .order("updated_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   const interviewStatus: InterviewStatus = !interviewRow
