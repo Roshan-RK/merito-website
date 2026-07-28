@@ -3,6 +3,7 @@
 import { useState } from "react";
 import ProgressRail, { type InterviewStatus, type PersonalityStatus } from "./ProgressRail";
 import ScoreCard from "./ScoreCard";
+import BundlePromoCard from "./BundlePromoCard";
 import ReportPaywallModal from "./ReportPaywallModal";
 import PersonalityPaywallModal from "./PersonalityPaywallModal";
 import ReferencesPaywallModal from "./ReferencesPaywallModal";
@@ -94,6 +95,10 @@ export default function DashboardClient({
             report={report}
             onOpenReportPaywall={() => setModal("report")}
           />
+
+          {bundleEligible && (
+            <BundlePromoCard level={level} onOpenPaywall={() => setModal("report")} />
+          )}
 
           <CounsellingCard
             priceLabel={counsellingPriceLabel}
