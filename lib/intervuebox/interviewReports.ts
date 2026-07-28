@@ -1,13 +1,14 @@
 import http from "http";
 import https from "https";
 import { IntervueBoxError, type IntervueBoxErrorShape } from "./client";
+import type { CriteriaMatchStatus } from "../criteriaStatus";
 
-// Real shape confirmed 2026-07-28 against a live isCriteriaMatch:true report
-// (job IV-L9b2tCD) — status seen so far only as "Matched", no non-matching
-// example observed yet (see memory intervuebox-interview-modes).
+// Real shape confirmed 2026-07-28 against a live isCriteriaMatch:true report.
+// status has exactly 3 confirmed real values (see CriteriaMatchStatus) —
+// confirmed against a real completed interview (Marketing Exec, IV-C4QJXmR).
 export type CriteriaEvaluationEntry = {
   criteria: string;
-  status: string;
+  status: CriteriaMatchStatus;
   reason: string;
 };
 
