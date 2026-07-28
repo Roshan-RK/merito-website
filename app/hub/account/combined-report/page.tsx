@@ -342,6 +342,34 @@ export default async function CombinedReportPage({
               <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14.5, lineHeight: 1.7, margin: 0 }}>{interview.report.overallSummary}</p>
             </div>
 
+            {interview.report.criteriaEvaluationTable.length > 0 && (
+              <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20, breakInside: "avoid" }}>
+                <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 14px" }}>
+                  Skill-wise evaluation
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {interview.report.criteriaEvaluationTable.map((entry, i) => (
+                    <div key={i} style={{ borderTop: i > 0 ? "1px solid rgba(0,0,0,0.08)" : undefined, paddingTop: i > 0 ? 14 : 0 }}>
+                      <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
+                        <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.02rem", margin: 0 }}>
+                          {entry.criteria}
+                        </h3>
+                        <span
+                          className="font-[family-name:var(--font-poppins)] font-semibold uppercase"
+                          style={{ fontSize: 10.5, letterSpacing: "0.04em", color: entry.status === "Matched" ? "#16803c" : "#ed1a24" }}
+                        >
+                          {entry.status}
+                        </span>
+                      </div>
+                      <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                        {entry.reason}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14, marginBottom: 20 }}>
               {interview.report.strengths && (
                 <div className="bg-[#eefdf1]" style={{ borderRadius: 14, padding: "14px 16px", breakInside: "avoid" }}>

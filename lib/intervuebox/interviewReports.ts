@@ -2,6 +2,15 @@ import http from "http";
 import https from "https";
 import { IntervueBoxError, type IntervueBoxErrorShape } from "./client";
 
+// Real shape confirmed 2026-07-28 against a live isCriteriaMatch:true report
+// (job IV-L9b2tCD) — status seen so far only as "Matched", no non-matching
+// example observed yet (see memory intervuebox-interview-modes).
+export type CriteriaEvaluationEntry = {
+  criteria: string;
+  status: string;
+  reason: string;
+};
+
 export type InterviewReportReady = {
   overallScore: number; // 0-10, per sessionDetails.overallReport.score
   skillMetrics: Record<string, number>; // 0-10 each, per sessionDetails.overallReport.metrics
@@ -21,10 +30,7 @@ export type InterviewReportReady = {
   // the employer-shareable combined report per 2026-07-27 product decision).
   feedbackToInterviewer: string | null;
   roadmap: string | null;
-  // Unconfirmed shape — two live interviews under isCriteriaMatch:false both
-  // returned []. Typed permissively until a populated example is observed
-  // (see memory intervuebox-interview-modes).
-  criteriaEvaluationTable: unknown[];
+  criteriaEvaluationTable: CriteriaEvaluationEntry[];
 };
 
 export type InterviewReport = { status: "NOT_READY" } | ({ status: "READY" } & InterviewReportReady);
@@ -55,7 +61,7 @@ type RawInterviewReportResponse = {
       areasOfImprovement?: string;
       feedbackToInterviewer?: string;
       roadmap?: string;
-      criteriaEvaluationTable?: unknown[];
+      criteriaEvaluationTable?: CriteriaEvaluationEntry[];
     };
   };
 };
