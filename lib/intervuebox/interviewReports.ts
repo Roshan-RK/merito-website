@@ -25,10 +25,10 @@ export type InterviewReportReady = {
   flagForSuspiciousActivity: boolean;
   integrityCheck: string | null;
   videoReport: string | null;
-  // Deliberately recruiter-facing (blunt hire/no-hire read + SWOT) — callers
-  // must decide per-surface whether it's appropriate to show (e.g. excluded
-  // from the candidate's own /hub/account/interview view, but included in
-  // the employer-shareable combined report per 2026-07-27 product decision).
+  // Blunt hire/no-hire read + SWOT. Originally excluded from the candidate's
+  // own /hub/account/interview view (recruiter-only), but IntervueBox's own
+  // candidate-facing PDF export shows it plainly — shown on both surfaces
+  // as of 2026-07-28.
   feedbackToInterviewer: string | null;
   roadmap: string | null;
   criteriaEvaluationTable: CriteriaEvaluationEntry[];

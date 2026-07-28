@@ -253,6 +253,20 @@ export default async function InterviewReportPage({
           </div>
         )}
 
+        {report.feedbackToInterviewer && (
+          <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, margin: "0 0 32px" }}>
+            <p
+              className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]"
+              style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}
+            >
+              Evaluator notes
+            </p>
+            <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13.5, lineHeight: 1.75, margin: 0, whiteSpace: "pre-wrap" }}>
+              {report.feedbackToInterviewer}
+            </p>
+          </div>
+        )}
+
         {report.shareableReportLink && (
           <a
             href={report.shareableReportLink}
