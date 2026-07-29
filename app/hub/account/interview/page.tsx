@@ -129,6 +129,11 @@ export default async function InterviewReportPage({
                 {interview.role_title}
               </span>
             </div>
+            {report.interviewTitle && (
+              <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 12, margin: "4px 0 0" }}>
+                {report.interviewTitle}
+              </p>
+            )}
             {infoBarParts.length > 0 && (
               <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 13, margin: "8px 0 0" }}>
                 {infoBarParts.join(" · ")}
@@ -179,6 +184,12 @@ export default async function InterviewReportPage({
             {report.overallSummary}
           </p>
         </div>
+
+        {report.overallSkillScore != null && (
+          <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 12, margin: "0 0 20px" }}>
+            Overall skill score: <strong className="text-black">{Math.round(report.overallSkillScore)}%</strong>
+          </p>
+        )}
 
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14 }}>
           {report.strengths && (

@@ -345,6 +345,12 @@ export default async function CombinedReportPage({
               <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14.5, lineHeight: 1.7, margin: 0 }}>{interview.report.overallSummary}</p>
             </div>
 
+            {interview.report.overallSkillScore != null && (
+              <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 12, margin: "0 0 20px" }}>
+                Overall skill score: <strong className="text-black">{Math.round(interview.report.overallSkillScore)}%</strong>
+              </p>
+            )}
+
             {Object.keys(interview.report.skillReport).length > 0 && (
               <SkillReportTable skillReport={interview.report.skillReport} />
             )}
