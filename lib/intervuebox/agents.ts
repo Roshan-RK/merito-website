@@ -42,14 +42,14 @@ export async function createInterviewAgent(
     body: JSON.stringify({
       maxInterviewMinutes: durationForLevel(candidateLevel),
       interviewType: inferInterviewType(roleTitle),
-      // Vendor's prose (2026-07-26, 2026-07-27) both times said "set
-      // isCriteriaMatch to false" for skill-based interviews, but the
-      // literal example JSON in the 2026-07-27 email shows `true` — and two
-      // live interviews under `false` came back with `criteriaEvaluationTable: []`
-      // both times (see memory intervuebox-interview-modes). Trusting the
-      // JSON over the contradictory prose; re-verify with one more real
-      // interview before treating this as settled.
-      isCriteriaMatch: true,
+      // Flipped back to false (skill-based) 2026-07-29 — product decision:
+      // skill-based is what's actually needed, not criteria-based. Confirmed
+      // criteria-based (true) does populate criteriaEvaluationTable (built
+      // 2026-07-28), but skill-based's own sessionDetails.skillReport table
+      // (named skill + score + comment, not yet mapped anywhere in this
+      // codebase) is the one actually wanted. See memory
+      // intervuebox-interview-modes for the full mode comparison.
+      isCriteriaMatch: false,
       // "medium" is vendor-confirmed but not mapped to candidateLevel yet —
       // full enum (low/high?) unconfirmed. Map once confirmed, per
       // specs/2026-07-24-ai-interview-difficulty-design.md's open item.

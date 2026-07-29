@@ -48,7 +48,7 @@ describe("createInterviewAgent", () => {
     expect(sentBody).toEqual({
       maxInterviewMinutes: 30,
       interviewType: "technical",
-      isCriteriaMatch: true,
+      isCriteriaMatch: false,
       complexity: "medium",
       isQuickApplyEnabled: true,
     });
@@ -72,7 +72,7 @@ describe("createInterviewAgent", () => {
     expect(sentBody).toEqual({
       maxInterviewMinutes: 30,
       interviewType: "technical",
-      isCriteriaMatch: true,
+      isCriteriaMatch: false,
       complexity: "medium",
       isQuickApplyEnabled: true,
     });
