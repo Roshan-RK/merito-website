@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@keyframes merito-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
 @theme inline {
   /* Merito brand colors */
   --color-primary: #ed1a24;

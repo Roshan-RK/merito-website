@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ProgressRail, { type InterviewStatus, type PersonalityStatus } from "./ProgressRail";
 import ScoreCard from "./ScoreCard";
 import BundlePromoCard from "./BundlePromoCard";
@@ -58,6 +58,25 @@ export default function DashboardClient({
   const [counsellingRequested, setCounsellingRequested] = useState(initialCounsellingRequested);
   const [personalityUnlockedState, setPersonalityUnlockedState] = useState(personalityUnlocked);
   const [referencesUnlockedState, setReferencesUnlockedState] = useState(referencesUnlocked);
+
+  // While the interview report is still generating, poll for it so the
+  // dashboard updates live instead of requiring a manual refresh.
+  useEffect(() => {
+    if (interviewStatus !== "invited") return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/hub/interview/status?role=${encodeURIComponent(roleTitle)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.status === "ready") {
+          setInterviewStatus("ready");
+        }
+      } catch {
+        // Transient network error — next poll retries, nothing to surface.
+      }
+    }, 15_000);
+    return () => clearInterval(interval);
+  }, [interviewStatus, roleTitle]);
 
   return (
     <>

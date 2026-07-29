@@ -150,8 +150,17 @@ export default function ProgressRail({
             );
           } else if (isInterviewStep && interviewStatus === "invited") {
             rightBadge = (
-              <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#9c9c9c]" style={{ fontSize: 11 }}>
-                Invited
+              <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#9c9c9c]" style={{ fontSize: 11, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: "#ed1a24",
+                    animation: "merito-pulse 1.4s ease-in-out infinite",
+                  }}
+                />
+                Processing
               </span>
             );
           } else if (isInterviewStep && interviewStatus === "not_started") {
