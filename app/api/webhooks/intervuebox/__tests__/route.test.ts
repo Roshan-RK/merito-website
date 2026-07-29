@@ -82,6 +82,11 @@ describe("POST /api/webhooks/intervuebox", () => {
           shareableReportLink: "https://app.intervuebox.com/reports/ISE_1",
           approxDurationMinutes: 4,
           criteriaEvaluationTable: [{ skill: "Ownership", commentary: "Owns outcomes end to end." }],
+          interviewTitle: "Technical Interview",
+          skillReport: { javascript: { score: 82, comment: "Strong fundamentals." } },
+          overallSkillScore: 75,
+          answers: [],
+          knowledgeAnswers: [],
         };
       }
       return { status: "NOT_READY" };
@@ -106,6 +111,9 @@ describe("POST /api/webhooks/intervuebox", () => {
         report_raw: expect.objectContaining({
           approxDurationMinutes: 4,
           criteriaEvaluationTable: [{ skill: "Ownership", commentary: "Owns outcomes end to end." }],
+          interviewTitle: "Technical Interview",
+          skillReport: { javascript: { score: 82, comment: "Strong fundamentals." } },
+          overallSkillScore: 75,
         }),
       })
     );

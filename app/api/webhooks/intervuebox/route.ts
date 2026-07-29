@@ -85,6 +85,11 @@ export async function POST(request: Request) {
                 feedbackToInterviewer: report.feedbackToInterviewer,
                 roadmap: report.roadmap,
                 criteriaEvaluationTable: report.criteriaEvaluationTable,
+                interviewTitle: report.interviewTitle,
+                skillReport: report.skillReport,
+                overallSkillScore: report.overallSkillScore,
+                answers: report.answers,
+                knowledgeAnswers: report.knowledgeAnswers,
               },
               updated_at: new Date().toISOString(),
             })
