@@ -13,6 +13,7 @@ import CondensedPersonalitySection from "./CondensedPersonalitySection";
 import InterviewScoreGauge, { getScoreBand } from "../interview/InterviewScoreGauge";
 import ParameterScoreTile from "../interview/ParameterScoreTile";
 import CriteriaMatchCard from "../interview/CriteriaMatchCard";
+import SkillReportTable from "../interview/SkillReportTable";
 import { getCriteriaStatusColor } from "@/lib/criteriaStatus";
 
 function splitBullets(text: string): string[] {
@@ -343,6 +344,10 @@ export default async function CombinedReportPage({
               <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>AI overview</p>
               <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14.5, lineHeight: 1.7, margin: 0 }}>{interview.report.overallSummary}</p>
             </div>
+
+            {Object.keys(interview.report.skillReport).length > 0 && (
+              <SkillReportTable skillReport={interview.report.skillReport} />
+            )}
 
             {typeof interview.report.skillMetrics?.criteriaMatch === "number" && (
               <CriteriaMatchCard criteriaMatchScore={interview.report.skillMetrics.criteriaMatch} criteriaEvaluationTable={interview.report.criteriaEvaluationTable} />
