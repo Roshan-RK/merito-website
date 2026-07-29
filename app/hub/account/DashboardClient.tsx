@@ -172,6 +172,7 @@ export default function DashboardClient({
       {modal === "interview" && (
         <InterviewPaywallModal
           roleTitle={roleTitle}
+          level={level}
           onClose={() => setModal("none")}
           onStarted={(status) => {
             setInterviewStatus(status);

@@ -157,7 +157,7 @@ export default function ProgressRail({
           } else if (isInterviewStep && interviewStatus === "not_started") {
             rightBadge = (
               <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 11 }}>
-                Start
+                {formatPrice(PRODUCT_PRICING.interview[level])}
               </span>
             );
           }

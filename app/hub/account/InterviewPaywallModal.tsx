@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { InterviewStatus } from "./ProgressRail";
+import { PRODUCT_PRICING, formatPrice, type CandidateLevel } from "@/lib/razorpay/pricing";
 
 type RazorpayHandlerResponse = {
   razorpay_order_id: string;
@@ -46,10 +47,12 @@ function loadRazorpayCheckoutScript(): Promise<void> {
 
 export default function InterviewPaywallModal({
   roleTitle,
+  level,
   onClose,
   onStarted,
 }: {
   roleTitle: string;
+  level: CandidateLevel;
   onClose: () => void;
   onStarted: (status: InterviewStatus) => void;
 }) {
@@ -173,7 +176,7 @@ export default function InterviewPaywallModal({
           className="w-full font-[family-name:var(--font-poppins)] font-semibold text-white"
           style={{ height: 50, borderRadius: 8, fontSize: 15, background: paying ? "#dcdcdc" : "#ed1a24", border: "none", cursor: paying ? "default" : "pointer", boxShadow: paying ? "none" : "0 4px 6px rgba(236,34,40,0.3)" }}
         >
-          {paying ? "Processing…" : "Pay and send me my interview invite"}
+          {paying ? "Processing…" : `Pay ${formatPrice(PRODUCT_PRICING.interview[level])} and send me my interview invite`}
         </button>
         <p className="text-[#9c9c9c]" style={{ fontSize: 11.5, textAlign: "center", margin: "10px 0 0" }}>
           One-time payment per attempt · UPI, card & netbanking
