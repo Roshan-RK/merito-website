@@ -8,6 +8,7 @@ import InterviewScoreGauge from "./InterviewScoreGauge";
 import ParameterScoreTile from "./ParameterScoreTile";
 import CriteriaMatchCard from "./CriteriaMatchCard";
 import SkillReportTable from "./SkillReportTable";
+import AnswerTranscript from "./AnswerTranscript";
 import { getCriteriaStatusColor } from "@/lib/criteriaStatus";
 
 // report.strengths/areasOfImprovement arrive as a single "- point\n- point"
@@ -282,6 +283,8 @@ export default async function InterviewReportPage({
             </p>
           </div>
         )}
+
+        <AnswerTranscript answers={report.answers} />
 
         {report.shareableReportLink && (
           <a
