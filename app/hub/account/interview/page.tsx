@@ -270,6 +270,20 @@ export default async function InterviewReportPage({
           </div>
         )}
 
+        {report.roadmap && (
+          <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, margin: "0 0 32px" }}>
+            <p
+              className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]"
+              style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}
+            >
+              Improvement roadmap
+            </p>
+            <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13.5, lineHeight: 1.75, margin: 0, whiteSpace: "pre-wrap" }}>
+              {report.roadmap}
+            </p>
+          </div>
+        )}
+
         {report.feedbackToInterviewer && (
           <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, margin: "0 0 32px" }}>
             <p
@@ -280,6 +294,34 @@ export default async function InterviewReportPage({
             </p>
             <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13.5, lineHeight: 1.75, margin: 0, whiteSpace: "pre-wrap" }}>
               {report.feedbackToInterviewer}
+            </p>
+          </div>
+        )}
+
+        <div
+          className={report.flagForSuspiciousActivity ? "bg-[#fdeced]" : "bg-[#eefdf1]"}
+          style={{ borderRadius: 14, padding: "14px 16px", margin: "0 0 32px" }}
+        >
+          <p
+            className="font-[family-name:var(--font-poppins)] font-bold uppercase"
+            style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 8px", color: report.flagForSuspiciousActivity ? "#ed1a24" : "#16803c" }}
+          >
+            Integrity assessment · {report.flagForSuspiciousActivity ? "Flagged" : "No issues"}
+          </p>
+          {report.integrityCheck && (
+            <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+              {report.integrityCheck}
+            </p>
+          )}
+        </div>
+
+        {report.videoReport && (
+          <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, margin: "0 0 32px" }}>
+            <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>
+              Video &amp; delivery notes
+            </p>
+            <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13.5, lineHeight: 1.75, margin: 0, whiteSpace: "pre-wrap" }}>
+              {report.videoReport}
             </p>
           </div>
         )}
