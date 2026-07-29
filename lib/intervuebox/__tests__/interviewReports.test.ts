@@ -98,6 +98,104 @@ describe("getInterviewReport", () => {
       feedbackToInterviewer: "Recommend advancing.",
       roadmap: "Short-term: practice mock interviews.",
       criteriaEvaluationTable: [],
+      interviewTitle: null,
+      skillReport: {},
+      overallSkillScore: null,
+      answers: [
+        { question: undefined, transcript: undefined, timestamp: "00:00:24", metrics: { score: undefined, evaluation: undefined, dynamicSkills: [] } },
+        { question: undefined, transcript: undefined, timestamp: "00:03:27", metrics: { score: undefined, evaluation: undefined, dynamicSkills: [] } },
+      ],
+      knowledgeAnswers: [],
+    });
+  });
+
+  it("maps skillReport, interviewTitle, overallSkillScore, answers, and knowledgeAnswers", async () => {
+    respond = (_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          shareableReportLink: null,
+          sessionDetails: {
+            skillReport: {
+              sales: { score: 56, comment: "Solid pitch structure." },
+              communication: { score: 3, comment: "Struggled to articulate points." },
+            },
+            interviewTitle: "Sales Interview",
+            overallSkillScore: 57,
+            knowledgeAnswers: [],
+            answers: [
+              {
+                question: "Tell me about a time you closed a deal.",
+                transcript: "I once closed a six-figure deal by...",
+                timestamp: "00:01:24",
+                metrics: {
+                  score: 79,
+                  evaluation: "Strong, specific example with measurable outcome.",
+                  dynamicSkills: [{ skill: "sales", comment: "" }],
+                },
+              },
+            ],
+            overallReport: {
+              score: 39,
+              metrics: { communication: 39, relevance: 41 },
+              overallSummary: "Mixed performance.",
+            },
+          },
+        })
+      );
+    };
+    const { getInterviewReport } = await import("../interviewReports");
+
+    const result = await getInterviewReport("INT_123", "USR_123");
+
+    expect(result).toMatchObject({
+      status: "READY",
+      interviewTitle: "Sales Interview",
+      overallSkillScore: 57,
+      skillReport: {
+        sales: { score: 56, comment: "Solid pitch structure." },
+        communication: { score: 3, comment: "Struggled to articulate points." },
+      },
+      knowledgeAnswers: [],
+      answers: [
+        {
+          question: "Tell me about a time you closed a deal.",
+          transcript: "I once closed a six-figure deal by...",
+          timestamp: "00:01:24",
+          metrics: {
+            score: 79,
+            evaluation: "Strong, specific example with measurable outcome.",
+            dynamicSkills: [{ skill: "sales", comment: "" }],
+          },
+        },
+      ],
+    });
+  });
+
+  it("defaults skillReport/interviewTitle/overallSkillScore/answers/knowledgeAnswers when the upstream report omits them", async () => {
+    respond = (_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          shareableReportLink: null,
+          sessionDetails: {
+            skillReport: {},
+            overallReport: { score: 5, metrics: {}, overallSummary: "No extras." },
+          },
+        })
+      );
+    };
+    const { getInterviewReport } = await import("../interviewReports");
+
+    const result = await getInterviewReport("INT_123", "USR_123");
+
+    expect(result).toMatchObject({
+      status: "READY",
+      interviewTitle: null,
+      overallSkillScore: null,
+      skillReport: {},
+      answers: [],
+      knowledgeAnswers: [],
     });
   });
 

@@ -12,6 +12,19 @@ export type CriteriaEvaluationEntry = {
   reason: string;
 };
 
+export type SkillReportEntry = { score: number; comment: string };
+
+export type AnswerDetail = {
+  question: string;
+  transcript: string;
+  timestamp: string;
+  metrics: {
+    score?: number;
+    evaluation?: string;
+    dynamicSkills: Array<{ skill: string; comment: string }>;
+  };
+};
+
 export type InterviewReportReady = {
   overallScore: number; // 0-10, per sessionDetails.overallReport.score
   skillMetrics: Record<string, number>; // 0-10 each, per sessionDetails.overallReport.metrics
@@ -32,6 +45,11 @@ export type InterviewReportReady = {
   feedbackToInterviewer: string | null;
   roadmap: string | null;
   criteriaEvaluationTable: CriteriaEvaluationEntry[];
+  interviewTitle: string | null;
+  skillReport: Record<string, SkillReportEntry>;
+  overallSkillScore: number | null;
+  answers: AnswerDetail[];
+  knowledgeAnswers: unknown[];
 };
 
 export type InterviewReport = { status: "NOT_READY" } | ({ status: "READY" } & InterviewReportReady);
@@ -47,13 +65,26 @@ export type InterviewReport = { status: "NOT_READY" } | ({ status: "READY" } & I
 type RawInterviewReportResponse = {
   shareableReportLink: string | null;
   sessionDetails: {
-    // Only used for an approximate interview duration — the last answer's
-    // timestamp is a proxy for total elapsed time, not a true recording-length
-    // field (IntervueBox doesn't expose one). Never presented as exact.
-    answers?: Array<{ timestamp: string }>;
+    // The timestamp on each entry is also used as a proxy for total elapsed
+    // duration (last answer's timestamp) — not a true recording-length field
+    // (IntervueBox doesn't expose one). Never presented as exact.
+    answers?: Array<{
+      question: string;
+      transcript: string;
+      timestamp: string;
+      metrics?: {
+        score?: number;
+        evaluation?: string;
+        dynamicSkills?: Array<{ skill: string; comment: string }>;
+      };
+    }>;
     flagForSuspiciousActivity?: boolean;
     integrityCheck?: string;
     videoReport?: string;
+    interviewTitle?: string;
+    skillReport?: Record<string, { score: number; comment: string }>;
+    overallSkillScore?: number;
+    knowledgeAnswers?: unknown[];
     overallReport: {
       score: number;
       metrics: Record<string, number>;
@@ -184,6 +215,20 @@ export async function getInterviewReport(interviewId: string, candidateId: strin
       feedbackToInterviewer: overallReport.feedbackToInterviewer ?? null,
       roadmap: overallReport.roadmap ?? null,
       criteriaEvaluationTable: overallReport.criteriaEvaluationTable ?? [],
+      interviewTitle: response.sessionDetails.interviewTitle ?? null,
+      skillReport: response.sessionDetails.skillReport ?? {},
+      overallSkillScore: response.sessionDetails.overallSkillScore ?? null,
+      knowledgeAnswers: response.sessionDetails.knowledgeAnswers ?? [],
+      answers: (response.sessionDetails.answers ?? []).map((a) => ({
+        question: a.question,
+        transcript: a.transcript,
+        timestamp: a.timestamp,
+        metrics: {
+          score: a.metrics?.score,
+          evaluation: a.metrics?.evaluation,
+          dynamicSkills: a.metrics?.dynamicSkills ?? [],
+        },
+      })),
     };
   } catch (err) {
     if (err instanceof IntervueBoxError && err.status === 404) {
