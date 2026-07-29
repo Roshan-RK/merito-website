@@ -21,6 +21,7 @@ export default function DashboardClient({
   bundleEligible,
   personalityUnlocked,
   referencesUnlocked,
+  userEmail,
   score,
   prevScore,
   verdict,
@@ -38,6 +39,7 @@ export default function DashboardClient({
   bundleEligible: boolean;
   personalityUnlocked: boolean;
   referencesUnlocked: boolean;
+  userEmail: string;
   score: number;
   prevScore: number | null;
   verdict: string;
@@ -173,6 +175,7 @@ export default function DashboardClient({
         <InterviewPaywallModal
           roleTitle={roleTitle}
           level={level}
+          userEmail={userEmail}
           onClose={() => setModal("none")}
           onStarted={(status) => {
             setInterviewStatus(status);

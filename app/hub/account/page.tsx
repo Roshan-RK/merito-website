@@ -146,6 +146,7 @@ export default async function AccountPage() {
       bundleEligible={bundleEligible}
       personalityUnlocked={personalityUnlocked}
       referencesUnlocked={referencesUnlocked}
+      userEmail={user.email ?? ""}
       score={score}
       prevScore={prevForSameRole ? prevForSameRole.score : null}
       verdict={verdict}
