@@ -52,6 +52,43 @@ describe("createJob", () => {
   });
 });
 
+describe("inferSkillsFromJD", () => {
+  it("extracts matching skill keywords from the JD text", async () => {
+    const { inferSkillsFromJD } = await import("../jobs");
+    expect(inferSkillsFromJD("Looking for a React and TypeScript developer with strong SQL skills."))
+      .toEqual(["TypeScript", "React", "SQL"]);
+  });
+
+  it("matches case-insensitively but returns the canonical casing", async () => {
+    const { inferSkillsFromJD } = await import("../jobs");
+    expect(inferSkillsFromJD("must know python and product management")).toEqual([
+      "Python",
+      "Product Management",
+    ]);
+  });
+
+  it("returns an empty array when no keywords match", async () => {
+    const { inferSkillsFromJD } = await import("../jobs");
+    expect(inferSkillsFromJD("We need someone great.")).toEqual([]);
+  });
+
+  it("caps results at the max count", async () => {
+    const { inferSkillsFromJD } = await import("../jobs");
+    const jd = "JavaScript TypeScript Python Java React Next.js Node.js SQL AWS Docker Kubernetes Go Rust C++ C#";
+    expect(inferSkillsFromJD(jd, 5)).toHaveLength(5);
+  });
+
+  it("createJob passes the inferred skills through in the request body", async () => {
+    intervueBoxFetchMock.mockResolvedValue({ success: true, jobId: "JOB_123" });
+    const { createJob } = await import("../jobs");
+
+    await createJob({ title: "Engineer", jobDescription: "Need strong Python and SQL skills." });
+
+    const sentBody = JSON.parse(intervueBoxFetchMock.mock.calls.at(-1)![1].body);
+    expect(sentBody.skills).toEqual(["Python", "SQL"]);
+  });
+});
+
 describe("inferExperienceFromJD", () => {
   it("extracts a years-of-experience range", async () => {
     const { inferExperienceFromJD } = await import("../jobs");
