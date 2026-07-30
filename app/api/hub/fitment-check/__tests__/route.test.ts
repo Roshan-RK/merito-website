@@ -413,4 +413,65 @@ describe("POST /api/hub/fitment-check", () => {
       expect.objectContaining({ candidate_level: "entry" })
     );
   });
+
+  describe("jdUrl (JD link mode)", () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it("fetches the URL, strips HTML, and passes the extracted text as jobDescription", async () => {
+      const html = "<html><head><style>.x{color:red}</style></head><body><script>track()</script><h1>Senior PM</h1><p>We need a PM who can ship &amp; own roadmaps across three product lines with a decade of B2B SaaS depth.</p></body></html>";
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
+          headers: new Headers({ "content-type": "text/html" }),
+          text: () => Promise.resolve(html),
+        })
+      );
+      const { createJob } = await import("@/lib/intervuebox/jobs");
+      const { POST } = await importRoute();
+      const request = new Request("http://localhost/api/hub/fitment-check", {
+        method: "POST",
+        body: buildForm({ jdText: "", jdUrl: "https://company.com/careers/pm" }),
+      });
+      const response = await POST(request);
+      expect(response.status).toBe(200);
+      const callInput = vi.mocked(createJob).mock.calls.at(-1)![0];
+      expect(callInput.jobDescription).toContain("Senior PM");
+      expect(callInput.jobDescription).toContain("We need a PM who can ship & own roadmaps");
+      expect(callInput.jobDescription).not.toContain("<");
+      expect(callInput.jobDescription).not.toContain("track()");
+    });
+
+    it("returns 400 without ever fetching when the URL targets a private/internal host (SSRF guard)", async () => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      const { POST } = await importRoute();
+      const request = new Request("http://localhost/api/hub/fitment-check", {
+        method: "POST",
+        body: buildForm({ jdText: "", jdUrl: "http://169.254.169.254/latest/meta-data/" }),
+      });
+      const response = await POST(request);
+      expect(response.status).toBe(400);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when the link can't be fetched", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({ ok: false, status: 404, headers: new Headers(), text: () => Promise.resolve("") })
+      );
+      const { POST } = await importRoute();
+      const request = new Request("http://localhost/api/hub/fitment-check", {
+        method: "POST",
+        body: buildForm({ jdText: "", jdUrl: "https://company.com/gone" }),
+      });
+      const response = await POST(request);
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toMatch(/paste the job description instead/i);
+    });
+  });
 });

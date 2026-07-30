@@ -1,3 +1,5 @@
+import { lookup as dnsLookup } from "node:dns/promises";
+import { isIP } from "node:net";
 import { verifyRecaptchaToken } from "@/lib/recaptcha";
 import { createRateLimiter } from "@/lib/rateLimit";
 import { createJob } from "@/lib/intervuebox/jobs";
@@ -104,6 +106,102 @@ async function addApplicantWithRetry(input: AddApplicantInput) {
 
 const MAX_CV_SIZE_BYTES = 5 * 1024 * 1024; // 5MB, matches client-side cap in FitmentChecker.tsx
 const MAX_TEXT_CHARS = 20000;
+const JD_FETCH_TIMEOUT_MS = 10_000;
+const JD_FETCH_MAX_BYTES = 2 * 1024 * 1024; // 2MB, plenty for any real JD page's HTML
+
+// This is a public, unauthenticated endpoint doing a server-side fetch of a
+// user-supplied URL -- without this check it's an open SSRF invitation to
+// probe internal services or cloud metadata endpoints (169.254.169.254)
+// from prod. Blocks by literal hostname/IP and by the IP each hostname
+// actually resolves to.
+function isDisallowedHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  if (host === "localhost" || host.endsWith(".localhost")) return true;
+  const ipVersion = isIP(host);
+  if (ipVersion === 0) return false;
+  return isPrivateOrReservedIp(host);
+}
+
+function isPrivateOrReservedIp(ip: string): boolean {
+  if (ip.includes(":")) {
+    const lower = ip.toLowerCase();
+    return lower === "::1" || lower.startsWith("fe80:") || lower.startsWith("fc") || lower.startsWith("fd");
+  }
+  const parts = ip.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((p) => Number.isNaN(p))) return true;
+  const [a, b] = parts;
+  if (a === 127 || a === 10 || a === 0) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  return false;
+}
+
+async function assertUrlIsFetchable(url: URL): Promise<void> {
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("Only http/https job description links are supported.");
+  }
+  if (isDisallowedHost(url.hostname)) {
+    throw new Error("That link isn't reachable.");
+  }
+  if (isIP(url.hostname) === 0) {
+    const resolved = await dnsLookup(url.hostname).catch(() => null);
+    if (resolved && isPrivateOrReservedIp(resolved.address)) {
+      throw new Error("That link isn't reachable.");
+    }
+  }
+}
+
+function stripHtmlToText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function fetchJobDescriptionFromUrl(rawUrl: string): Promise<string> {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error("That doesn't look like a valid URL.");
+  }
+  await assertUrlIsFetchable(url);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), JD_FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      redirect: "follow",
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; MeritoHubBot/1.0)" },
+    });
+    if (!res.ok) {
+      throw new Error(`The link returned an error (${res.status}).`);
+    }
+    const contentLength = Number(res.headers.get("content-length") || 0);
+    if (contentLength > JD_FETCH_MAX_BYTES) {
+      throw new Error("That page is too large to read.");
+    }
+    const contentType = res.headers.get("content-type") || "";
+    const body = await res.text();
+    const text = contentType.includes("html") ? stripHtmlToText(body) : body.trim();
+    if (text.length < 50) {
+      throw new Error("Couldn't find a job description on that page.");
+    }
+    return text;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 function normalize(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value.trim() : "";
@@ -191,7 +289,17 @@ export async function POST(request: Request) {
   }
 
   const jdSource = jdText ? "paste" : "link";
-  const jdForScoring = (jdText || jdUrl).slice(0, MAX_TEXT_CHARS);
+  let jdForScoring: string;
+  if (jdText) {
+    jdForScoring = jdText.slice(0, MAX_TEXT_CHARS);
+  } else {
+    try {
+      jdForScoring = (await fetchJobDescriptionFromUrl(jdUrl)).slice(0, MAX_TEXT_CHARS);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not read that link.";
+      return Response.json({ error: `${message} Please paste the job description instead.` }, { status: 400 });
+    }
+  }
 
   let ibJobId: string | undefined;
   let ibResumeId: string | undefined;
