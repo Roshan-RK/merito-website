@@ -3,6 +3,14 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["*.ngrok-free.dev", "*.ngrok-free.app", "*.ngrok.io"],
+  // @sparticuz/chromium's executablePath() resolves its bin/ binary via a
+  // runtime-computed path, not a static import -- Vercel's file tracer can't
+  // see that reference, so the binary silently doesn't ship with the
+  // serverless function unless force-included here (confirmed live in prod:
+  // "input directory .../@sparticuz/chromium/bin does not exist").
+  outputFileTracingIncludes: {
+    "/*": ["node_modules/@sparticuz/chromium/**/*"],
+  },
   images: {
     dangerouslyAllowSVG: true,
     contentDispositionType: "attachment",
