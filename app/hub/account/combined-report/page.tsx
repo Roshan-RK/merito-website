@@ -14,6 +14,7 @@ import InterviewScoreGauge, { getScoreBand } from "../interview/InterviewScoreGa
 import ParameterScoreTile from "../interview/ParameterScoreTile";
 import CriteriaMatchCard from "../interview/CriteriaMatchCard";
 import SkillReportTable from "../interview/SkillReportTable";
+import RoadmapTimeline from "../RoadmapTimeline";
 import { getCriteriaStatusColor } from "@/lib/criteriaStatus";
 
 function splitBullets(text: string): string[] {
@@ -406,12 +407,7 @@ export default async function CombinedReportPage({
               )}
             </div>
 
-            {interview.report.roadmap && (
-              <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20, breakInside: "avoid" }}>
-                <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>Improvement roadmap</p>
-                <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13.5, lineHeight: 1.75, margin: 0, whiteSpace: "pre-wrap" }}>{interview.report.roadmap}</p>
-              </div>
-            )}
+            {interview.report.roadmap && <RoadmapTimeline roadmap={interview.report.roadmap} />}
 
             {interview.report.feedbackToInterviewer && (
               <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20, breakInside: "avoid" }}>
