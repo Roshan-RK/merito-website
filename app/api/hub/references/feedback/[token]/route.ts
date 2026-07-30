@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { validateRefereeToken, consumeRefereeToken } from "@/lib/referenceTokens";
-import { recordRefereeFeedback, recordRefereeDecline, getRefereeName } from "@/lib/referenceChecks";
+import { recordRefereeFeedback, recordRefereeDecline, getRefereeAndCandidateNames } from "@/lib/referenceChecks";
 
 const FEEDBACK_CATEGORIES = [
   "knowledge-application",
@@ -31,8 +31,8 @@ export async function GET(_request: Request, { params }: RouteContext) {
     return Response.json({ valid: false, reason: validation.reason });
   }
 
-  const refereeName = await getRefereeName(validation.refereeId);
-  return Response.json({ valid: true, refereeName });
+  const { refereeName, candidateName } = await getRefereeAndCandidateNames(validation.refereeId);
+  return Response.json({ valid: true, refereeName, candidateName });
 }
 
 export async function POST(request: Request, { params }: RouteContext) {

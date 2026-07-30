@@ -389,10 +389,27 @@ export async function getStaleRefereesForReminder(): Promise<
   return data ?? [];
 }
 
-export async function getRefereeName(refereeId: string): Promise<string | null> {
+// The feedback form needs both names: the referee's own name (to greet them)
+// and the candidate's name (who they're actually rating) -- "Rate {referee's
+// own name}" reads as asking the referee to rate themselves.
+export async function getRefereeAndCandidateNames(
+  refereeId: string
+): Promise<{ refereeName: string | null; candidateName: string }> {
   const supabase = getSupabaseServerClient();
-  const { data } = await supabase.from("referees").select("name").eq("id", refereeId).maybeSingle();
-  return data?.name ?? null;
+  const { data: referee } = await supabase
+    .from("referees")
+    .select("name, reference_check_id")
+    .eq("id", refereeId)
+    .maybeSingle();
+
+  if (!referee) {
+    return { refereeName: null, candidateName: "the candidate" };
+  }
+
+  const ownerId = await getReferenceCheckOwner(referee.reference_check_id);
+  const candidateName = ownerId ? await getCandidateDisplayName(ownerId) : "the candidate";
+
+  return { refereeName: referee.name, candidateName };
 }
 
 export async function getReferenceCheckOwner(checkId: string): Promise<string | null> {

@@ -4,7 +4,7 @@ const validateRefereeTokenMock = vi.fn();
 const consumeRefereeTokenMock = vi.fn();
 const recordRefereeFeedbackMock = vi.fn();
 const recordRefereeDeclineMock = vi.fn();
-const getRefereeNameMock = vi.fn();
+const getRefereeAndCandidateNamesMock = vi.fn();
 
 vi.mock("@/lib/referenceTokens", () => ({
   validateRefereeToken: validateRefereeTokenMock,
@@ -13,7 +13,7 @@ vi.mock("@/lib/referenceTokens", () => ({
 vi.mock("@/lib/referenceChecks", () => ({
   recordRefereeFeedback: recordRefereeFeedbackMock,
   recordRefereeDecline: recordRefereeDeclineMock,
-  getRefereeName: getRefereeNameMock,
+  getRefereeAndCandidateNames: getRefereeAndCandidateNamesMock,
 }));
 
 async function importRoute() {
@@ -27,7 +27,7 @@ function params(token: string) {
 describe("GET /api/hub/references/feedback/[token]", () => {
   beforeEach(() => {
     validateRefereeTokenMock.mockReset();
-    getRefereeNameMock.mockReset();
+    getRefereeAndCandidateNamesMock.mockReset();
   });
 
   it("returns valid:false when the token is invalid", async () => {
@@ -38,13 +38,13 @@ describe("GET /api/hub/references/feedback/[token]", () => {
     expect(body).toEqual({ valid: false, reason: "expired" });
   });
 
-  it("returns the referee name when the token is valid", async () => {
+  it("returns the referee and candidate names when the token is valid", async () => {
     validateRefereeTokenMock.mockResolvedValue({ valid: true, refereeId: "referee-1" });
-    getRefereeNameMock.mockResolvedValue("Jane Doe");
+    getRefereeAndCandidateNamesMock.mockResolvedValue({ refereeName: "Jane Doe", candidateName: "Roshan RK" });
     const { GET } = await importRoute();
     const response = await GET(new Request("http://localhost"), params("good-token"));
     const body = await response.json();
-    expect(body).toEqual({ valid: true, refereeName: "Jane Doe" });
+    expect(body).toEqual({ valid: true, refereeName: "Jane Doe", candidateName: "Roshan RK" });
   });
 });
 

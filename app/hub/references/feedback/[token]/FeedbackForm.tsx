@@ -15,7 +15,7 @@ const CATEGORIES: { value: string; label: string }[] = [
 type LoadState =
   | { kind: "loading" }
   | { kind: "invalid"; reason: string }
-  | { kind: "ready"; refereeName: string }
+  | { kind: "ready"; refereeName: string; candidateName: string }
   | { kind: "submitted" };
 
 export default function FeedbackForm({ token }: { token: string }) {
@@ -30,7 +30,7 @@ export default function FeedbackForm({ token }: { token: string }) {
       .then((res) => res.json())
       .then((data) => {
         if (data.valid) {
-          setState({ kind: "ready", refereeName: data.refereeName });
+          setState({ kind: "ready", refereeName: data.refereeName, candidateName: data.candidateName });
         } else {
           setState({ kind: "invalid", reason: data.reason });
         }
@@ -88,8 +88,11 @@ export default function FeedbackForm({ token }: { token: string }) {
   return (
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.4rem" }}>
-        Rate {state.refereeName}
+        Hi {state.refereeName}, thanks for being a reference
       </h1>
+      <p className="text-[#4b4b4d]" style={{ fontSize: 13.5, marginTop: -8 }}>
+        {state.candidateName} listed you as a reference. A couple of minutes of your honest feedback helps them a lot.
+      </p>
       {CATEGORIES.map((cat) => (
         <div key={cat.value} style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ flex: 1, fontSize: 13 }}>{cat.label}</span>
