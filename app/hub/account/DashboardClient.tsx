@@ -97,6 +97,7 @@ export default function DashboardClient({
           onOpenPersonalityPaywall={() => setModal("personality")}
           onOpenReferencesPaywall={() => setModal("references")}
           onOpenInterviewStart={() => setModal("interview")}
+          onOpenExport={() => setModal("export")}
         />
 
         <div>
@@ -127,16 +128,6 @@ export default function DashboardClient({
             onOpenPaywall={() => setModal("counselling")}
           />
         </div>
-      </div>
-
-      <div className="mx-auto" style={{ maxWidth: 1440, padding: "0 24px 24px" }}>
-        <button
-          onClick={() => setModal("export")}
-          className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-          style={{ background: "none", border: "1px solid rgba(237,26,36,0.4)", borderRadius: 8, padding: "10px 16px", fontSize: 13, cursor: "pointer" }}
-        >
-          Download combined report
-        </button>
       </div>
 
       {modal === "counselling" && (
