@@ -81,7 +81,18 @@ export async function GET(request: Request) {
   targetUrl.searchParams.set("include", Array.from(include).join(","));
   if (roleTitle) targetUrl.searchParams.set("role", roleTitle);
 
-  const buffer = await renderPageToPdf(targetUrl.toString(), pageCookies);
+  let buffer: Buffer;
+  try {
+    buffer = await renderPageToPdf(targetUrl.toString(), pageCookies);
+  } catch (err) {
+    console.error("Combined report PDF render failed", {
+      targetUrl: targetUrl.toString(),
+      errorName: err instanceof Error ? err.name : typeof err,
+      errorMessage: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    return Response.json({ error: "Could not generate the PDF — please try again." }, { status: 502 });
+  }
 
   return new Response(new Uint8Array(buffer), {
     status: 200,
