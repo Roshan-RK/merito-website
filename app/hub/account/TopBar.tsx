@@ -2,8 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabaseAuth";
 import SignOutButton from "./SignOutButton";
 
 export default function TopBar({
@@ -15,23 +13,13 @@ export default function TopBar({
   userName: string;
   onChangeRole: () => void;
 }) {
-  const router = useRouter();
-
-  const handleBackToSite = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!window.confirm("Leave Hub and sign out?")) return;
-    const supabase = createSupabaseBrowserClient();
-    await supabase.auth.signOut();
-    router.push("/");
-  };
-
   return (
     <header
       className="print:hidden sticky top-0 bg-white border-b border-black/[0.08] flex items-center justify-between"
       style={{ height: 66, padding: "0 24px", zIndex: 20, boxShadow: "0 8px 22px rgba(17,35,89,0.06)" }}
     >
       <div className="flex items-center" style={{ gap: 10 }}>
-        <Link href="/" onClick={handleBackToSite} className="flex items-center" style={{ gap: 10 }}>
+        <Link href="/hub/account" className="flex items-center" style={{ gap: 10 }}>
           <Image src="/logo.png" alt="Merito" width={100} height={28} style={{ height: 24, width: "auto" }} />
           <span
             className="bg-[#ed1a24] text-white font-[family-name:var(--font-poppins)] font-bold"
@@ -46,14 +34,6 @@ export default function TopBar({
           style={{ fontSize: 13 }}
         >
           Dashboard
-        </Link>
-        <Link
-          href="/"
-          onClick={handleBackToSite}
-          className="hidden lg:inline font-[family-name:var(--font-poppins)] font-semibold text-[#9c9c9c] hover:text-[#ed1a24] transition-colors"
-          style={{ fontSize: 12 }}
-        >
-          ← Merito.ai
         </Link>
       </div>
 

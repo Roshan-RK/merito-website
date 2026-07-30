@@ -5,14 +5,11 @@ import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { isHubAccountRoute } from "@/lib/hubRoutes";
-import { createSupabaseBrowserClient } from "@/lib/supabaseAuth";
-import type { Session } from "@supabase/supabase-js";
 
 const navLinks = [
   { label: "About us", href: "/about" },
   { label: "Merito's way", href: "/meritoways" },
   { label: "Platform & tools", href: "#tools" },
-  { label: "HUB", href: "/hub" },
   { label: "Insights", href: "/insights" },
 ];
 
@@ -21,31 +18,6 @@ export default function Navbar() {
   const [platformsOpen, setPlatformsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-
-  const [session, setSession] = useState<Session | null | "loading">("loading");
-
-  useEffect(() => {
-    let supabase;
-    try {
-      supabase = createSupabaseBrowserClient();
-    } catch {
-      setSession(null);
-      return;
-    }
-
-    supabase.auth.getSession().then(
-      ({ data }) => setSession(data.session),
-      () => setSession(null)
-    );
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -186,15 +158,6 @@ export default function Navbar() {
           })}
         </div>
 
-        {session === null && (
-          <Link
-            href="/hub/login"
-            className="hidden whitespace-nowrap px-[9px] py-[10px] font-[family-name:var(--font-gabarito)] text-[17px] font-medium text-black transition-colors hover:text-[#ed1a24] md:block"
-          >
-            Log in
-          </Link>
-        )}
-
         {/* CTA */}
         <Link
           href="/contact"
@@ -255,15 +218,6 @@ export default function Navbar() {
               </Link>
             );
           })}
-          {session === null && (
-            <Link
-              href="/hub/login"
-              onClick={() => setOpen(false)}
-              className="font-[family-name:var(--font-gabarito)] font-medium text-[18px] text-black hover:text-[#ed1a24] transition-colors"
-            >
-              Log in
-            </Link>
-          )}
           <Link
             href="/contact"
             onClick={() => setOpen(false)}

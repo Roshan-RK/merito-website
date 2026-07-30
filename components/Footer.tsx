@@ -77,9 +77,6 @@ export default function Footer() {
                 <Link href="/meritoways" className="transition-colors hover:text-[#ed1a24]">
                   Our Approach
                 </Link>
-                <Link href="/hub" className="transition-colors hover:text-[#ed1a24]">
-                  HUB
-                </Link>
                 <Link
                   href="/contact"
                   className="text-left transition-colors hover:text-[#ed1a24]"
