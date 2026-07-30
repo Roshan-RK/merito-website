@@ -84,7 +84,7 @@ export default async function CombinedReportPage({
       .limit(1);
     const current = leads?.[0];
     if (current) {
-      const unlocked = await isReportUnlocked(user.id, current.id);
+      const unlocked = await isReportUnlocked(user.id, current.role_title);
       if (unlocked && current.resume_match_status === "READY" && current.resume_match_raw) {
         fitment = {
           roleTitle: current.role_title,

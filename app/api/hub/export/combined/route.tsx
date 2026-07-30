@@ -33,7 +33,7 @@ export async function GET(request: Request) {
       .limit(1);
     const current = leads?.[0];
     if (current) {
-      const unlocked = await isReportUnlocked(user.id, current.id);
+      const unlocked = await isReportUnlocked(user.id, current.role_title);
       if (unlocked && current.resume_match_status === "READY" && current.resume_match_raw) {
         anyReady = true;
       }
