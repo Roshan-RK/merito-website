@@ -388,24 +388,14 @@ export default async function CombinedReportPage({
               </div>
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14, marginBottom: 20 }}>
-              {interview.report.strengths && (
-                <div className="bg-[#eefdf1]" style={{ borderRadius: 14, padding: "14px 16px", breakInside: "avoid" }}>
-                  <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#16803c]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>Strengths</p>
-                  {splitBullets(interview.report.strengths).map((point, i) => (
-                    <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: "0 0 8px" }}>✓ {point}</p>
-                  ))}
-                </div>
-              )}
-              {interview.report.areasOfImprovement && (
-                <div className="bg-[#fdeced]" style={{ borderRadius: 14, padding: "14px 16px", breakInside: "avoid" }}>
-                  <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#ed1a24]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>Areas to improve</p>
-                  {splitBullets(interview.report.areasOfImprovement).map((point, i) => (
-                    <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: "0 0 8px" }}>✗ {point}</p>
-                  ))}
-                </div>
-              )}
-            </div>
+            {interview.report.strengths && (
+              <div className="bg-[#eefdf1]" style={{ borderRadius: 14, padding: "14px 16px", marginBottom: 20, breakInside: "avoid" }}>
+                <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#16803c]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>Strengths</p>
+                {splitBullets(interview.report.strengths).map((point, i) => (
+                  <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: "0 0 8px" }}>✓ {point}</p>
+                ))}
+              </div>
+            )}
 
             {interview.report.roadmap && <RoadmapTimeline roadmap={interview.report.roadmap} />}
 
