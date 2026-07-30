@@ -147,9 +147,13 @@ export default function DashboardClient({
           level={level}
           bundleEligible={bundleEligible}
           onClose={() => setModal("none")}
-          onUnlocked={(unlockedReport) => {
+          onUnlocked={(unlockedReport, selection) => {
             setReportUnlocked(true);
             setReport(unlockedReport);
+            if (selection === "bundle") {
+              setPersonalityUnlockedState(true);
+              setReferencesUnlockedState(true);
+            }
             setModal("none");
           }}
         />

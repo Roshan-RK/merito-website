@@ -59,7 +59,7 @@ export default function ReportPaywallModal({
   level: CandidateLevel;
   bundleEligible: boolean;
   onClose: () => void;
-  onUnlocked: (report: ResumeMatchReportReady) => void;
+  onUnlocked: (report: ResumeMatchReportReady, selection: "solo" | "bundle") => void;
 }) {
   const [paying, setPaying] = useState(false);
   const [pending, setPending] = useState(false);
@@ -127,7 +127,7 @@ export default function ReportPaywallModal({
                 setPending(true);
                 return;
               }
-              onUnlocked(verifyData.report);
+              onUnlocked(verifyData.report, selection);
             } catch {
               setPaying(false);
               setError("Payment succeeded but verification failed — please refresh.");
@@ -141,7 +141,7 @@ export default function ReportPaywallModal({
         return;
       }
       setPaying(false);
-      onUnlocked(data.report);
+      onUnlocked(data.report, selection);
     } catch {
       setPaying(false);
       setError("Something went wrong — please try again.");
