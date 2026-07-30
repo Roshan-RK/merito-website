@@ -9,6 +9,7 @@ import ParameterScoreTile from "./ParameterScoreTile";
 import CriteriaMatchCard from "./CriteriaMatchCard";
 import SkillReportTable from "./SkillReportTable";
 import RoadmapTimeline from "../RoadmapTimeline";
+import EvaluatorNotes, { InlineText } from "../EvaluatorNotes";
 import AnswerTranscript from "./AnswerTranscript";
 import { getCriteriaStatusColor } from "@/lib/criteriaStatus";
 
@@ -207,7 +208,7 @@ export default async function InterviewReportPage({
               </p>
               {splitBullets(report.strengths).map((point, i) => (
                 <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: "0 0 8px" }}>
-                  ✓ {point}
+                  ✓ <InlineText text={point} />
                 </p>
               ))}
             </div>
@@ -225,7 +226,7 @@ export default async function InterviewReportPage({
               </p>
               {splitBullets(report.areasOfImprovement).map((point, i) => (
                 <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: "0 0 8px" }}>
-                  ✗ {point}
+                  ✗ <InlineText text={point} />
                 </p>
               ))}
             </div>
@@ -273,19 +274,7 @@ export default async function InterviewReportPage({
 
         {report.roadmap && <RoadmapTimeline roadmap={report.roadmap} />}
 
-        {report.feedbackToInterviewer && (
-          <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, margin: "0 0 32px" }}>
-            <p
-              className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]"
-              style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}
-            >
-              Evaluator notes
-            </p>
-            <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13.5, lineHeight: 1.75, margin: 0, whiteSpace: "pre-wrap" }}>
-              {report.feedbackToInterviewer}
-            </p>
-          </div>
-        )}
+        {report.feedbackToInterviewer && <EvaluatorNotes notes={report.feedbackToInterviewer} />}
 
         <div
           className={report.flagForSuspiciousActivity ? "bg-[#fdeced]" : "bg-[#eefdf1]"}

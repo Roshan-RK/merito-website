@@ -1,0 +1,83 @@
+import { describe, it, expect } from "vitest";
+import { parseInlineBold, parseEvaluatorNotes } from "../markdownNotes";
+
+describe("parseInlineBold", () => {
+  it("splits bold spans from surrounding plain text", () => {
+    expect(parseInlineBold("**Marketing Experience:** Gained hands-on experience.")).toEqual([
+      { text: "Marketing Experience:", bold: true },
+      { text: " Gained hands-on experience.", bold: false },
+    ]);
+  });
+
+  it("returns a single plain segment when there's no bold markup", () => {
+    expect(parseInlineBold("Just plain text.")).toEqual([{ text: "Just plain text.", bold: false }]);
+  });
+
+  it("handles multiple bold spans in one string", () => {
+    expect(parseInlineBold("**A** and **B** and plain.")).toEqual([
+      { text: "A", bold: true },
+      { text: " and ", bold: false },
+      { text: "B", bold: true },
+      { text: " and plain.", bold: false },
+    ]);
+  });
+});
+
+describe("parseEvaluatorNotes", () => {
+  // Real production feedbackToInterviewer string, pulled 2026-07-30 from the
+  // same live Growth Strategist interview used for the roadmap fixture.
+  const REAL_NOTES = `### Strengths
+- Diverse experience in digital marketing activities, such as influencer marketing, social media marketing, and brand relaunch.
+- Demonstrates an understanding of the importance of collaboration, discipline, and communication within team projects.
+- Some practical knowledge of tools like Apollo and Sales Navigator.
+
+### Weaknesses
+- Lack of depth in discussing frameworks or structured strategies.
+- Poor communication skills; answers lacked clarity and often deviated from the core question.
+
+### Opportunities
+- Candidate has hands-on experience in marketing and brand activities, which can be leveraged and expanded in a focused training environment.
+
+### Threats
+- Inability to communicate clear, concrete strategies may hinder collaboration and decision-making in client-facing roles.
+
+### Training Needed
+1. Structured frameworks for growth strategies (e.g., AARRR, SWOT, or OKRs).
+2. Measuring ROI and working with specific KPIs such as CAC, LTV, and customer retention rates.
+
+Recommendation: The candidate should not be considered for further rounds unless they demonstrate improved clarity, structure, and technical knowledge in their skill set.`;
+
+  it("parses sections and the trailing recommendation from the real production shape", () => {
+    const result = parseEvaluatorNotes(REAL_NOTES);
+    expect(result).not.toBeNull();
+    expect(result!.sections.map((s) => s.heading)).toEqual([
+      "Strengths",
+      "Weaknesses",
+      "Opportunities",
+      "Threats",
+      "Training Needed",
+    ]);
+    expect(result!.sections[0].items).toHaveLength(3);
+    expect(result!.sections[4].items).toEqual([
+      "Structured frameworks for growth strategies (e.g., AARRR, SWOT, or OKRs).",
+      "Measuring ROI and working with specific KPIs such as CAC, LTV, and customer retention rates.",
+    ]);
+    expect(result!.recommendation).toBe(
+      "The candidate should not be considered for further rounds unless they demonstrate improved clarity, structure, and technical knowledge in their skill set."
+    );
+  });
+
+  it("returns null when there are no ### headings", () => {
+    expect(parseEvaluatorNotes("Just a plain paragraph with no structure.")).toBeNull();
+  });
+
+  it("returns null for an empty string", () => {
+    expect(parseEvaluatorNotes("")).toBeNull();
+  });
+
+  it("returns a parsed result with no recommendation when the line is absent", () => {
+    const result = parseEvaluatorNotes("### Strengths\n- Good communicator.");
+    expect(result).not.toBeNull();
+    expect(result!.recommendation).toBeNull();
+  });
+});
