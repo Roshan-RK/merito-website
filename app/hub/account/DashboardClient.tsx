@@ -9,6 +9,7 @@ import PersonalityPaywallModal from "./PersonalityPaywallModal";
 import ReferencesPaywallModal from "./ReferencesPaywallModal";
 import InterviewPaywallModal from "./InterviewPaywallModal";
 import CombinedExportModal from "./CombinedExportModal";
+import ShareLinkedInModal from "./ShareLinkedInModal";
 import CounsellingCard from "./CounsellingCard";
 import CounsellingPaywallModal from "./CounsellingPaywallModal";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
@@ -51,7 +52,7 @@ export default function DashboardClient({
   counsellingPriceLabel: string;
   initialCounsellingRequested: boolean;
 }) {
-  const [modal, setModal] = useState<"none" | "report" | "personality" | "references" | "interview" | "export" | "counselling">("none");
+  const [modal, setModal] = useState<"none" | "report" | "personality" | "references" | "interview" | "export" | "share" | "counselling">("none");
   const [reportUnlocked, setReportUnlocked] = useState(initialReportUnlocked);
   const [report, setReport] = useState<ResumeMatchReportReady | null>(initialReport);
   const [interviewStatus, setInterviewStatus] = useState<InterviewStatus>(initialInterviewStatus);
@@ -98,6 +99,7 @@ export default function DashboardClient({
           onOpenReferencesPaywall={() => setModal("references")}
           onOpenInterviewStart={() => setModal("interview")}
           onOpenExport={() => setModal("export")}
+          onOpenShare={() => setModal("share")}
         />
 
         <div>
@@ -199,6 +201,16 @@ export default function DashboardClient({
       )}
       {modal === "export" && (
         <CombinedExportModal
+          roleTitle={roleTitle}
+          reportUnlocked={reportUnlocked}
+          personalityStatus={personalityStatus}
+          interviewStatus={interviewStatus}
+          referenceCheckStatus={referenceCheckStatus}
+          onClose={() => setModal("none")}
+        />
+      )}
+      {modal === "share" && (
+        <ShareLinkedInModal
           roleTitle={roleTitle}
           reportUnlocked={reportUnlocked}
           personalityStatus={personalityStatus}

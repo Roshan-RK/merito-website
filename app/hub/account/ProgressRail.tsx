@@ -29,6 +29,7 @@ export default function ProgressRail({
   onOpenReferencesPaywall,
   onOpenInterviewStart,
   onOpenExport,
+  onOpenShare,
 }: {
   reportUnlocked: boolean;
   interviewStatus: InterviewStatus;
@@ -43,6 +44,7 @@ export default function ProgressRail({
   onOpenReferencesPaywall: () => void;
   onOpenInterviewStart: () => void;
   onOpenExport: () => void;
+  onOpenShare: () => void;
 }) {
   const referencesDone = referenceCheckStatus === "completed";
   const doneCount =
@@ -252,6 +254,14 @@ export default function ProgressRail({
         style={{ width: "100%", marginTop: 20, background: "none", border: "1px solid rgba(237,26,36,0.4)", borderRadius: 8, padding: "10px 16px", fontSize: 13, cursor: "pointer" }}
       >
         Download consolidated report
+      </button>
+
+      <button
+        onClick={onOpenShare}
+        className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+        style={{ width: "100%", marginTop: 10, background: "none", border: "1px solid rgba(237,26,36,0.4)", borderRadius: 8, padding: "10px 16px", fontSize: 13, cursor: "pointer" }}
+      >
+        Share on LinkedIn
       </button>
     </div>
   );
