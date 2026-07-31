@@ -80,6 +80,8 @@ export async function GET(request: Request) {
   const targetUrl = new URL("/hub/account/combined-report", url.origin);
   targetUrl.searchParams.set("include", Array.from(include).join(","));
   if (roleTitle) targetUrl.searchParams.set("role", roleTitle);
+  const interviewSections = url.searchParams.get("interviewSections");
+  if (interviewSections) targetUrl.searchParams.set("interviewSections", interviewSections);
 
   let buffer: Buffer;
   try {

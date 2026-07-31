@@ -5,6 +5,35 @@ import type { InterviewStatus, PersonalityStatus } from "./ProgressRail";
 
 type ReportType = "fitment" | "personality" | "interview" | "references";
 
+type InterviewSection =
+  | "scoreGauge"
+  | "overview"
+  | "skillReport"
+  | "criteriaMatch"
+  | "skillEvaluation"
+  | "strengths"
+  | "integrity"
+  | "recommendation"
+  | "roadmap"
+  | "videoNotes";
+
+const INTERVIEW_SECTIONS: { key: InterviewSection; label: string }[] = [
+  { key: "scoreGauge", label: "Score & delivery parameters" },
+  { key: "overview", label: "AI overview summary" },
+  { key: "skillReport", label: "Skill-wise score table" },
+  { key: "criteriaMatch", label: "Criteria match summary" },
+  { key: "skillEvaluation", label: "Skill-wise evaluation detail" },
+  { key: "strengths", label: "What the interview evidenced" },
+  { key: "integrity", label: "Integrity assessment" },
+  { key: "recommendation", label: "AI recommendation (blunt hire/no-hire verdict)" },
+  { key: "roadmap", label: "Improvement roadmap" },
+  { key: "videoNotes", label: "Video & delivery notes" },
+];
+
+const DEFAULT_INTERVIEW_SECTIONS = new Set<InterviewSection>(
+  INTERVIEW_SECTIONS.map((s) => s.key).filter((k) => k !== "recommendation")
+);
+
 export default function CombinedExportModal({
   roleTitle,
   reportUnlocked,
@@ -28,6 +57,19 @@ export default function CombinedExportModal({
   };
 
   const [selected, setSelected] = useState<Set<ReportType>>(new Set());
+  const [interviewSections, setInterviewSections] = useState<Set<InterviewSection>>(
+    new Set(DEFAULT_INTERVIEW_SECTIONS)
+  );
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+
+  const toggleSection = (key: InterviewSection) => {
+    setInterviewSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const toggle = (type: ReportType) => {
     if (!availability[type]) return;
@@ -47,7 +89,13 @@ export default function CombinedExportModal({
   };
 
   const canGenerate = selected.size > 0;
-  const href = `/api/hub/export/combined?include=${Array.from(selected).join(",")}&role=${encodeURIComponent(roleTitle)}`;
+  const params = new URLSearchParams();
+  params.set("include", Array.from(selected).join(","));
+  params.set("role", roleTitle);
+  if (selected.has("interview")) {
+    params.set("interviewSections", Array.from(interviewSections).join(","));
+  }
+  const href = `/api/hub/export/combined?${params.toString()}`;
 
   return (
     <div
@@ -81,30 +129,62 @@ export default function CombinedExportModal({
         </p>
 
         {(Object.keys(labels) as ReportType[]).map((type) => (
-          <label
-            key={type}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "10px 4px",
-              opacity: availability[type] ? 1 : 0.45,
-              cursor: availability[type] ? "pointer" : "default",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={selected.has(type)}
-              disabled={!availability[type]}
-              onChange={() => toggle(type)}
-            />
-            <span className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14 }}>
-              {labels[type]}
-              {!availability[type] && (
-                <span style={{ color: "#9c9c9c", fontSize: 12 }}> — not completed yet</span>
-              )}
-            </span>
-          </label>
+          <div key={type}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "10px 4px",
+                opacity: availability[type] ? 1 : 0.45,
+                cursor: availability[type] ? "pointer" : "default",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(type)}
+                disabled={!availability[type]}
+                onChange={() => toggle(type)}
+              />
+              <span className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14 }}>
+                {labels[type]}
+                {!availability[type] && (
+                  <span style={{ color: "#9c9c9c", fontSize: 12 }}> — not completed yet</span>
+                )}
+              </span>
+            </label>
+            {type === "interview" && availability.interview && selected.has("interview") && (
+              <div style={{ padding: "0 4px 8px 30px" }}>
+                <button
+                  type="button"
+                  onClick={() => setCustomizeOpen((v) => !v)}
+                  className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+                  style={{ background: "none", border: "none", padding: 0, fontSize: 12.5, cursor: "pointer" }}
+                >
+                  Customize sections {customizeOpen ? "▲" : "▼"}
+                </button>
+                {customizeOpen && (
+                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2 }}>
+                    {INTERVIEW_SECTIONS.map((section) => (
+                      <label
+                        key={section.key}
+                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 0", cursor: "pointer" }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={interviewSections.has(section.key)}
+                          onChange={() => toggleSection(section.key)}
+                        />
+                        <span className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 12.5 }}>
+                          {section.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         ))}
 
         {canGenerate ? (

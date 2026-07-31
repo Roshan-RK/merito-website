@@ -76,6 +76,10 @@ export default async function CombinedReportPage({
   const includeParam = typeof params.include === "string" ? params.include : "fitment,personality,interview,references";
   const include = new Set(includeParam.split(",").filter(Boolean));
   const roleTitleParam = typeof params.role === "string" ? params.role : null;
+  const DEFAULT_INTERVIEW_SECTIONS =
+    "scoreGauge,overview,skillReport,criteriaMatch,skillEvaluation,strengths,integrity,roadmap,videoNotes";
+  const interviewSectionsParam = typeof params.interviewSections === "string" ? params.interviewSections : DEFAULT_INTERVIEW_SECTIONS;
+  const interviewSections = new Set(interviewSectionsParam.split(",").filter(Boolean));
 
   let fitment: { roleTitle: string; displayName: string; report: ResumeMatchReportReady } | null = null;
   if (include.has("fitment")) {
@@ -327,45 +331,53 @@ export default async function CombinedReportPage({
                   .join(" · "),
               ].join(" ")}
             />
-            <div
-              className="bg-white border border-black/[0.08]"
-              style={{ borderRadius: 14, padding: 20, display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr)", gap: 24, alignItems: "center", marginBottom: 20, breakInside: "avoid" }}
-            >
-              <div>
-                <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 12px" }}>
-                  Delivery parameters
-                </p>
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
-                  {Object.entries(interview.report.skillMetrics ?? {}).map(([skill, score]) => (
-                    <ParameterScoreTile key={skill} skill={skill} score={score} />
-                  ))}
+            {interviewSections.has("scoreGauge") && (
+              <div
+                className="bg-white border border-black/[0.08]"
+                style={{ borderRadius: 14, padding: 20, display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr)", gap: 24, alignItems: "center", marginBottom: 20, breakInside: "avoid" }}
+              >
+                <div>
+                  <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 12px" }}>
+                    Delivery parameters
+                  </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
+                    {Object.entries(interview.report.skillMetrics ?? {}).map(([skill, score]) => (
+                      <ParameterScoreTile key={skill} skill={skill} score={score} />
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center justify-center">
+                  <InterviewScoreGauge score={interview.report.overallScore} />
                 </div>
               </div>
-              <div className="flex items-center justify-center">
-                <InterviewScoreGauge score={interview.report.overallScore} />
+            )}
+
+            {interviewSections.has("overview") && (
+              <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20, breakInside: "avoid" }}>
+                <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>AI overview</p>
+                <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14.5, lineHeight: 1.7, margin: 0 }}>{interview.report.overallSummary}</p>
               </div>
-            </div>
-
-            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20, breakInside: "avoid" }}>
-              <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>AI overview</p>
-              <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14.5, lineHeight: 1.7, margin: 0 }}>{interview.report.overallSummary}</p>
-            </div>
-
-            {interview.report.overallSkillScore != null && (
-              <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 12, margin: "0 0 20px" }}>
-                Overall skill score: <strong className="text-black">{Math.round(interview.report.overallSkillScore)}%</strong>
-              </p>
             )}
 
-            {Object.keys(interview.report.skillReport).length > 0 && (
-              <SkillReportTable skillReport={interview.report.skillReport} />
+            {interviewSections.has("skillReport") && (
+              <>
+                {interview.report.overallSkillScore != null && (
+                  <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 12, margin: "0 0 20px" }}>
+                    Overall skill score: <strong className="text-black">{Math.round(interview.report.overallSkillScore)}%</strong>
+                  </p>
+                )}
+
+                {Object.keys(interview.report.skillReport).length > 0 && (
+                  <SkillReportTable skillReport={interview.report.skillReport} />
+                )}
+              </>
             )}
 
-            {typeof interview.report.skillMetrics?.criteriaMatch === "number" && (
+            {interviewSections.has("criteriaMatch") && typeof interview.report.skillMetrics?.criteriaMatch === "number" && (
               <CriteriaMatchCard criteriaMatchScore={interview.report.skillMetrics.criteriaMatch} criteriaEvaluationTable={interview.report.criteriaEvaluationTable} />
             )}
 
-            {interview.report.criteriaEvaluationTable.length > 0 && (
+            {interviewSections.has("skillEvaluation") && interview.report.criteriaEvaluationTable.length > 0 && (
               <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20, breakInside: "avoid" }}>
                 <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 14px" }}>
                   Skill-wise evaluation
@@ -393,9 +405,10 @@ export default async function CombinedReportPage({
               </div>
             )}
 
-            {(interview.report.strengths || interview.report.integrityCheck) && (
+            {((interviewSections.has("strengths") && interview.report.strengths) ||
+              (interviewSections.has("integrity") && interview.report.integrityCheck)) && (
               <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14, marginBottom: 20 }}>
-                {interview.report.strengths && (
+                {interviewSections.has("strengths") && interview.report.strengths && (
                   <div className="bg-[#eefdf1]" style={{ borderRadius: 14, padding: "14px 16px", breakInside: "avoid" }}>
                     <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#16803c]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>
                       What the interview evidenced
@@ -411,27 +424,29 @@ export default async function CombinedReportPage({
                   </div>
                 )}
 
-                <div
-                  className={interview.report.flagForSuspiciousActivity ? "bg-[#fdeced]" : "bg-[#eefdf1]"}
-                  style={{ borderRadius: 14, padding: "14px 16px", breakInside: "avoid" }}
-                >
-                  <p
-                    className="font-[family-name:var(--font-poppins)] font-bold uppercase"
-                    style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px", color: interview.report.flagForSuspiciousActivity ? "#ed1a24" : "#16803c" }}
+                {interviewSections.has("integrity") && (
+                  <div
+                    className={interview.report.flagForSuspiciousActivity ? "bg-[#fdeced]" : "bg-[#eefdf1]"}
+                    style={{ borderRadius: 14, padding: "14px 16px", breakInside: "avoid" }}
                   >
-                    Integrity assessment · {interview.report.flagForSuspiciousActivity ? "Flagged" : "No issues"}
-                  </p>
-                  <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>
-                    {interview.report.integrityCheck ||
-                      (interview.report.flagForSuspiciousActivity
-                        ? "Suspicious activity was flagged during this interview."
-                        : "No suspicious activity flagged during this interview.")}
-                  </p>
-                </div>
+                    <p
+                      className="font-[family-name:var(--font-poppins)] font-bold uppercase"
+                      style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px", color: interview.report.flagForSuspiciousActivity ? "#ed1a24" : "#16803c" }}
+                    >
+                      Integrity assessment · {interview.report.flagForSuspiciousActivity ? "Flagged" : "No issues"}
+                    </p>
+                    <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+                      {interview.report.integrityCheck ||
+                        (interview.report.flagForSuspiciousActivity
+                          ? "Suspicious activity was flagged during this interview."
+                          : "No suspicious activity flagged during this interview.")}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
-            {interviewRecommendation && (
+            {interviewSections.has("recommendation") && interviewRecommendation && (
               <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "14px 16px", marginBottom: 20, breakInside: "avoid" }}>
                 <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 8px" }}>
                   Recommendation
@@ -442,9 +457,9 @@ export default async function CombinedReportPage({
               </div>
             )}
 
-            {interview.report.roadmap && <RoadmapTimeline roadmap={interview.report.roadmap} />}
+            {interviewSections.has("roadmap") && interview.report.roadmap && <RoadmapTimeline roadmap={interview.report.roadmap} />}
 
-            {interview.report.videoReport && (
+            {interviewSections.has("videoNotes") && interview.report.videoReport && (
               <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20, breakInside: "avoid" }}>
                 <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>Video &amp; delivery notes</p>
                 <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13.5, lineHeight: 1.75, margin: 0, whiteSpace: "pre-wrap" }}>{interview.report.videoReport}</p>
