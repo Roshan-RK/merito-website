@@ -1,8 +1,10 @@
 import { intervueBoxFetch } from "./client";
+import { durationForLevel, type CandidateLevel } from "./agents";
 
 export type CreateJobInput = {
   title: string;
   jobDescription: string;
+  candidateLevel: CandidateLevel;
 };
 
 type CreateJobResponse = {
@@ -46,9 +48,17 @@ const SKILL_KEYWORDS = [
   "Operations Management", "Vendor Management",
 ] as const;
 
-const MAX_INFERRED_SKILLS = 15;
+// IntervueBox can only analyze a fixed number of skills per interview slot
+// (vendor-confirmed by Krupal, 2026-07-31): 7 skills in a 30-min interview,
+// 10 in a 45-min interview. Passing more than the slot supports just wastes
+// the extra skills, so cap inference to match durationForLevel's slot.
+const MAX_SKILLS_BY_DURATION: Record<30 | 45, number> = { 30: 7, 45: 10 };
 
-export function inferSkillsFromJD(jobDescription: string, max = MAX_INFERRED_SKILLS): string[] {
+export function maxSkillsForLevel(level: CandidateLevel): number {
+  return MAX_SKILLS_BY_DURATION[durationForLevel(level)];
+}
+
+export function inferSkillsFromJD(jobDescription: string, max: number): string[] {
   const found: string[] = [];
   for (const skill of SKILL_KEYWORDS) {
     const pattern = new RegExp(`\\b${skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
@@ -73,7 +83,7 @@ export async function createJob(input: CreateJobInput): Promise<{ ibJobId: strin
       department: "General",
       openings: 1,
       jobDescription: input.jobDescription,
-      skills: inferSkillsFromJD(input.jobDescription),
+      skills: inferSkillsFromJD(input.jobDescription, maxSkillsForLevel(input.candidateLevel)),
       education: [],
       experience: inferExperienceFromJD(input.jobDescription),
       status: "ACTIVE",

@@ -305,7 +305,7 @@ export async function POST(request: Request) {
   let ibResumeId: string | undefined;
   let ibAppliedJobId: string;
   try {
-    ({ ibJobId } = await createJob({ title: role, jobDescription: jdForScoring }));
+    ({ ibJobId } = await createJob({ title: role, jobDescription: jdForScoring, candidateLevel: validCandidateLevel }));
     ({ ibResumeId } = await uploadResume(cv, { jobId: ibJobId }));
     ({ ibAppliedJobId } = await addApplicantWithRetry({
       jobId: ibJobId,

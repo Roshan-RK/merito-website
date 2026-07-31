@@ -14,7 +14,7 @@ describe("createJob", () => {
     intervueBoxFetchMock.mockResolvedValue({ success: true, jobId: "JOB_123" });
     const { createJob } = await import("../jobs");
 
-    const result = await createJob({ title: "Senior Product Manager", jobDescription: "Ship things." });
+    const result = await createJob({ title: "Senior Product Manager", jobDescription: "Ship things.", candidateLevel: "mid" });
 
     expect(result).toEqual({ ibJobId: "JOB_123" });
     expect(intervueBoxFetchMock).toHaveBeenCalledWith(
@@ -45,7 +45,7 @@ describe("createJob", () => {
     intervueBoxFetchMock.mockResolvedValue({ success: true, jobId: "JOB_123" });
     const { createJob } = await import("../jobs");
 
-    await createJob({ title: "Senior Product Manager", jobDescription: "Looking for someone with 5-8 years of experience." });
+    await createJob({ title: "Senior Product Manager", jobDescription: "Looking for someone with 5-8 years of experience.", candidateLevel: "senior" });
 
     const sentBody = JSON.parse(intervueBoxFetchMock.mock.calls[0][1].body);
     expect(sentBody.experience).toBe("5-8 years");
@@ -69,7 +69,7 @@ describe("inferSkillsFromJD", () => {
 
   it("returns an empty array when no keywords match", async () => {
     const { inferSkillsFromJD } = await import("../jobs");
-    expect(inferSkillsFromJD("We need someone great.")).toEqual([]);
+    expect(inferSkillsFromJD("We need someone great.", 15)).toEqual([]);
   });
 
   it("caps results at the max count", async () => {
@@ -82,10 +82,34 @@ describe("inferSkillsFromJD", () => {
     intervueBoxFetchMock.mockResolvedValue({ success: true, jobId: "JOB_123" });
     const { createJob } = await import("../jobs");
 
-    await createJob({ title: "Engineer", jobDescription: "Need strong Python and SQL skills." });
+    await createJob({ title: "Engineer", jobDescription: "Need strong Python and SQL skills.", candidateLevel: "mid" });
 
     const sentBody = JSON.parse(intervueBoxFetchMock.mock.calls.at(-1)![1].body);
     expect(sentBody.skills).toEqual(["Python", "SQL"]);
+  });
+});
+
+describe("maxSkillsForLevel", () => {
+  it("caps entry and mid level at 7 skills (30-min interview slot)", async () => {
+    const { maxSkillsForLevel } = await import("../jobs");
+    expect(maxSkillsForLevel("entry")).toBe(7);
+    expect(maxSkillsForLevel("mid")).toBe(7);
+  });
+
+  it("caps senior level at 10 skills (45-min interview slot)", async () => {
+    const { maxSkillsForLevel } = await import("../jobs");
+    expect(maxSkillsForLevel("senior")).toBe(10);
+  });
+
+  it("createJob truncates inferred skills to the level's cap", async () => {
+    intervueBoxFetchMock.mockResolvedValue({ success: true, jobId: "JOB_123" });
+    const { createJob } = await import("../jobs");
+    const jd = "JavaScript TypeScript Python Java React Next.js Node.js SQL AWS Docker Kubernetes Go Rust C++ C#";
+
+    await createJob({ title: "Engineer", jobDescription: jd, candidateLevel: "mid" });
+
+    const sentBody = JSON.parse(intervueBoxFetchMock.mock.calls.at(-1)![1].body);
+    expect(sentBody.skills).toHaveLength(7);
   });
 });
 

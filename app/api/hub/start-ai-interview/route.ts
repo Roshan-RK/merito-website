@@ -106,12 +106,13 @@ export async function POST(request: Request) {
       .limit(1)
       .maybeSingle();
 
+    const candidateLevel = (lead.candidate_level as CandidateLevel) || "mid";
+
     if (priorAttempt) {
       const retakeJD = `${lead.jd_text}\n\n(Retake attempt — ${new Date().toISOString()})`;
-      ({ ibJobId } = await createJob({ title: roleTitle, jobDescription: retakeJD }));
+      ({ ibJobId } = await createJob({ title: roleTitle, jobDescription: retakeJD, candidateLevel }));
     }
 
-    const candidateLevel = (lead.candidate_level as CandidateLevel) || "mid";
     ({ ibAgentId } = await createInterviewAgent(ibJobId, roleTitle, candidateLevel));
 
     const { invited } = await sendInterviewInvitation(ibAgentId, [candidateId]);
