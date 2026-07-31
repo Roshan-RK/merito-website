@@ -10,6 +10,7 @@ export default function CombinedGauge({
   caption,
   diameter,
   band,
+  numberColor = "#0a0a0a",
 }: {
   value: number;
   max: number;
@@ -17,6 +18,7 @@ export default function CombinedGauge({
   caption?: string;
   diameter: 96 | 150;
   band: { textColor: string; trackColor: string };
+  numberColor?: string;
 }) {
   const { radius, stroke, numFont } = SIZES[diameter];
   const clamped = Math.min(max, Math.max(0, value));
@@ -40,7 +42,7 @@ export default function CombinedGauge({
         />
       </svg>
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-        <span className="font-[family-name:var(--font-fraunces)] font-semibold text-black" style={{ fontSize: numFont, lineHeight: 1 }}>
+        <span className="font-[family-name:var(--font-fraunces)] font-semibold" style={{ fontSize: numFont, lineHeight: 1, color: numberColor }}>
           {displayValue}
         </span>
         {caption && (

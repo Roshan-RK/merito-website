@@ -251,7 +251,7 @@ export default async function CombinedReportPage({
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 14 }}>
             {fitment && fitmentBand && fitmentBandDark && (
               <div className="bg-white/[0.04] border border-white/[0.1]" style={{ borderRadius: 16, padding: "18px 14px 16px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10 }}>
-                <CombinedGauge value={fitment.report.overallScore} max={100} displayValue={`${Math.round(fitment.report.overallScore)}%`} diameter={96} band={fitmentBandDark} />
+                <CombinedGauge value={fitment.report.overallScore} max={100} displayValue={`${Math.round(fitment.report.overallScore)}%`} diameter={96} band={fitmentBandDark} numberColor="#fff" />
                 <span className="font-[family-name:var(--font-inter)] font-semibold text-white" style={{ fontSize: 12.5 }}>Role Fitment</span>
                 <span
                   className="font-[family-name:var(--font-ibm-plex-mono)] uppercase"
@@ -263,7 +263,7 @@ export default async function CombinedReportPage({
             )}
             {interview && interviewBand && interviewBandDark && (
               <div className="bg-white/[0.04] border border-white/[0.1]" style={{ borderRadius: 16, padding: "18px 14px 16px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10 }}>
-                <CombinedGauge value={interview.report.overallScore} max={100} displayValue={`${Math.round(interview.report.overallScore)}%`} diameter={96} band={interviewBandDark} />
+                <CombinedGauge value={interview.report.overallScore} max={100} displayValue={`${Math.round(interview.report.overallScore)}%`} diameter={96} band={interviewBandDark} numberColor="#fff" />
                 <span className="font-[family-name:var(--font-inter)] font-semibold text-white" style={{ fontSize: 12.5 }}>AI Interview</span>
                 <span
                   className="font-[family-name:var(--font-ibm-plex-mono)] uppercase"
@@ -275,7 +275,7 @@ export default async function CombinedReportPage({
             )}
             {references && refBand && (
               <div className="bg-white/[0.04] border border-white/[0.1]" style={{ borderRadius: 16, padding: "18px 14px 16px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10 }}>
-                <CombinedGauge value={references.overallScore} max={5} displayValue={references.overallScore.toFixed(1)} diameter={96} band={{ textColor: refBand.textColor === "#1E8F5E" ? "#3FCB8C" : refBand.textColor === "#95324B" ? "#E8798F" : "#BD7E12", trackColor: "rgba(255,255,255,0.12)" }} />
+                <CombinedGauge value={references.overallScore} max={5} displayValue={references.overallScore.toFixed(1)} diameter={96} band={{ textColor: refBand.textColor === "#1E8F5E" ? "#3FCB8C" : refBand.textColor === "#95324B" ? "#E8798F" : "#BD7E12", trackColor: "rgba(255,255,255,0.12)" }} numberColor="#fff" />
                 <span className="font-[family-name:var(--font-inter)] font-semibold text-white" style={{ fontSize: 12.5 }}>References</span>
                 <span
                   className="font-[family-name:var(--font-ibm-plex-mono)] uppercase"
@@ -287,7 +287,7 @@ export default async function CombinedReportPage({
             )}
             {personality && (
               <div className="bg-white/[0.04] border border-white/[0.1]" style={{ borderRadius: 16, padding: "18px 14px 16px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10 }}>
-                <CombinedGauge value={5} max={5} displayValue="5/5" diameter={96} band={{ textColor: "#9C97E8", trackColor: "rgba(255,255,255,0.12)" }} />
+                <CombinedGauge value={5} max={5} displayValue="5/5" diameter={96} band={{ textColor: "#9C97E8", trackColor: "rgba(255,255,255,0.12)" }} numberColor="#fff" />
                 <span className="font-[family-name:var(--font-inter)] font-semibold text-white" style={{ fontSize: 12.5 }}>Personality</span>
                 <span
                   className="font-[family-name:var(--font-ibm-plex-mono)] uppercase"
