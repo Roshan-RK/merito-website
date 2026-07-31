@@ -32,10 +32,10 @@ function splitBullets(text: string): string[] {
     .filter(Boolean);
 }
 
-function SectionHeading({ index, title, blurb }: { index: string; title: string; blurb: string }) {
+function SectionHeading({ index, title, blurb, eyebrowColor = "#DE3A2C" }: { index: string; title: string; blurb: string; eyebrowColor?: string }) {
   return (
     <div style={{ margin: "48px 0 24px" }}>
-      <p className="font-[family-name:var(--font-ibm-plex-mono)] font-semibold uppercase text-[#DE3A2C]" style={{ fontSize: 11.5, letterSpacing: "0.1em", margin: "0 0 10px" }}>
+      <p className="font-[family-name:var(--font-ibm-plex-mono)] font-semibold uppercase" style={{ fontSize: 11.5, letterSpacing: "0.1em", margin: "0 0 10px", color: eyebrowColor }}>
         {index}
       </p>
       <h2 className="font-[family-name:var(--font-fraunces)] font-semibold text-black" style={{ fontSize: "1.9rem", margin: "0 0 8px", letterSpacing: "-0.01em" }}>
@@ -349,7 +349,7 @@ export default async function CombinedReportPage({
 
         {personality && (
           <>
-            <SectionHeading index="02 · Personality" title="Big Five (OCEAN) working-style profile" blurb="Five research-backed traits describing working style, self-reported against a validated questionnaire. No score here is inherently good or bad — these describe tendencies, not ability." />
+            <SectionHeading index="02 · Personality" title="Big Five (OCEAN) working-style profile" blurb="Five research-backed traits describing working style, self-reported against a validated questionnaire. No score here is inherently good or bad — these describe tendencies, not ability." eyebrowColor="#4B4894" />
             <CondensedPersonalitySection candidateName={displayName} scores={personality.scores} />
           </>
         )}
@@ -359,6 +359,7 @@ export default async function CombinedReportPage({
             <SectionHeading
               index="03 · AI Video Interview"
               title="Structured, proctored interview"
+              eyebrowColor="#95324B"
               blurb={[
                 "Scored against role-critical competencies, with a parallel read on delivery quality.",
                 [

@@ -1,4 +1,12 @@
-import { TRAITS, TRAIT_NAME, type Scores } from "@/lib/personality";
+import { TRAITS, type Scores } from "@/lib/personality";
+
+const RADAR_LABEL: Record<string, string> = {
+  E: "Extroversion",
+  A: "Agreeableness",
+  C: "Conscientiousness",
+  ES: "Emotional Stability",
+  O: "Openness",
+};
 
 const SIZE = 300;
 const CENTER = 150;
@@ -22,7 +30,7 @@ function pointsFor(fractions: number[]): string {
 
 export default function CombinedRadar({ scores }: { scores: Scores }) {
   const values = TRAITS.map((t) => scores[t].pct / 100);
-  const labels = TRAITS.map((t) => TRAIT_NAME[t]);
+  const labels = TRAITS.map((t) => RADAR_LABEL[t]);
 
   return (
     <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width={SIZE} height={SIZE}>
