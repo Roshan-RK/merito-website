@@ -13,7 +13,6 @@ import { getScoreBand } from "../interview/InterviewScoreGauge";
 import { remapBand, remapBandDark } from "./combinedBandColors";
 import CombinedGauge from "./CombinedGauge";
 import CombinedCategoryCard from "./CombinedCategoryCard";
-import CombinedParameterTile from "./CombinedParameterTile";
 import CombinedCriteriaCard from "./CombinedCriteriaCard";
 import CombinedSkillTable from "./CombinedSkillTable";
 import CombinedRoadmapTimeline from "./CombinedRoadmapTimeline";
@@ -59,7 +58,7 @@ function SummaryRow({ pillLabel, pillTier, children, gauge }: { pillLabel: strin
   return (
     <div
       className="bg-white border border-black/[0.08]"
-      style={{ borderRadius: 22, padding: "26px 30px", display: "grid", gridTemplateColumns: "1fr auto", gap: 32, alignItems: "center", marginBottom: 28 }}
+      style={{ borderRadius: 22, padding: "26px 30px", display: "grid", gridTemplateColumns: "1fr auto", gap: 32, alignItems: "center", marginBottom: 28, breakInside: "avoid" }}
     >
       <div>
         <span
@@ -79,7 +78,7 @@ function SummaryRow({ pillLabel, pillTier, children, gauge }: { pillLabel: strin
 
 function DimensionBars({ title, rows }: { title: string; rows: { label: string; value: number; max: number; color: string }[] }) {
   return (
-    <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 22, padding: "26px 30px", marginBottom: 22 }}>
+    <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 22, padding: "26px 30px", marginBottom: 22, breakInside: "avoid" }}>
       <p className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]" style={{ fontSize: 11, letterSpacing: "0.1em", margin: "0 0 20px" }}>
         {title}
       </p>
@@ -332,7 +331,13 @@ export default async function CombinedReportPage({
                   Strong points
                 </p>
                 {fitment.report.strongPoints.map((point, i) => (
-                  <p key={i} className="font-[family-name:var(--font-inter)] text-black" style={{ fontSize: 14, lineHeight: 1.6, margin: "0 0 9px" }}>✓ {point}</p>
+                  <div key={i} className="flex items-start" style={{ gap: 10, marginBottom: 9 }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" style={{ flexShrink: 0, marginTop: 2 }}>
+                      <circle cx="8" cy="8" r="8" fill="#1E8F5E" />
+                      <path d="M4.5 8.2l2.2 2.2 4.8-5" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <p className="font-[family-name:var(--font-inter)] text-black" style={{ fontSize: 14, lineHeight: 1.6, margin: 0 }}>{point}</p>
+                  </div>
                 ))}
               </div>
             )}
@@ -374,16 +379,15 @@ export default async function CombinedReportPage({
                 >
                   {interview.report.overallSummary}
                 </SummaryRow>
-                <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 22, padding: "26px 30px", marginBottom: 20 }}>
-                  <p className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]" style={{ fontSize: 11, letterSpacing: "0.1em", margin: "0 0 18px" }}>
-                    Interview Parameter
-                  </p>
-                  <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
-                    {Object.entries(interview.report.skillMetrics ?? {}).map(([skill, score]) => (
-                      <CombinedParameterTile key={skill} skill={skill} score={score} />
-                    ))}
-                  </div>
-                </div>
+                <DimensionBars
+                  title="Interview Parameter"
+                  rows={Object.entries(interview.report.skillMetrics ?? {}).map(([skill, score]) => ({
+                    label: skill.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()).trim(),
+                    value: score,
+                    max: 100,
+                    color: score >= 70 ? "#1E8F5E" : score >= 40 ? "#BD7E12" : "#95324B",
+                  }))}
+                />
               </>
             )}
 

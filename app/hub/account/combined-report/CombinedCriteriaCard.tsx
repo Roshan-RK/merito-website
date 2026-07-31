@@ -15,7 +15,7 @@ export default function CombinedCriteriaCard({
   const unmatched = criteriaEvaluationTable.filter((e) => e.status === "Not Matched").length;
 
   return (
-    <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 16, padding: "26px 30px", marginBottom: 20 }}>
+    <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 16, padding: "26px 30px", marginBottom: 20, breakInside: "avoid" }}>
       <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
         <p
           className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]"

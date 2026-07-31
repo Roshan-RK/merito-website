@@ -1,8 +1,9 @@
 import { TRAITS, TRAIT_NAME, type Scores } from "@/lib/personality";
 
-const SIZE = 260;
-const CENTER = 130;
-const MAX_RADIUS = 95;
+const SIZE = 300;
+const CENTER = 150;
+const MAX_RADIUS = 82;
+const LABEL_RADIUS = MAX_RADIUS + 32;
 const RING_FRACTIONS = [0.25, 0.5, 0.75, 1];
 
 function angleFor(index: number, count: number): number {
@@ -50,8 +51,8 @@ export default function CombinedRadar({ scores }: { scores: Scores }) {
       })}
       {TRAITS.map((t, i) => {
         const a = angleFor(i, TRAITS.length);
-        const lx = CENTER + Math.cos(a) * (MAX_RADIUS + 30);
-        const ly = CENTER + Math.sin(a) * (MAX_RADIUS + 30);
+        const lx = CENTER + Math.cos(a) * LABEL_RADIUS;
+        const ly = CENTER + Math.sin(a) * LABEL_RADIUS;
         const words = labels[i].split(" ");
         return (
           <text

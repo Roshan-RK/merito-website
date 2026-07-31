@@ -69,7 +69,7 @@ export default function CombinedRoadmapTimeline({ roadmap }: { roadmap: string }
             >
               {i + 1}
             </div>
-            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 16, padding: "20px 22px", height: "100%" }}>
+            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 16, padding: "20px 22px", height: "100%", breakInside: "avoid" }}>
               <span
                 className="font-[family-name:var(--font-ibm-plex-mono)] uppercase"
                 style={{

@@ -15,7 +15,7 @@ function scoreColor(score: number): string {
 export default function CombinedSkillTable({ skillReport }: { skillReport: Record<string, { score: number; comment: string }> }) {
   const entries = Object.entries(skillReport);
   return (
-    <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 16, padding: "26px 30px", marginBottom: 20 }}>
+    <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 16, padding: "26px 30px", marginBottom: 20, breakInside: "avoid" }}>
       <p
         className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]"
         style={{ fontSize: 11, letterSpacing: "0.1em", margin: "0 0 18px" }}

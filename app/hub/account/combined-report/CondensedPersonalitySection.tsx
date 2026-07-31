@@ -22,7 +22,7 @@ export default function CondensedPersonalitySection({
     <>
       <div
         className="bg-white border border-black/[0.08]"
-        style={{ borderRadius: 22, padding: 30, display: "grid", gridTemplateColumns: "280px 1fr", gap: 36, alignItems: "center", marginBottom: 20 }}
+        style={{ borderRadius: 22, padding: 30, display: "grid", gridTemplateColumns: "320px 1fr", gap: 36, alignItems: "center", marginBottom: 20, breakInside: "avoid" }}
       >
         <div className="flex items-center justify-center">
           <CombinedRadar scores={scores} />
