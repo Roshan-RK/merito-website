@@ -12,6 +12,18 @@ function scoreColor(score: number): string {
   return "#95324B";
 }
 
+function scoreTierLabel(score: number): string {
+  if (score >= 70) return "Strong";
+  if (score >= 40) return "Proficient";
+  return "Developing";
+}
+
+function scoreTierBg(score: number): string {
+  if (score >= 70) return "#E7F5EE";
+  if (score >= 40) return "#FBF1DF";
+  return "#F6E7EB";
+}
+
 export default function CombinedSkillTable({ skillReport }: { skillReport: Record<string, { score: number; comment: string }> }) {
   const entries = Object.entries(skillReport);
   return (
@@ -41,11 +53,16 @@ export default function CombinedSkillTable({ skillReport }: { skillReport: Recor
             <p className="font-[family-name:var(--font-inter)] text-[#6C6779]" style={{ fontSize: 13.5, lineHeight: 1.6, margin: 0 }}>
               {entry.comment}
             </p>
-            <span
-              className="font-[family-name:var(--font-fraunces)] font-semibold"
-              style={{ fontSize: 20, color: scoreColor(entry.score), textAlign: "right" }}
-            >
-              {Math.round(entry.score)}
+            <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+              <span className="font-[family-name:var(--font-fraunces)] font-semibold" style={{ fontSize: 20, color: scoreColor(entry.score) }}>
+                {Math.round(entry.score)}
+              </span>
+              <span
+                className="font-[family-name:var(--font-ibm-plex-mono)] font-semibold uppercase"
+                style={{ fontSize: 9.5, letterSpacing: "0.06em", padding: "2px 8px", borderRadius: 12, background: scoreTierBg(entry.score), color: scoreColor(entry.score) }}
+              >
+                {scoreTierLabel(entry.score)}
+              </span>
             </span>
           </div>
         ))}

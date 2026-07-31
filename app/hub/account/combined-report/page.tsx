@@ -320,41 +320,49 @@ export default async function CombinedReportPage({
         </div>
       </div>
 
-      <div className="mx-auto" style={{ maxWidth: 860, padding: "28px 20px 60px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 24, padding: "26px 0", borderBottom: "1px solid #E6E1ED", marginBottom: 24 }}>
-          <div>
-            <p className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]" style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>Candidate</p>
-            <p className="font-[family-name:var(--font-fraunces)] font-semibold text-black" style={{ fontSize: 17, margin: 0 }}>{displayName}</p>
-          </div>
-          <div>
-            <p className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]" style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>Target Role</p>
-            <p className="font-[family-name:var(--font-fraunces)] font-semibold text-black" style={{ fontSize: 17, margin: 0 }}>{primaryRole}</p>
-          </div>
-          <div>
-            <p className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]" style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>Report Date</p>
-            <p className="font-[family-name:var(--font-fraunces)] font-semibold text-black" style={{ fontSize: 17, margin: 0 }}>{reportDate}</p>
-          </div>
-          <div>
-            <p className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]" style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>Report ID</p>
-            <p className="font-[family-name:var(--font-fraunces)] font-semibold text-black" style={{ fontSize: 17, margin: 0 }}>{reportId}</p>
-          </div>
-        </div>
-
-        <p className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]" style={{ fontSize: 11.5, letterSpacing: "0.12em", margin: "0 0 12px" }}>
-          What&apos;s inside
-        </p>
-        <div style={{ borderTop: "1px solid #E6E1ED", marginBottom: 40 }}>
-          {sections.map((s, i) => (
-            <div key={s.key} style={{ display: "grid", gridTemplateColumns: "40px 1fr 2fr", gap: 18, alignItems: "baseline", padding: "16px 4px", borderBottom: "1px solid #E6E1ED" }}>
-              <span className="font-[family-name:var(--font-ibm-plex-mono)] font-semibold text-[#DE3A2C]" style={{ fontSize: 12 }}>
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <span className="font-[family-name:var(--font-inter)] font-semibold text-black" style={{ fontSize: 15 }}>{s.label}</span>
-              <span className="font-[family-name:var(--font-inter)] text-[#6C6779]" style={{ fontSize: 13 }}>{s.blurb}</span>
+      <div style={{ background: "#fff", borderBottom: "1px solid #E6E1ED" }}>
+        <div className="mx-auto" style={{ maxWidth: 860, padding: "26px 20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 24 }}>
+            <div>
+              <p className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]" style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>Candidate</p>
+              <p className="font-[family-name:var(--font-fraunces)] font-semibold text-black" style={{ fontSize: 17, margin: 0 }}>{displayName}</p>
             </div>
-          ))}
+            <div>
+              <p className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]" style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>Target Role</p>
+              <p className="font-[family-name:var(--font-fraunces)] font-semibold text-black" style={{ fontSize: 17, margin: 0 }}>{primaryRole}</p>
+            </div>
+            <div>
+              <p className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]" style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>Report Date</p>
+              <p className="font-[family-name:var(--font-fraunces)] font-semibold text-black" style={{ fontSize: 17, margin: 0 }}>{reportDate}</p>
+            </div>
+            <div>
+              <p className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]" style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>Report ID</p>
+              <p className="font-[family-name:var(--font-fraunces)] font-semibold text-black" style={{ fontSize: 17, margin: 0 }}>{reportId}</p>
+            </div>
+          </div>
         </div>
+      </div>
 
+      <div style={{ background: "#fff", borderBottom: "1px solid #E6E1ED" }}>
+        <div className="mx-auto" style={{ maxWidth: 860, padding: "40px 20px 44px" }}>
+          <p className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]" style={{ fontSize: 11.5, letterSpacing: "0.12em", margin: "0 0 12px" }}>
+            What&apos;s inside
+          </p>
+          <div style={{ borderTop: "1px solid #E6E1ED" }}>
+            {sections.map((s, i) => (
+              <div key={s.key} style={{ display: "grid", gridTemplateColumns: "40px 1fr 2fr", gap: 18, alignItems: "baseline", padding: "16px 4px", borderBottom: "1px solid #E6E1ED" }}>
+                <span className="font-[family-name:var(--font-ibm-plex-mono)] font-semibold text-[#DE3A2C]" style={{ fontSize: 12 }}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="font-[family-name:var(--font-inter)] font-semibold text-black" style={{ fontSize: 15 }}>{s.label}</span>
+                <span className="font-[family-name:var(--font-inter)] text-[#6C6779]" style={{ fontSize: 13 }}>{s.blurb}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto" style={{ maxWidth: 860, padding: "28px 20px 60px" }}>
         {fitment && fitmentBand && (
           <>
             <SectionHeading index="01 · Role Fitment" title="Matched against six weighted dimensions" blurb={`CV and experience compared against the ${fitment.roleTitle} job description. Scores below 100% usually reflect information missing from the CV, not an absence of capability.`} />
@@ -638,14 +646,19 @@ export default async function CombinedReportPage({
               </div>
             ))}
           </div>
-          <div style={{ borderTop: "1px solid #E6E1ED", paddingTop: 24 }}>
-            <p className="font-[family-name:var(--font-fraunces)] font-semibold text-black" style={{ fontSize: 15, margin: "0 0 5px" }}>
-              Merito HUB — the talent partner that turns job briefs into dream hires.
-            </p>
-            <p className="font-[family-name:var(--font-ibm-plex-mono)] text-[#6C6779]" style={{ fontSize: 11, margin: 0 }}>
-              Career Corner Education Pvt. Ltd. · merito.ai · admin@merito.ai · +91 97676-63123
-            </p>
-          </div>
+        </div>
+      </div>
+      <div style={{ background: "#15121F", padding: "40px 20px" }}>
+        <div className="mx-auto" style={{ maxWidth: 860 }}>
+          <p className="font-[family-name:var(--font-fraunces)] font-semibold text-white" style={{ fontSize: 16, margin: "0 0 6px" }}>
+            Merito HUB
+          </p>
+          <p className="font-[family-name:var(--font-inter)] text-[#B8B3C8]" style={{ fontSize: 13, margin: 0, maxWidth: "52ch" }}>
+            The talent partner that turns job briefs into dream hires.
+          </p>
+          <p className="font-[family-name:var(--font-ibm-plex-mono)] text-[#7A7590]" style={{ fontSize: 11, margin: "10px 0 0" }}>
+            Career Corner Education Pvt. Ltd. · merito.ai · admin@merito.ai · +91 97676-63123
+          </p>
         </div>
       </div>
     </main>

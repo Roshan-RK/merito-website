@@ -25,10 +25,13 @@ export default function CombinedRoadmapTimeline({ roadmap }: { roadmap: string }
     <div style={{ margin: "0 0 32px" }}>
       <p
         className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]"
-        style={{ fontSize: 11, letterSpacing: "0.08em", margin: "0 0 16px" }}
+        style={{ fontSize: 11, letterSpacing: "0.08em", margin: "0 0 8px" }}
       >
         Improvement roadmap
       </p>
+      <h3 className="font-[family-name:var(--font-fraunces)] font-semibold text-black" style={{ fontSize: "1.4rem", margin: "0 0 20px" }}>
+        A structured path to close the gaps identified above
+      </h3>
 
       <div className="bg-[#E7F5EE] border" style={{ borderColor: "#CFEBDC", borderRadius: 16, padding: "18px 22px", marginBottom: 20 }}>
         <p
