@@ -2,31 +2,8 @@
 
 import { useState } from "react";
 import type { InterviewStatus, PersonalityStatus } from "./ProgressRail";
-
-type ReportType = "fitment" | "personality" | "interview" | "references";
-
-type InterviewSection =
-  | "scoreGauge"
-  | "overview"
-  | "skillReport"
-  | "criteriaMatch"
-  | "skillEvaluation"
-  | "strengths"
-  | "integrity"
-  | "recommendation"
-  | "roadmap";
-
-const INTERVIEW_SECTIONS: { key: InterviewSection; label: string }[] = [
-  { key: "scoreGauge", label: "Score & delivery parameters" },
-  { key: "overview", label: "AI overview summary" },
-  { key: "skillReport", label: "Skill-wise score table" },
-  { key: "criteriaMatch", label: "Criteria match summary" },
-  { key: "skillEvaluation", label: "Skill-wise evaluation detail" },
-  { key: "strengths", label: "What the interview evidenced" },
-  { key: "integrity", label: "Integrity assessment" },
-  { key: "recommendation", label: "AI recommendation (blunt hire/no-hire verdict)" },
-  { key: "roadmap", label: "Improvement roadmap" },
-];
+import ReportSectionPicker from "./ReportSectionPicker";
+import { INTERVIEW_SECTIONS, type InterviewSection, type ReportType } from "./reportSections";
 
 const DEFAULT_INTERVIEW_SECTIONS = new Set<InterviewSection>(
   INTERVIEW_SECTIONS.map((s) => s.key).filter((k) => k !== "recommendation")
@@ -47,18 +24,10 @@ export default function CombinedExportModal({
   referenceCheckStatus: "none" | "in_progress" | "completed";
   onClose: () => void;
 }) {
-  const availability: Record<ReportType, boolean> = {
-    fitment: reportUnlocked,
-    personality: personalityStatus === "ready",
-    interview: interviewStatus === "ready",
-    references: referenceCheckStatus === "completed",
-  };
-
   const [selected, setSelected] = useState<Set<ReportType>>(new Set());
   const [interviewSections, setInterviewSections] = useState<Set<InterviewSection>>(
     new Set(DEFAULT_INTERVIEW_SECTIONS)
   );
-  const [customizeOpen, setCustomizeOpen] = useState(false);
 
   const toggleSection = (key: InterviewSection) => {
     setInterviewSections((prev) => {
@@ -70,20 +39,12 @@ export default function CombinedExportModal({
   };
 
   const toggle = (type: ReportType) => {
-    if (!availability[type]) return;
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(type)) next.delete(type);
       else next.add(type);
       return next;
     });
-  };
-
-  const labels: Record<ReportType, string> = {
-    fitment: "Fitment report",
-    personality: "Personality report",
-    interview: "AI interview report",
-    references: "Reference check report",
   };
 
   const canGenerate = selected.size > 0;
@@ -126,64 +87,16 @@ export default function CombinedExportModal({
           Choose one or more completed reports to combine into a single PDF.
         </p>
 
-        {(Object.keys(labels) as ReportType[]).map((type) => (
-          <div key={type}>
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "10px 4px",
-                opacity: availability[type] ? 1 : 0.45,
-                cursor: availability[type] ? "pointer" : "default",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={selected.has(type)}
-                disabled={!availability[type]}
-                onChange={() => toggle(type)}
-              />
-              <span className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14 }}>
-                {labels[type]}
-                {!availability[type] && (
-                  <span style={{ color: "#9c9c9c", fontSize: 12 }}> — not completed yet</span>
-                )}
-              </span>
-            </label>
-            {type === "interview" && availability.interview && selected.has("interview") && (
-              <div style={{ padding: "0 4px 8px 30px" }}>
-                <button
-                  type="button"
-                  onClick={() => setCustomizeOpen((v) => !v)}
-                  className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-                  style={{ background: "none", border: "none", padding: 0, fontSize: 12.5, cursor: "pointer" }}
-                >
-                  Customize sections {customizeOpen ? "▲" : "▼"}
-                </button>
-                {customizeOpen && (
-                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2 }}>
-                    {INTERVIEW_SECTIONS.map((section) => (
-                      <label
-                        key={section.key}
-                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 0", cursor: "pointer" }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={interviewSections.has(section.key)}
-                          onChange={() => toggleSection(section.key)}
-                        />
-                        <span className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 12.5 }}>
-                          {section.label}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+        <ReportSectionPicker
+          reportUnlocked={reportUnlocked}
+          personalityStatus={personalityStatus}
+          interviewStatus={interviewStatus}
+          referenceCheckStatus={referenceCheckStatus}
+          selected={selected}
+          onToggle={toggle}
+          interviewSections={interviewSections}
+          onToggleInterviewSection={toggleSection}
+        />
 
         {canGenerate ? (
           <a
