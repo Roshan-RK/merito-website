@@ -14,8 +14,7 @@ type InterviewSection =
   | "strengths"
   | "integrity"
   | "recommendation"
-  | "roadmap"
-  | "videoNotes";
+  | "roadmap";
 
 const INTERVIEW_SECTIONS: { key: InterviewSection; label: string }[] = [
   { key: "scoreGauge", label: "Score & delivery parameters" },
@@ -27,7 +26,6 @@ const INTERVIEW_SECTIONS: { key: InterviewSection; label: string }[] = [
   { key: "integrity", label: "Integrity assessment" },
   { key: "recommendation", label: "AI recommendation (blunt hire/no-hire verdict)" },
   { key: "roadmap", label: "Improvement roadmap" },
-  { key: "videoNotes", label: "Video & delivery notes" },
 ];
 
 const DEFAULT_INTERVIEW_SECTIONS = new Set<InterviewSection>(

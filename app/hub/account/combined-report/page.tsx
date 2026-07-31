@@ -77,7 +77,7 @@ export default async function CombinedReportPage({
   const include = new Set(includeParam.split(",").filter(Boolean));
   const roleTitleParam = typeof params.role === "string" ? params.role : null;
   const DEFAULT_INTERVIEW_SECTIONS =
-    "scoreGauge,overview,skillReport,criteriaMatch,skillEvaluation,strengths,integrity,roadmap,videoNotes";
+    "scoreGauge,overview,skillReport,criteriaMatch,skillEvaluation,strengths,integrity,roadmap";
   const interviewSectionsParam = typeof params.interviewSections === "string" ? params.interviewSections : DEFAULT_INTERVIEW_SECTIONS;
   const interviewSections = new Set(interviewSectionsParam.split(",").filter(Boolean));
 
@@ -459,7 +459,7 @@ export default async function CombinedReportPage({
 
             {interviewSections.has("roadmap") && interview.report.roadmap && <RoadmapTimeline roadmap={interview.report.roadmap} />}
 
-            {interviewSections.has("videoNotes") && interview.report.videoReport && (
+            {interview.report.videoReport && (
               <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20, breakInside: "avoid" }}>
                 <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>Video &amp; delivery notes</p>
                 <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13.5, lineHeight: 1.75, margin: 0, whiteSpace: "pre-wrap" }}>{interview.report.videoReport}</p>
