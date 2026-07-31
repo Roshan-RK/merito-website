@@ -286,11 +286,12 @@ export default async function InterviewReportPage({
           >
             Integrity assessment · {report.flagForSuspiciousActivity ? "Flagged" : "No issues"}
           </p>
-          {report.integrityCheck && (
-            <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>
-              {report.integrityCheck}
-            </p>
-          )}
+          <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+            {report.integrityCheck ||
+              (report.flagForSuspiciousActivity
+                ? "Suspicious activity was flagged during this interview."
+                : "No suspicious activity flagged during this interview.")}
+          </p>
         </div>
 
         {report.videoReport && (

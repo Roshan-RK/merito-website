@@ -421,9 +421,12 @@ export default async function CombinedReportPage({
                   >
                     Integrity assessment · {interview.report.flagForSuspiciousActivity ? "Flagged" : "No issues"}
                   </p>
-                  {interview.report.integrityCheck && (
-                    <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>{interview.report.integrityCheck}</p>
-                  )}
+                  <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+                    {interview.report.integrityCheck ||
+                      (interview.report.flagForSuspiciousActivity
+                        ? "Suspicious activity was flagged during this interview."
+                        : "No suspicious activity flagged during this interview.")}
+                  </p>
                 </div>
               </div>
             )}
