@@ -41,6 +41,7 @@ export default function RecruiterPreviewClient({
   references,
   initialEnabled,
   initialSections,
+  initialLinkedinUrl,
 }: {
   roleTitle: string | null;
   candidateName: string;
@@ -50,12 +51,15 @@ export default function RecruiterPreviewClient({
   references: ReferenceReport | null;
   initialEnabled: boolean;
   initialSections: string[];
+  initialLinkedinUrl: string | null;
 }) {
   const [enabled, setEnabled] = useState(initialEnabled);
   const [sections, setSections] = useState<Set<ReportType>>(
     new Set(initialSections.filter((s): s is ReportType => (SELECTABLE_SECTIONS as string[]).includes(s)))
   );
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [linkedinUrl, setLinkedinUrl] = useState(initialLinkedinUrl ?? "");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const available: Record<ReportType, boolean> = {
     fitment: fitment !== null,
@@ -79,14 +83,22 @@ export default function RecruiterPreviewClient({
 
   async function handleSave() {
     setSaveState("saving");
+    setErrorMessage(null);
     try {
       const response = await fetch("/api/hub/recruiter-preview", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled, sections: Array.from(sections) }),
+        body: JSON.stringify({ enabled, sections: Array.from(sections), linkedinUrl }),
       });
-      setSaveState(response.ok ? "saved" : "error");
+      if (response.ok) {
+        setSaveState("saved");
+      } else {
+        const body = await response.json().catch(() => null);
+        setErrorMessage(body?.error ?? "Something went wrong saving — please try again.");
+        setSaveState("error");
+      }
     } catch {
+      setErrorMessage("Something went wrong saving — please try again.");
       setSaveState("error");
     }
   }
@@ -114,6 +126,28 @@ export default function RecruiterPreviewClient({
         Control what recruiters see about you via the Merito Hub recruiter preview, before they ever reach out. Raw
         scores, the AI recommendation, and the integrity assessment are never included.
       </p>
+
+      <div style={{ marginBottom: 20 }}>
+        <label
+          htmlFor="linkedin-url"
+          className="font-[family-name:var(--font-poppins)] font-semibold text-black"
+          style={{ fontSize: 13, display: "block", marginBottom: 6 }}
+        >
+          Your LinkedIn profile URL
+        </label>
+        <input
+          id="linkedin-url"
+          type="url"
+          value={linkedinUrl}
+          onChange={(e) => setLinkedinUrl(e.target.value)}
+          placeholder="https://www.linkedin.com/in/your-name"
+          className="font-[family-name:var(--font-poppins)]"
+          style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.15)", fontSize: 13.5 }}
+        />
+        <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, margin: "6px 0 0" }}>
+          Must be your own LinkedIn profile — this is what recruiters&apos; extension will match against.
+        </p>
+      </div>
 
       <label className="flex items-center" style={{ gap: 10, marginBottom: 16, cursor: "pointer" }}>
         <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
@@ -158,9 +192,9 @@ export default function RecruiterPreviewClient({
           Saved.
         </p>
       )}
-      {saveState === "error" && (
+      {saveState === "error" && errorMessage && (
         <p className="font-[family-name:var(--font-poppins)]" style={{ fontSize: 12.5, color: "#ed1a24", margin: "0 0 24px" }}>
-          Something went wrong saving — please try again.
+          {errorMessage}
         </p>
       )}
 

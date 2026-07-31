@@ -63,7 +63,7 @@ export default async function RecruiterPreviewPage() {
 
   const { data: settingsRow } = await supabase
     .from("recruiter_preview_settings")
-    .select("enabled, sections")
+    .select("enabled, sections, linkedin_url")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -77,6 +77,7 @@ export default async function RecruiterPreviewPage() {
       references={references}
       initialEnabled={settingsRow?.enabled ?? false}
       initialSections={(settingsRow?.sections as string[] | undefined) ?? []}
+      initialLinkedinUrl={settingsRow?.linkedin_url ?? null}
     />
   );
 }
