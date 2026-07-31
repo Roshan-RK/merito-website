@@ -5,6 +5,12 @@ import type { ReportType } from "@/app/hub/account/reportSections";
 export const runtime = "nodejs";
 
 const VALID_SECTIONS: ReportType[] = ["fitment", "personality", "interview", "references"];
+const LINKEDIN_URL_PATTERN = /^https?:\/\/(www\.)?linkedin\.com\/in\/[A-Za-z0-9\-_%]+$/;
+
+function normalizeLinkedinUrl(url: string): string {
+  const withoutQuery = url.split("?")[0];
+  return withoutQuery.endsWith("/") ? withoutQuery.slice(0, -1) : withoutQuery;
+}
 
 export async function GET(_request: Request) {
   const supabase = await createSupabaseServerClient();
@@ -18,13 +24,14 @@ export async function GET(_request: Request) {
 
   const { data } = await supabase
     .from("recruiter_preview_settings")
-    .select("enabled, sections")
+    .select("enabled, sections, linkedin_url")
     .eq("user_id", user.id)
     .maybeSingle();
 
   return Response.json({
     enabled: data?.enabled ?? false,
     sections: data?.sections ?? [],
+    linkedinUrl: data?.linkedin_url ?? null,
   });
 }
 
@@ -38,7 +45,7 @@ export async function PUT(request: Request) {
     return Response.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  let body: { enabled?: unknown; sections?: unknown };
+  let body: { enabled?: unknown; sections?: unknown; linkedinUrl?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -59,12 +66,31 @@ export async function PUT(request: Request) {
     );
   }
 
+  let linkedinUrl: string | null = null;
+  if (typeof body.linkedinUrl === "string" && body.linkedinUrl.trim().length > 0) {
+    linkedinUrl = normalizeLinkedinUrl(body.linkedinUrl.trim());
+    if (!LINKEDIN_URL_PATTERN.test(linkedinUrl)) {
+      return Response.json(
+        { error: "linkedinUrl must be a valid LinkedIn profile URL (e.g. https://www.linkedin.com/in/your-name)." },
+        { status: 400 }
+      );
+    }
+  }
+
+  if (body.enabled && !linkedinUrl) {
+    return Response.json(
+      { error: "A LinkedIn profile URL is required before visibility can be turned on." },
+      { status: 400 }
+    );
+  }
+
   const admin = getSupabaseServerClient();
   const { error: upsertError } = await admin.from("recruiter_preview_settings").upsert(
     {
       user_id: user.id,
       enabled: body.enabled,
       sections: body.sections,
+      linkedin_url: linkedinUrl,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" }
@@ -78,5 +104,5 @@ export async function PUT(request: Request) {
     );
   }
 
-  return Response.json({ enabled: body.enabled, sections: body.sections });
+  return Response.json({ enabled: body.enabled, sections: body.sections, linkedinUrl });
 }
