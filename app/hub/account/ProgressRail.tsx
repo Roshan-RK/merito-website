@@ -263,6 +263,14 @@ export default function ProgressRail({
       >
         Share on LinkedIn
       </button>
+
+      <Link
+        href="/hub/account/recruiter-preview"
+        className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+        style={{ width: "100%", marginTop: 10, background: "none", border: "1px solid rgba(237,26,36,0.4)", borderRadius: 8, padding: "10px 16px", fontSize: 13, cursor: "pointer", display: "block", textAlign: "center", textDecoration: "none" }}
+      >
+        Recruiter Preview settings
+      </Link>
     </div>
   );
 }
