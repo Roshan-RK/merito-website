@@ -493,7 +493,7 @@ export default async function CombinedReportPage({
 
             {((interviewSections.has("strengths") && interview.report.strengths) ||
               (interviewSections.has("integrity") && interview.report.integrityCheck)) && (
-              <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 16, marginBottom: 22 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr)", gap: 16, marginBottom: 22 }}>
                 {interviewSections.has("strengths") && interview.report.strengths && (
                   <div className="bg-[#E7F5EE] border" style={{ borderColor: "#CFEBDC", borderRadius: 16, padding: "22px 24px" }}>
                     <p className="font-[family-name:var(--font-ibm-plex-mono)] uppercase" style={{ fontSize: 11, letterSpacing: "0.08em", color: "#1E8F5E", margin: "0 0 12px" }}>
@@ -517,15 +517,33 @@ export default async function CombinedReportPage({
                       border: `1px solid ${interview.report.flagForSuspiciousActivity ? "#E9CCD3" : "#CFEBDC"}`,
                       borderRadius: 16,
                       padding: "22px 24px",
+                      display: "flex",
+                      flexDirection: "column",
                     }}
                   >
                     <p
-                      className="font-[family-name:var(--font-ibm-plex-mono)] uppercase"
-                      style={{ fontSize: 11, letterSpacing: "0.08em", margin: "0 0 12px", color: interview.report.flagForSuspiciousActivity ? "#95324B" : "#1E8F5E" }}
+                      className="font-[family-name:var(--font-ibm-plex-mono)] uppercase text-[#6C6779]"
+                      style={{ fontSize: 11, letterSpacing: "0.08em", margin: "0 0 16px" }}
                     >
-                      Integrity assessment · {interview.report.flagForSuspiciousActivity ? "Flagged" : "No issues"}
+                      Integrity assessment
                     </p>
-                    <p className="font-[family-name:var(--font-inter)] text-black" style={{ fontSize: 13.5, lineHeight: 1.6, margin: 0 }}>
+                    <div className="flex items-center" style={{ gap: 8 }}>
+                      <svg width="18" height="18" viewBox="0 0 16 16">
+                        <circle cx="8" cy="8" r="8" fill={interview.report.flagForSuspiciousActivity ? "#95324B" : "#1E8F5E"} />
+                        {interview.report.flagForSuspiciousActivity ? (
+                          <path d="M8 4.5v4.2M8 11.2h.01" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" />
+                        ) : (
+                          <path d="M4.5 8.2l2.2 2.2 4.8-5" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                        )}
+                      </svg>
+                      <span
+                        className="font-[family-name:var(--font-inter)] font-semibold"
+                        style={{ fontSize: 15, color: interview.report.flagForSuspiciousActivity ? "#95324B" : "#1E8F5E" }}
+                      >
+                        {interview.report.flagForSuspiciousActivity ? "Flagged" : "No issues detected"}
+                      </span>
+                    </div>
+                    <p className="font-[family-name:var(--font-inter)] text-[#6C6779]" style={{ fontSize: 12.5, lineHeight: 1.6, margin: "10px 0 0" }}>
                       {interview.report.integrityCheck ||
                         (interview.report.flagForSuspiciousActivity
                           ? "Suspicious activity was flagged during this interview."
@@ -537,13 +555,19 @@ export default async function CombinedReportPage({
             )}
 
             {interviewSections.has("recommendation") && interviewRecommendation && (
-              <div className="bg-[#F6E7EB] border" style={{ borderColor: "#E9CCD3", borderRadius: 16, padding: "22px 26px", marginBottom: 22 }}>
-                <p className="font-[family-name:var(--font-ibm-plex-mono)] uppercase" style={{ fontSize: 13, letterSpacing: "0.08em", color: "#95324B", margin: "0 0 8px" }}>
-                  Recommendation
-                </p>
-                <p className="font-[family-name:var(--font-inter)] text-black" style={{ fontSize: 14.5, lineHeight: 1.6, margin: 0 }}>
-                  <InlineText text={interviewRecommendation} />
-                </p>
+              <div className="bg-[#F6E7EB] border flex items-start" style={{ borderColor: "#E9CCD3", borderRadius: 16, padding: "22px 26px", marginBottom: 22, gap: 14 }}>
+                <svg width="20" height="20" viewBox="0 0 16 16" style={{ flexShrink: 0, marginTop: 2 }}>
+                  <circle cx="8" cy="8" r="8" fill="#95324B" />
+                  <path d="M8 4.5v4.2M8 11.2h.01" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+                <div>
+                  <p className="font-[family-name:var(--font-ibm-plex-mono)] uppercase" style={{ fontSize: 13, letterSpacing: "0.08em", color: "#95324B", margin: "0 0 6px" }}>
+                    Recommendation
+                  </p>
+                  <p className="font-[family-name:var(--font-inter)] text-black" style={{ fontSize: 14.5, lineHeight: 1.6, margin: 0 }}>
+                    <InlineText text={interviewRecommendation} />
+                  </p>
+                </div>
               </div>
             )}
 
@@ -601,30 +625,18 @@ export default async function CombinedReportPage({
             How to read this report
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 16, marginBottom: 30 }}>
-            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 16, padding: 20 }}>
-              <p className="font-[family-name:var(--font-inter)] font-semibold text-black" style={{ fontSize: 14.5, margin: "0 0 8px" }}>Role Fitment</p>
-              <p className="font-[family-name:var(--font-inter)] text-[#6C6779]" style={{ fontSize: 12.5, lineHeight: 1.6, margin: 0 }}>
-                AI comparison of the CV against a specific job description, scored across six dimensions. Measures documented alignment, not potential.
-              </p>
-            </div>
-            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 16, padding: 20 }}>
-              <p className="font-[family-name:var(--font-inter)] font-semibold text-black" style={{ fontSize: 14.5, margin: "0 0 8px" }}>Personality</p>
-              <p className="font-[family-name:var(--font-inter)] text-[#6C6779]" style={{ fontSize: 12.5, lineHeight: 1.6, margin: 0 }}>
-                A Big Five (OCEAN) questionnaire measuring five stable dimensions of working style. Scores describe tendencies, not ability.
-              </p>
-            </div>
-            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 16, padding: 20 }}>
-              <p className="font-[family-name:var(--font-inter)] font-semibold text-black" style={{ fontSize: 14.5, margin: "0 0 8px" }}>AI Interview</p>
-              <p className="font-[family-name:var(--font-inter)] text-[#6C6779]" style={{ fontSize: 12.5, lineHeight: 1.6, margin: 0 }}>
-                Structured, proctored interview scored against role-critical competencies, with a parallel read on delivery quality.
-              </p>
-            </div>
-            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 16, padding: 20 }}>
-              <p className="font-[family-name:var(--font-inter)] font-semibold text-black" style={{ fontSize: 14.5, margin: "0 0 8px" }}>Reference Check</p>
-              <p className="font-[family-name:var(--font-inter)] text-[#6C6779]" style={{ fontSize: 12.5, lineHeight: 1.6, margin: 0 }}>
-                Independent ratings from people who have worked with the candidate, across seven standard categories on a five-point scale.
-              </p>
-            </div>
+            {[
+              { label: "Role Fitment", color: "#1E8F5E", body: "AI comparison of the CV against a specific job description, scored across six dimensions. Measures documented alignment, not potential." },
+              { label: "Personality", color: "#4B4894", body: "A Big Five (OCEAN) questionnaire measuring five stable dimensions of working style. Scores describe tendencies, not ability." },
+              { label: "AI Interview", color: "#95324B", body: "Structured, proctored interview scored against role-critical competencies, with a parallel read on delivery quality." },
+              { label: "Reference Check", color: "#1E8F5E", body: "Independent ratings from people who have worked with the candidate, across seven standard categories on a five-point scale." },
+            ].map((card) => (
+              <div key={card.label} className="bg-white border border-black/[0.08]" style={{ borderRadius: 16, padding: 20 }}>
+                <span style={{ display: "block", width: 8, height: 8, borderRadius: "50%", background: card.color, marginBottom: 12 }} />
+                <p className="font-[family-name:var(--font-inter)] font-semibold text-black" style={{ fontSize: 14.5, margin: "0 0 8px" }}>{card.label}</p>
+                <p className="font-[family-name:var(--font-inter)] text-[#6C6779]" style={{ fontSize: 12.5, lineHeight: 1.6, margin: 0 }}>{card.body}</p>
+              </div>
+            ))}
           </div>
           <div style={{ borderTop: "1px solid #E6E1ED", paddingTop: 24 }}>
             <p className="font-[family-name:var(--font-fraunces)] font-semibold text-black" style={{ fontSize: 15, margin: "0 0 5px" }}>

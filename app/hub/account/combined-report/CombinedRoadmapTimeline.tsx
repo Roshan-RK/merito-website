@@ -46,7 +46,8 @@ export default function CombinedRoadmapTimeline({ roadmap }: { roadmap: string }
         </ul>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, position: "relative" }}>
+        <div style={{ position: "absolute", top: 11, left: 0, right: 0, height: 2, background: "#E6E1ED" }} />
         {phases.map((phase, i) => (
           <div key={i} style={{ paddingTop: 24, position: "relative" }}>
             <div
