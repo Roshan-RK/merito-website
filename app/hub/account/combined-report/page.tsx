@@ -99,6 +99,12 @@ function DimensionBars({ title, rows }: { title: string; rows: { label: string; 
   );
 }
 
+function heroPillTint(tier: "strong" | "mid" | "weak"): { background: string; color: string } {
+  if (tier === "strong") return { background: "rgba(63,203,140,0.18)", color: "#7EE6B6" };
+  if (tier === "mid") return { background: "rgba(189,126,18,0.18)", color: "#F0C674" };
+  return { background: "rgba(232,121,143,0.18)", color: "#F2A6B6" };
+}
+
 function referenceBand(avg: number): { textColor: string; trackColor: string } {
   if (avg >= 4) return { textColor: "#1E8F5E", trackColor: "#E7F5EE" };
   if (avg >= 3) return { textColor: "#BD7E12", trackColor: "#FBF1DF" };
@@ -243,30 +249,73 @@ export default async function CombinedReportPage({
           </p>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 14 }}>
-            {fitment && fitmentBandDark && (
+            {fitment && fitmentBand && fitmentBandDark && (
               <div className="bg-white/[0.04] border border-white/[0.1]" style={{ borderRadius: 16, padding: "18px 14px 16px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10 }}>
                 <CombinedGauge value={fitment.report.overallScore} max={100} displayValue={`${Math.round(fitment.report.overallScore)}%`} diameter={96} band={fitmentBandDark} />
                 <span className="font-[family-name:var(--font-inter)] font-semibold text-white" style={{ fontSize: 12.5 }}>Role Fitment</span>
+                <span
+                  className="font-[family-name:var(--font-ibm-plex-mono)] uppercase"
+                  style={{ fontSize: 10, letterSpacing: "0.06em", padding: "3px 9px", borderRadius: 20, ...heroPillTint(fitment.report.overallScore >= 80 ? "strong" : fitment.report.overallScore >= 50 ? "mid" : "weak") }}
+                >
+                  {fitmentBand.label}
+                </span>
               </div>
             )}
-            {interview && interviewBandDark && (
+            {interview && interviewBand && interviewBandDark && (
               <div className="bg-white/[0.04] border border-white/[0.1]" style={{ borderRadius: 16, padding: "18px 14px 16px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10 }}>
                 <CombinedGauge value={interview.report.overallScore} max={100} displayValue={`${Math.round(interview.report.overallScore)}%`} diameter={96} band={interviewBandDark} />
                 <span className="font-[family-name:var(--font-inter)] font-semibold text-white" style={{ fontSize: 12.5 }}>AI Interview</span>
+                <span
+                  className="font-[family-name:var(--font-ibm-plex-mono)] uppercase"
+                  style={{ fontSize: 10, letterSpacing: "0.06em", padding: "3px 9px", borderRadius: 20, ...heroPillTint(interview.report.overallScore >= 70 ? "strong" : interview.report.overallScore >= 40 ? "mid" : "weak") }}
+                >
+                  {interviewBand.label}
+                </span>
               </div>
             )}
             {references && refBand && (
               <div className="bg-white/[0.04] border border-white/[0.1]" style={{ borderRadius: 16, padding: "18px 14px 16px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10 }}>
                 <CombinedGauge value={references.overallScore} max={5} displayValue={references.overallScore.toFixed(1)} diameter={96} band={{ textColor: refBand.textColor === "#1E8F5E" ? "#3FCB8C" : refBand.textColor === "#95324B" ? "#E8798F" : "#BD7E12", trackColor: "rgba(255,255,255,0.12)" }} />
                 <span className="font-[family-name:var(--font-inter)] font-semibold text-white" style={{ fontSize: 12.5 }}>References</span>
+                <span
+                  className="font-[family-name:var(--font-ibm-plex-mono)] uppercase"
+                  style={{ fontSize: 10, letterSpacing: "0.06em", padding: "3px 9px", borderRadius: 20, ...heroPillTint(references.overallScore >= 4 ? "strong" : references.overallScore >= 3 ? "mid" : "weak") }}
+                >
+                  {references.referees.length} verified
+                </span>
               </div>
             )}
             {personality && (
               <div className="bg-white/[0.04] border border-white/[0.1]" style={{ borderRadius: 16, padding: "18px 14px 16px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10 }}>
                 <CombinedGauge value={5} max={5} displayValue="5/5" diameter={96} band={{ textColor: "#9C97E8", trackColor: "rgba(255,255,255,0.12)" }} />
                 <span className="font-[family-name:var(--font-inter)] font-semibold text-white" style={{ fontSize: 12.5 }}>Personality</span>
+                <span
+                  className="font-[family-name:var(--font-ibm-plex-mono)] uppercase"
+                  style={{ fontSize: 10, letterSpacing: "0.06em", padding: "3px 9px", borderRadius: 20, background: "rgba(156,151,232,0.18)", color: "#C6C2F5" }}
+                >
+                  Traits mapped
+                </span>
               </div>
             )}
+          </div>
+
+          <div className="flex flex-wrap" style={{ gap: 18, paddingTop: 20, marginTop: 22, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+            <span className="flex items-center font-[family-name:var(--font-ibm-plex-mono)] text-[#B8B3C8]" style={{ gap: 7, fontSize: 10.5, letterSpacing: "0.04em" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#3FCB8C" }} />
+              Strong signal
+            </span>
+            <span className="flex items-center font-[family-name:var(--font-ibm-plex-mono)] text-[#B8B3C8]" style={{ gap: 7, fontSize: 10.5, letterSpacing: "0.04em" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#E0A83F" }} />
+              Moderate
+            </span>
+            <span className="flex items-center font-[family-name:var(--font-ibm-plex-mono)] text-[#B8B3C8]" style={{ gap: 7, fontSize: 10.5, letterSpacing: "0.04em" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#E8798F" }} />
+              Needs development
+            </span>
+            <span className="flex items-center font-[family-name:var(--font-ibm-plex-mono)] text-[#B8B3C8]" style={{ gap: 7, fontSize: 10.5, letterSpacing: "0.04em" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#9C97E8" }} />
+              Descriptive, not scored
+            </span>
           </div>
         </div>
       </div>

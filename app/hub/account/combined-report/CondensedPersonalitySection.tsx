@@ -41,11 +41,16 @@ export default function CondensedPersonalitySection({
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 16 }}>
-        {TRAITS.map((t) => {
+        {TRAITS.map((t, i) => {
           const s = scores[t];
           const level = traitLevel(s.pct);
+          const isLast = i === TRAITS.length - 1;
           return (
-            <div key={t} className="bg-white border border-black/[0.08]" style={{ borderRadius: 16, padding: 20, breakInside: "avoid" }}>
+            <div
+              key={t}
+              className="bg-white border border-black/[0.08]"
+              style={{ borderRadius: 16, padding: 20, breakInside: "avoid", gridColumn: isLast ? "1 / -1" : undefined }}
+            >
               <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
                 <h3 className="font-[family-name:var(--font-inter)] font-semibold text-black" style={{ fontSize: "1.05rem", margin: 0 }}>
                   {TRAIT_NAME[t]}
