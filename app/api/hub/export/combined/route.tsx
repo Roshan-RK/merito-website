@@ -85,7 +85,7 @@ export async function GET(request: Request) {
 
   let buffer: Buffer;
   try {
-    buffer = await renderPageToPdf(targetUrl.toString(), pageCookies);
+    buffer = await renderPageToPdf(targetUrl.toString(), pageCookies, { singlePage: true });
   } catch (err) {
     console.error("Combined report PDF render failed", {
       targetUrl: targetUrl.toString(),

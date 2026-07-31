@@ -25,8 +25,18 @@ export function requestCookiesFor(request: Request, domain: string): PageCookie[
  * authenticated user (cookies forwarded from the incoming request). Used to
  * make downloaded reports pixel-identical to their on-screen page instead of
  * hand-recreating each layout in a separate PDF styling system.
+ *
+ * `singlePage: true` sizes the PDF to the page's actual rendered height
+ * instead of paginating into A4 sheets — for designs (like combined-report)
+ * built as one continuous scroll with no print pagination in mind, A4
+ * pagination cuts sections mid-block and breaks background color continuity
+ * at every page seam.
  */
-export async function renderPageToPdf(url: string, cookies: PageCookie[]): Promise<Buffer> {
+export async function renderPageToPdf(
+  url: string,
+  cookies: PageCookie[],
+  options: { singlePage?: boolean } = {}
+): Promise<Buffer> {
   const isProd = Boolean(process.env.VERCEL_ENV);
 
   // @sparticuz/chromium only ships a Linux binary (Vercel/Lambda target) — it
@@ -50,8 +60,23 @@ export async function renderPageToPdf(url: string, cookies: PageCookie[]): Promi
   try {
     const page = await browser.newPage();
     await page.setCookie(...cookies.map((cookie) => ({ ...cookie, path: "/" })));
+    if (options.singlePage) {
+      await page.setViewport({ width: 900, height: 1200 });
+    }
     await page.goto(url, { waitUntil: "networkidle0" });
-    const pdf = await page.pdf({ format: "A4", printBackground: true });
+
+    let pdf: Uint8Array;
+    if (options.singlePage) {
+      const heightPx = await page.evaluate(() => document.documentElement.scrollHeight);
+      pdf = await page.pdf({
+        width: "900px",
+        height: `${heightPx}px`,
+        printBackground: true,
+        pageRanges: "1",
+      });
+    } else {
+      pdf = await page.pdf({ format: "A4", printBackground: true });
+    }
     return Buffer.from(pdf);
   } finally {
     await browser.close();
