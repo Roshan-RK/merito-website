@@ -15,7 +15,8 @@ import ParameterScoreTile from "../interview/ParameterScoreTile";
 import CriteriaMatchCard from "../interview/CriteriaMatchCard";
 import SkillReportTable from "../interview/SkillReportTable";
 import RoadmapTimeline from "../RoadmapTimeline";
-import EvaluatorNotes, { InlineText } from "../EvaluatorNotes";
+import { InlineText } from "../EvaluatorNotes";
+import { parseEvaluatorNotes } from "@/lib/intervuebox/markdownNotes";
 import { getCriteriaStatusColor } from "@/lib/criteriaStatus";
 
 function splitBullets(text: string): string[] {
@@ -139,6 +140,9 @@ export default async function CombinedReportPage({
   const reportDate = new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" });
   const reportId = `MH-${user.id.split("-")[0].toUpperCase()}`;
   const sortedFitmentCategories = fitment ? [...fitment.report.categories].sort((a, b) => b.score - a.score) : [];
+  const interviewRecommendation = interview?.report.feedbackToInterviewer
+    ? parseEvaluatorNotes(interview.report.feedbackToInterviewer)?.recommendation ?? null
+    : null;
 
   const sections: { key: string; label: string; blurb: string }[] = [];
   if (fitment) sections.push({ key: "fitment", label: "Role Fitment Analysis", blurb: "CV matched against the job description across six dimensions" });
@@ -389,33 +393,53 @@ export default async function CombinedReportPage({
               </div>
             )}
 
-            {interview.report.strengths && (
-              <div className="bg-[#eefdf1]" style={{ borderRadius: 14, padding: "14px 16px", marginBottom: 20, breakInside: "avoid" }}>
-                <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#16803c]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>Strengths</p>
-                {splitBullets(interview.report.strengths).map((point, i) => (
-                  <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: "0 0 8px" }}>✓ <InlineText text={point} /></p>
-                ))}
+            {(interview.report.strengths || interview.report.integrityCheck) && (
+              <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14, marginBottom: 20 }}>
+                {interview.report.strengths && (
+                  <div className="bg-[#eefdf1]" style={{ borderRadius: 14, padding: "14px 16px", breakInside: "avoid" }}>
+                    <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#16803c]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>
+                      What the interview evidenced
+                    </p>
+                    <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+                      {splitBullets(interview.report.strengths).map((point, i, arr) => (
+                        <span key={i}>
+                          <InlineText text={point} />
+                          {i < arr.length - 1 ? "; " : ""}
+                        </span>
+                      ))}
+                    </p>
+                  </div>
+                )}
+
+                <div
+                  className={interview.report.flagForSuspiciousActivity ? "bg-[#fdeced]" : "bg-[#eefdf1]"}
+                  style={{ borderRadius: 14, padding: "14px 16px", breakInside: "avoid" }}
+                >
+                  <p
+                    className="font-[family-name:var(--font-poppins)] font-bold uppercase"
+                    style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px", color: interview.report.flagForSuspiciousActivity ? "#ed1a24" : "#16803c" }}
+                  >
+                    Integrity assessment · {interview.report.flagForSuspiciousActivity ? "Flagged" : "No issues"}
+                  </p>
+                  {interview.report.integrityCheck && (
+                    <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>{interview.report.integrityCheck}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {interviewRecommendation && (
+              <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "14px 16px", marginBottom: 20, breakInside: "avoid" }}>
+                <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 8px" }}>
+                  Recommendation
+                </p>
+                <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+                  <InlineText text={interviewRecommendation} />
+                </p>
               </div>
             )}
 
             {interview.report.roadmap && <RoadmapTimeline roadmap={interview.report.roadmap} />}
-
-            {interview.report.feedbackToInterviewer && <EvaluatorNotes notes={interview.report.feedbackToInterviewer} />}
-
-            <div
-              className={interview.report.flagForSuspiciousActivity ? "bg-[#fdeced]" : "bg-[#eefdf1]"}
-              style={{ borderRadius: 14, padding: "14px 16px", marginBottom: 20, breakInside: "avoid" }}
-            >
-              <p
-                className="font-[family-name:var(--font-poppins)] font-bold uppercase"
-                style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 8px", color: interview.report.flagForSuspiciousActivity ? "#ed1a24" : "#16803c" }}
-              >
-                Integrity assessment · {interview.report.flagForSuspiciousActivity ? "Flagged" : "No issues"}
-              </p>
-              {interview.report.integrityCheck && (
-                <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>{interview.report.integrityCheck}</p>
-              )}
-            </div>
 
             {interview.report.videoReport && (
               <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, marginBottom: 20, breakInside: "avoid" }}>
