@@ -1,16 +1,11 @@
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { LINKEDIN_URL_PATTERN, normalizeLinkedinUrl } from "@/lib/linkedinUrl";
 import type { ReportType } from "@/app/hub/account/reportSections";
 
 export const runtime = "nodejs";
 
 const VALID_SECTIONS: ReportType[] = ["fitment", "personality", "interview", "references"];
-const LINKEDIN_URL_PATTERN = /^https?:\/\/(www\.)?linkedin\.com\/in\/[A-Za-z0-9\-_%]+$/;
-
-function normalizeLinkedinUrl(url: string): string {
-  const withoutQuery = url.split("?")[0];
-  return withoutQuery.endsWith("/") ? withoutQuery.slice(0, -1) : withoutQuery;
-}
 
 export async function GET(_request: Request) {
   const supabase = await createSupabaseServerClient();
