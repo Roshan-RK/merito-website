@@ -1,6 +1,8 @@
 import { useState } from "react";
-import logoUrl from "../assets/logo.png";
+import logoPath from "../assets/logo.png";
 import type { CandidateLevel, LookupResponse, TraitKey } from "./types";
+
+const logoUrl = chrome.runtime.getURL(logoPath.replace(/^\//, ""));
 
 const SERIF = "'Charter', 'Georgia', 'Cambria', serif";
 const MONO = "'IBM Plex Mono', ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace";
