@@ -15,6 +15,13 @@ type LookupInterview = {
   criteriaEvaluationTable: CriteriaEvaluationEntry[];
   strengths: string | null;
   roadmap: string | null;
+  completedAt: string;
+  approxDurationMinutes: number | null;
+};
+
+type LookupPersonality = {
+  scores: Scores;
+  completedAt: string | null;
 };
 
 export async function POST(request: Request) {
@@ -85,22 +92,27 @@ export async function POST(request: Request) {
     };
   }
 
-  let personality: Scores | null = null;
+  let personality: LookupPersonality | null = null;
   if (sections.has("personality") && roleTitle) {
     const { data: personalityRow } = await admin
       .from("personality_tests")
-      .select("scores")
+      .select("scores, completed_at")
       .eq("user_id", userId)
       .eq("role_title", roleTitle)
       .maybeSingle();
-    personality = (personalityRow?.scores as Scores | undefined) ?? null;
+    if (personalityRow?.scores) {
+      personality = {
+        scores: personalityRow.scores as Scores,
+        completedAt: (personalityRow.completed_at as string | null) ?? null,
+      };
+    }
   }
 
   let interview: LookupInterview | null = null;
   if (sections.has("interview") && roleTitle) {
     const { data: interviewRow } = await admin
       .from("fitment_interviews")
-      .select("status, report_raw")
+      .select("status, report_raw, updated_at")
       .eq("user_id", userId)
       .eq("role_title", roleTitle)
       .order("updated_at", { ascending: false })
@@ -116,6 +128,8 @@ export async function POST(request: Request) {
         criteriaEvaluationTable: full.criteriaEvaluationTable,
         strengths: full.strengths,
         roadmap: full.roadmap,
+        completedAt: interviewRow.updated_at as string,
+        approxDurationMinutes: full.approxDurationMinutes,
       };
     }
   }

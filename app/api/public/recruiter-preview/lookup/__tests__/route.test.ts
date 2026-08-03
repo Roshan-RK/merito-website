@@ -97,7 +97,7 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
 
   it("returns filtered data on a match, excluding unselected sections and always excluding recommendation/integrity/videoReport", async () => {
     tableResults.recruiter_preview_settings = makeQueryStub({
-      data: { user_id: "candidate-1", sections: ["fitment", "interview"] },
+      data: { user_id: "candidate-1", sections: ["fitment", "interview", "personality"] },
     });
     tableResults.fitment_leads = makeQueryStub({
       data: [
@@ -109,9 +109,13 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
         },
       ],
     });
+    tableResults.personality_tests = makeQueryStub({
+      data: { scores: { O: { pct: 70, raw: 44, band: 3 } }, completed_at: "2026-07-28T09:00:00.000Z" },
+    });
     tableResults.fitment_interviews = makeQueryStub({
       data: {
         status: "ready",
+        updated_at: "2026-07-30T10:00:00.000Z",
         report_raw: {
           overallScore: 75,
           skillMetrics: { sql: 8 },
@@ -142,12 +146,15 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
     expect(response.status).toBe(200);
     expect(body.candidateName).toBe("Jane Doe");
     expect(body.roleTitle).toBe("Data Analyst");
-    expect(body.sections).toEqual(["fitment", "interview"]);
+    expect(body.sections).toEqual(["fitment", "interview", "personality"]);
     expect(body.fitment).toEqual({
       report: { overallScore: 82, rank: null, categories: [], summary: "Good fit", strongPoints: [], weakPoints: [] },
       matchedAgainstRoleTitle: "Data Analyst",
     });
-    expect(body.personality).toBeNull();
+    expect(body.personality).toEqual({
+      scores: { O: { pct: 70, raw: 44, band: 3 } },
+      completedAt: "2026-07-28T09:00:00.000Z",
+    });
     expect(body.references).toBeNull();
     expect(body.interview).toEqual({
       overallScore: 75,
@@ -157,6 +164,8 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
       criteriaEvaluationTable: [],
       strengths: "Strong SQL fundamentals",
       roadmap: "Practice window functions.",
+      completedAt: "2026-07-30T10:00:00.000Z",
+      approxDurationMinutes: 20,
     });
     expect(body.interview).not.toHaveProperty("integrityCheck");
     expect(body.interview).not.toHaveProperty("videoReport");
