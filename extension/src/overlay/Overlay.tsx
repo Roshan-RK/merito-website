@@ -158,6 +158,7 @@ function SecondaryMetric({
         padding: 4,
         borderRadius: 18,
         boxShadow: active ? `0 0 0 2px ${band.color}` : "0 0 0 2px transparent",
+        transition: "box-shadow 150ms ease-out",
         width: "100%",
       }}
     >
@@ -187,7 +188,13 @@ function DetailSection({
   children: React.ReactNode;
 }) {
   return (
-    <div style={{ borderTop: "1px solid #E6E1ED", padding: "12px 16px 16px" }}>
+    <div
+      style={{
+        borderTop: "1px solid #E6E1ED",
+        padding: "12px 16px 16px",
+        animation: "merito-section-in 180ms ease-out",
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
         <span
           style={{
@@ -416,6 +423,12 @@ export function Overlay({ data }: { data: LookupResponse }) {
         color: "#211D2C",
       }}
     >
+      <style>{`
+        @keyframes merito-section-in {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
       <div style={{ padding: "14px 16px 0" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <img src={logoUrl} alt="Merito" style={{ height: 20, width: "auto", display: "block" }} />
@@ -473,6 +486,7 @@ export function Overlay({ data }: { data: LookupResponse }) {
             borderRadius: 12,
             background: fitmentBand.track,
             border: activeSection === "fitment" ? `2px solid ${fitmentBand.color}` : "2px solid transparent",
+            transition: "border-color 150ms ease-out",
             cursor: "pointer",
           }}
         >
