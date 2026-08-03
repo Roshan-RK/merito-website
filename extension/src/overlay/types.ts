@@ -27,7 +27,7 @@ export type LookupResponse = {
     };
     matchedAgainstRoleTitle: string;
   } | null;
-  personality: Scores | null;
+  personality: { scores: Scores; completedAt: string | null } | null;
   interview: {
     overallScore: number;
     skillMetrics: Record<string, number>;
@@ -36,6 +36,8 @@ export type LookupResponse = {
     criteriaEvaluationTable: CriteriaEvaluationEntry[];
     strengths: string | null;
     roadmap: string | null;
+    completedAt: string;
+    approxDurationMinutes: number | null;
   } | null;
   references: {
     overallScore: number;
