@@ -260,7 +260,9 @@ function CategoryRow({ label, score, comment }: { label: string; score: number; 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: comment ? 2 : 0 }}>
         <span style={{ fontSize: 11.5, fontWeight: 600, fontFamily: SANS }}>{label}</span>
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 11.5, fontWeight: 600, color: band.color, fontFamily: SANS }}>{score}%</span>
+          <span style={{ fontSize: 11.5, fontWeight: 600, color: band.color, fontFamily: SANS, minWidth: 28, textAlign: "right" }}>
+            {score}%
+          </span>
           <ScorePill band={band} />
         </span>
       </div>
@@ -291,13 +293,24 @@ function SkillRow({ skill, score, comment }: { skill: string; score: number; com
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
         <span style={{ fontSize: 11.5, fontWeight: 600, fontFamily: SANS }}>{skill}</span>
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 11.5, fontWeight: 600, color: band.color, fontFamily: SANS }}>{Math.round(score)}%</span>
+          <span style={{ fontSize: 11.5, fontWeight: 600, color: band.color, fontFamily: SANS, minWidth: 28, textAlign: "right" }}>
+            {Math.round(score)}%
+          </span>
           <ScorePill band={band} />
         </span>
       </div>
       <p style={{ fontSize: 11, color: "#6C6779", margin: 0, lineHeight: 1.5, fontFamily: SANS }}>{comment}</p>
     </div>
   );
+}
+
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
 }
 
 function RefereeQuote({
@@ -312,17 +325,39 @@ function RefereeQuote({
   feedback: string | null;
 }) {
   return (
-    <div style={{ borderLeft: "3px solid #ed1a24", paddingLeft: 12, marginBottom: 12 }}>
+    <div style={{ background: "#FAF9FC", borderRadius: 10, padding: 12, marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <div
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: "50%",
+            background: "#4B4894",
+            color: "#ffffff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 10,
+            fontWeight: 700,
+            fontFamily: SANS,
+            flexShrink: 0,
+          }}
+        >
+          {initials(name)}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 600, fontFamily: SANS, color: "#211D2C" }}>{name}</div>
+          <div style={{ fontSize: 9.5, color: "#6C6779", fontFamily: SANS }}>
+            {role}
+            {organization ? ` · ${organization}` : ""} · Verified
+          </div>
+        </div>
+      </div>
       {feedback && (
-        <p style={{ fontSize: 12, fontStyle: "italic", margin: "0 0 4px", lineHeight: 1.55, fontFamily: SANS }}>
-          <span style={{ fontFamily: SERIF, fontSize: 18, color: "#ed1a24", marginRight: 2, fontStyle: "normal" }}>&ldquo;</span>
+        <p style={{ fontSize: 12, fontStyle: "italic", color: "#332D41", margin: 0, lineHeight: 1.55, fontFamily: SANS }}>
           {feedback}
         </p>
       )}
-      <p style={{ fontFamily: MONO, fontSize: 9.5, color: "#6C6779", letterSpacing: "0.03em", margin: 0 }}>
-        — {name} · {role}
-        {organization ? ` · ${organization}` : ""} · Verified
-      </p>
     </div>
   );
 }
