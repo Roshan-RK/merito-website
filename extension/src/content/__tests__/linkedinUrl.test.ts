@@ -8,6 +8,12 @@ describe("normalizeLinkedinUrl", () => {
     );
   });
 
+  it("strips a trailing hash fragment", () => {
+    expect(normalizeLinkedinUrl("https://www.linkedin.com/in/jane-doe#experience")).toBe(
+      "https://www.linkedin.com/in/jane-doe"
+    );
+  });
+
   it("strips a trailing slash", () => {
     expect(normalizeLinkedinUrl("https://www.linkedin.com/in/jane-doe/")).toBe(
       "https://www.linkedin.com/in/jane-doe"

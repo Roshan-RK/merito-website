@@ -52,7 +52,10 @@ function parseBullets(text: string): { label: string | null; text: string }[] {
 function Badge({ onClick }: { onClick: () => void }) {
   return (
     <button
-      onClick={onClick}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
       style={{
         position: "fixed",
         top: 90,
@@ -408,6 +411,7 @@ export function Overlay({ data }: { data: LookupResponse }) {
   return (
     <div
       ref={cardRef}
+      onClick={(e) => e.stopPropagation()}
       style={{
         width: 372,
         maxHeight: "80vh",
