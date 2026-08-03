@@ -9,17 +9,16 @@ export type TraitKey = "E" | "A" | "C" | "ES" | "O";
 export type TraitScore = { raw: number; pct: number; band: number };
 export type Scores = Record<TraitKey, TraitScore>;
 
-export type CriteriaMatchStatus = "Matched" | "Partially Matched" | "Not Matched";
-export type CriteriaEvaluationEntry = { criteria: string; status: CriteriaMatchStatus; reason: string };
+export type CandidateLevel = "entry" | "mid" | "senior";
 
 export type LookupResponse = {
   candidateName: string;
   roleTitle: string | null;
+  candidateLevel: CandidateLevel;
   sections: string[];
   fitment: {
     report: {
       overallScore: number;
-      rank: number | null;
       categories: ResumeMatchCategory[];
       summary: string;
       strongPoints: string[];
@@ -33,9 +32,7 @@ export type LookupResponse = {
     skillMetrics: Record<string, number>;
     overallSummary: string;
     skillReport: Record<string, { score: number; comment: string }>;
-    criteriaEvaluationTable: CriteriaEvaluationEntry[];
     strengths: string | null;
-    roadmap: string | null;
     completedAt: string;
     approxDurationMinutes: number | null;
   } | null;

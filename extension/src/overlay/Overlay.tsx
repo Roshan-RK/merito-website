@@ -1,6 +1,6 @@
 import { useState } from "react";
 import logoUrl from "../assets/logo.png";
-import type { LookupResponse, TraitKey } from "./types";
+import type { CandidateLevel, LookupResponse, TraitKey } from "./types";
 
 const SERIF = "'Charter', 'Georgia', 'Cambria', serif";
 const MONO = "'IBM Plex Mono', ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace";
@@ -25,6 +25,20 @@ const TRAIT_LABELS: Record<TraitKey, string> = {
   ES: "Emotional Stability",
 };
 const TRAIT_ORDER: TraitKey[] = ["O", "C", "E", "A", "ES"];
+
+const LEVEL_LABELS: Record<CandidateLevel, string> = {
+  entry: "Entry-level",
+  mid: "Mid-level",
+  senior: "Senior-level",
+};
+
+const DELIVERY_PARAM_LABELS: Record<string, string> = {
+  relevance: "Relevance",
+  confidence: "Confidence",
+  correctness: "Correctness",
+  communication: "Communication",
+  problemSolving: "Problem Solving",
+};
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
@@ -299,6 +313,22 @@ function RefereeQuote({
   );
 }
 
+function DeliveryParam({ label, score }: { label: string; score: number }) {
+  const band = getBand(score);
+  const clamped = Math.min(100, Math.max(0, score));
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+        <span style={{ fontSize: 10.5, fontFamily: SANS }}>{label}</span>
+        <span style={{ fontSize: 10.5, fontWeight: 600, color: band.color, fontFamily: SANS }}>{Math.round(clamped)}%</span>
+      </div>
+      <div style={{ background: "#f0e6ea", borderRadius: 999, height: 4, overflow: "hidden" }}>
+        <div style={{ width: `${clamped}%`, height: "100%", background: band.color, borderRadius: 999 }} />
+      </div>
+    </div>
+  );
+}
+
 export function Overlay({ data }: { data: LookupResponse }) {
   const [expanded, setExpanded] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionKey>("fitment");
@@ -401,6 +431,18 @@ export function Overlay({ data }: { data: LookupResponse }) {
         {data.roleTitle && (
           <div style={{ fontSize: 12.5, color: "#6C6779", marginTop: 1, fontFamily: SANS }}>
             Assessed for <span style={{ color: "#211D2C", fontWeight: 500 }}>{data.roleTitle}</span>
+            {" · "}
+            <span
+              style={{
+                fontFamily: MONO,
+                fontSize: 10,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                fontWeight: 600,
+              }}
+            >
+              {LEVEL_LABELS[data.candidateLevel]}
+            </span>
           </div>
         )}
       </div>
@@ -529,6 +571,13 @@ export function Overlay({ data }: { data: LookupResponse }) {
             data.interview.approxDurationMinutes ? ` · ~${data.interview.approxDurationMinutes} min` : ""
           } · ${formatDate(data.interview.completedAt)}`}
         >
+          {Object.keys(data.interview.skillMetrics).length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 14px", marginBottom: 12 }}>
+              {Object.entries(data.interview.skillMetrics).map(([key, score]) => (
+                <DeliveryParam key={key} label={DELIVERY_PARAM_LABELS[key] ?? key} score={score} />
+              ))}
+            </div>
+          )}
           <p style={{ fontSize: 12, lineHeight: 1.55, margin: "0 0 10px", fontFamily: SANS }}>{data.interview.overallSummary}</p>
           {data.interview.strengths && (
             <div style={{ marginBottom: 10 }}>
