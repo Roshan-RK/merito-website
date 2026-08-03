@@ -354,7 +354,7 @@ export function Overlay({ data }: { data: LookupResponse }) {
 
   function selectSection(key: SectionKey) {
     setActiveSection(key);
-    cardRef.current?.scrollTo({ top: 0 });
+    requestAnimationFrame(() => cardRef.current?.scrollTo({ top: 0 }));
   }
 
   if (!expanded) {
@@ -362,7 +362,7 @@ export function Overlay({ data }: { data: LookupResponse }) {
   }
 
   const secondaryMetrics: { key: SectionKey; node: React.ReactNode }[] = [];
-  if (sections.has("personality") && data.personality) {
+  if (sections.has("personality") && data.personality?.traits?.length) {
     const traitCount = data.personality.traits.length;
     secondaryMetrics.push({
       key: "personality",
@@ -429,8 +429,8 @@ export function Overlay({ data }: { data: LookupResponse }) {
     >
       <style>{`
         @keyframes merito-section-in {
-          from { opacity: 0; transform: translateY(4px); }
-          to { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
       `}</style>
       <div style={{ padding: "14px 16px 0" }}>
@@ -567,7 +567,7 @@ export function Overlay({ data }: { data: LookupResponse }) {
               {data.personality.summary}
             </p>
           )}
-          {data.personality.traits.map((trait) => (
+          {(data.personality.traits ?? []).map((trait) => (
             <TraitBar key={trait.key} label={trait.label} pct={trait.pct} />
           ))}
         </DetailSection>
