@@ -2,19 +2,25 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { getReferenceCheckStatus, computeReferenceReport } from "@/lib/referenceChecks";
 import { nameFromEmail, type Scores } from "@/lib/personality";
 import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "@/lib/linkedinUrl";
-import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
-import type { InterviewReportReady, CriteriaEvaluationEntry } from "@/lib/intervuebox/interviewReports";
+import type { ResumeMatchReportReady, ResumeMatchCategory } from "@/lib/intervuebox/reports";
+import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 
 export const runtime = "nodejs";
+
+type LookupFitmentReport = {
+  overallScore: number;
+  categories: ResumeMatchCategory[];
+  summary: string;
+  strongPoints: string[];
+  weakPoints: string[];
+};
 
 type LookupInterview = {
   overallScore: number;
   skillMetrics: Record<string, number>;
   overallSummary: string;
   skillReport: Record<string, { score: number; comment: string }>;
-  criteriaEvaluationTable: CriteriaEvaluationEntry[];
   strengths: string | null;
-  roadmap: string | null;
   completedAt: string;
   approxDurationMinutes: number | null;
 };
@@ -65,12 +71,13 @@ export async function POST(request: Request) {
 
   const { data: leads } = await admin
     .from("fitment_leads")
-    .select("role_title, name, resume_match_status, resume_match_raw")
+    .select("role_title, name, resume_match_status, resume_match_raw, candidate_level")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(1);
   const currentLead = leads?.[0] ?? null;
   const roleTitle = currentLead?.role_title ?? null;
+  const candidateLevel = (currentLead?.candidate_level as "entry" | "mid" | "senior" | null) ?? "entry";
 
   let candidateName = currentLead?.name as string | undefined;
   if (!candidateName) {
@@ -78,7 +85,7 @@ export async function POST(request: Request) {
     candidateName = nameFromEmail(authUser?.user?.email ?? "");
   }
 
-  let fitment: { report: ResumeMatchReportReady; matchedAgainstRoleTitle: string } | null = null;
+  let fitment: { report: LookupFitmentReport; matchedAgainstRoleTitle: string } | null = null;
   if (
     sections.has("fitment") &&
     currentLead &&
@@ -86,8 +93,15 @@ export async function POST(request: Request) {
     currentLead.resume_match_raw &&
     roleTitle
   ) {
+    const fullFitment = currentLead.resume_match_raw as ResumeMatchReportReady;
     fitment = {
-      report: currentLead.resume_match_raw as ResumeMatchReportReady,
+      report: {
+        overallScore: fullFitment.overallScore,
+        categories: fullFitment.categories,
+        summary: fullFitment.summary,
+        strongPoints: fullFitment.strongPoints,
+        weakPoints: fullFitment.weakPoints,
+      },
       matchedAgainstRoleTitle: roleTitle,
     };
   }
@@ -125,9 +139,7 @@ export async function POST(request: Request) {
         skillMetrics: full.skillMetrics,
         overallSummary: full.overallSummary,
         skillReport: full.skillReport,
-        criteriaEvaluationTable: full.criteriaEvaluationTable,
         strengths: full.strengths,
-        roadmap: full.roadmap,
         completedAt: interviewRow.updated_at as string,
         approxDurationMinutes: full.approxDurationMinutes,
       };
@@ -145,6 +157,7 @@ export async function POST(request: Request) {
   return Response.json({
     candidateName,
     roleTitle,
+    candidateLevel,
     sections: Array.from(sections),
     fitment,
     personality,

@@ -105,6 +105,7 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
           role_title: "Data Analyst",
           name: "Jane Doe",
           resume_match_status: "READY",
+          candidate_level: "mid",
           resume_match_raw: { overallScore: 82, rank: null, categories: [], summary: "Good fit", strongPoints: [], weakPoints: [] },
         },
       ],
@@ -146,11 +147,13 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
     expect(response.status).toBe(200);
     expect(body.candidateName).toBe("Jane Doe");
     expect(body.roleTitle).toBe("Data Analyst");
+    expect(body.candidateLevel).toBe("mid");
     expect(body.sections).toEqual(["fitment", "interview", "personality"]);
     expect(body.fitment).toEqual({
-      report: { overallScore: 82, rank: null, categories: [], summary: "Good fit", strongPoints: [], weakPoints: [] },
+      report: { overallScore: 82, categories: [], summary: "Good fit", strongPoints: [], weakPoints: [] },
       matchedAgainstRoleTitle: "Data Analyst",
     });
+    expect(body.fitment.report).not.toHaveProperty("rank");
     expect(body.personality).toEqual({
       scores: { O: { pct: 70, raw: 44, band: 3 } },
       completedAt: "2026-07-28T09:00:00.000Z",
@@ -161,14 +164,14 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
       skillMetrics: { sql: 8 },
       overallSummary: "Solid performance.",
       skillReport: { sql: { score: 8, comment: "Strong" } },
-      criteriaEvaluationTable: [],
       strengths: "Strong SQL fundamentals",
-      roadmap: "Practice window functions.",
       completedAt: "2026-07-30T10:00:00.000Z",
       approxDurationMinutes: 20,
     });
     expect(body.interview).not.toHaveProperty("integrityCheck");
     expect(body.interview).not.toHaveProperty("videoReport");
     expect(body.interview).not.toHaveProperty("feedbackToInterviewer");
+    expect(body.interview).not.toHaveProperty("criteriaEvaluationTable");
+    expect(body.interview).not.toHaveProperty("roadmap");
   });
 });
