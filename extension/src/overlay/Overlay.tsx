@@ -1,7 +1,59 @@
+import { useState } from "react";
 import type { LookupResponse } from "./types";
 
+function Badge({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        position: "fixed",
+        top: 90,
+        right: 24,
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        background: "#ffffff",
+        border: "1px solid rgba(0,0,0,0.12)",
+        borderRadius: 999,
+        boxShadow: "0 12px 30px rgba(17,35,89,0.18)",
+        padding: "10px 16px",
+        zIndex: 999999,
+        fontFamily: "system-ui, sans-serif",
+        fontSize: 12.5,
+        fontWeight: 600,
+        color: "#0a0a0a",
+        cursor: "pointer",
+      }}
+    >
+      <span
+        style={{
+          width: 20,
+          height: 20,
+          borderRadius: "50%",
+          background: "#ed1a24",
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 11,
+          fontWeight: 700,
+        }}
+      >
+        M
+      </span>
+      Merito Preview available
+    </button>
+  );
+}
+
 export function Overlay({ data }: { data: LookupResponse }) {
+  const [expanded, setExpanded] = useState(false);
   const sections = new Set(data.sections);
+
+  if (!expanded) {
+    return <Badge onClick={() => setExpanded(true)} />;
+  }
+
   return (
     <div
       style={{
@@ -22,9 +74,27 @@ export function Overlay({ data }: { data: LookupResponse }) {
         color: "#0a0a0a",
       }}
     >
-      <p style={{ fontWeight: 700, fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: "#9c9c9c", margin: "0 0 8px" }}>
-        Merito Recruiter Preview
-      </p>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <p style={{ fontWeight: 700, fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: "#9c9c9c", margin: "0 0 8px" }}>
+          Merito Recruiter Preview
+        </p>
+        <button
+          onClick={() => setExpanded(false)}
+          aria-label="Close"
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontSize: 16,
+            lineHeight: 1,
+            color: "#9c9c9c",
+            padding: 0,
+            marginLeft: 8,
+          }}
+        >
+          ×
+        </button>
+      </div>
       <h2 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 4px" }}>{data.candidateName}</h2>
       {data.roleTitle && <p style={{ margin: "0 0 14px", color: "#4b4b4d" }}>{data.roleTitle}</p>}
 
