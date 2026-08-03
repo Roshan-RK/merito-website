@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import logoPath from "../assets/logo.png";
 import type { CandidateLevel, LookupResponse, TraitKey } from "./types";
 
@@ -165,7 +165,7 @@ function SecondaryMetric({
         border: "none",
         cursor: "pointer",
         padding: 4,
-        borderRadius: 10,
+        borderRadius: 18,
         boxShadow: active ? `0 0 0 2px ${band.color}` : "0 0 0 2px transparent",
         width: "100%",
       }}
@@ -252,18 +252,18 @@ function ScorePill({ band }: { band: Band }) {
   );
 }
 
-function CategoryRow({ label, score, comment }: { label: string; score: number; comment: string }) {
+function CategoryRow({ label, score, comment }: { label: string; score: number; comment?: string }) {
   const band = getBand(score);
   return (
     <div style={{ marginBottom: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: comment ? 2 : 0 }}>
         <span style={{ fontSize: 11.5, fontWeight: 600, fontFamily: SANS }}>{label}</span>
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontSize: 11.5, fontWeight: 600, color: band.color, fontFamily: SANS }}>{score}%</span>
           <ScorePill band={band} />
         </span>
       </div>
-      <p style={{ fontSize: 11, color: "#6C6779", margin: 0, lineHeight: 1.5, fontFamily: SANS }}>{comment}</p>
+      {comment && <p style={{ fontSize: 11, color: "#6C6779", margin: 0, lineHeight: 1.5, fontFamily: SANS }}>{comment}</p>}
     </div>
   );
 }
@@ -331,9 +331,12 @@ function DeliveryParam({ label, score }: { label: string; score: number }) {
   const clamped = Math.min(100, Math.max(0, score));
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
         <span style={{ fontSize: 10.5, fontFamily: SANS }}>{label}</span>
-        <span style={{ fontSize: 10.5, fontWeight: 600, color: band.color, fontFamily: SANS }}>{Math.round(clamped)}%</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ fontSize: 10.5, fontWeight: 600, color: band.color, fontFamily: SANS }}>{Math.round(clamped)}%</span>
+          <ScorePill band={band} />
+        </span>
       </div>
       <div style={{ background: "#f0e6ea", borderRadius: 999, height: 4, overflow: "hidden" }}>
         <div style={{ width: `${clamped}%`, height: "100%", background: band.color, borderRadius: 999 }} />
@@ -345,7 +348,13 @@ function DeliveryParam({ label, score }: { label: string; score: number }) {
 export function Overlay({ data }: { data: LookupResponse }) {
   const [expanded, setExpanded] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionKey>("fitment");
+  const cardRef = useRef<HTMLDivElement>(null);
   const sections = new Set(data.sections);
+
+  function selectSection(key: SectionKey) {
+    setActiveSection(key);
+    cardRef.current?.scrollTo({ top: 0 });
+  }
 
   if (!expanded) {
     return <Badge onClick={() => setExpanded(true)} />;
@@ -362,7 +371,7 @@ export function Overlay({ data }: { data: LookupResponse }) {
           score={100}
           centerLabel={`${traitCount}/5`}
           active={activeSection === "personality"}
-          onClick={() => setActiveSection("personality")}
+          onClick={() => selectSection("personality")}
         />
       ),
     });
@@ -376,7 +385,7 @@ export function Overlay({ data }: { data: LookupResponse }) {
           score={data.interview.overallScore}
           centerLabel={`${Math.round(data.interview.overallScore)}%`}
           active={activeSection === "interview"}
-          onClick={() => setActiveSection("interview")}
+          onClick={() => selectSection("interview")}
         />
       ),
     });
@@ -390,7 +399,7 @@ export function Overlay({ data }: { data: LookupResponse }) {
           score={data.references.overallScore * 20}
           centerLabel={data.references.overallScore.toFixed(1)}
           active={activeSection === "references"}
-          onClick={() => setActiveSection("references")}
+          onClick={() => selectSection("references")}
         />
       ),
     });
@@ -400,6 +409,7 @@ export function Overlay({ data }: { data: LookupResponse }) {
 
   return (
     <div
+      ref={cardRef}
       style={{
         width: 372,
         maxHeight: "80vh",
@@ -462,7 +472,7 @@ export function Overlay({ data }: { data: LookupResponse }) {
 
       {sections.has("fitment") && data.fitment && fitmentBand && (
         <button
-          onClick={() => setActiveSection("fitment")}
+          onClick={() => selectSection("fitment")}
           style={{
             display: "block",
             width: "calc(100% - 32px)",
@@ -524,30 +534,6 @@ export function Overlay({ data }: { data: LookupResponse }) {
           pillBg={fitmentBand!.track}
           sourceLine={`Matched against: ${data.fitment.matchedAgainstRoleTitle}`}
         >
-          {data.fitment.report.strongPoints.length > 0 && (
-            <div style={{ marginBottom: 10 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "#16803c", margin: "0 0 4px", fontFamily: SANS }}>
-                Strengths
-              </p>
-              {data.fitment.report.strongPoints.map((point, i) => (
-                <p key={i} style={{ fontSize: 11.5, margin: "0 0 3px", lineHeight: 1.5, fontFamily: SANS }}>
-                  • {point}
-                </p>
-              ))}
-            </div>
-          )}
-          {data.fitment.report.weakPoints.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6C6779", margin: "0 0 4px", fontFamily: SANS }}>
-                Areas to note
-              </p>
-              {data.fitment.report.weakPoints.map((point, i) => (
-                <p key={i} style={{ fontSize: 11.5, margin: "0 0 3px", lineHeight: 1.5, fontFamily: SANS }}>
-                  • {point}
-                </p>
-              ))}
-            </div>
-          )}
           {data.fitment.report.categories.map((c) => (
             <CategoryRow key={c.key} label={c.label} score={c.score} comment={c.comment} />
           ))}
@@ -624,7 +610,7 @@ export function Overlay({ data }: { data: LookupResponse }) {
           } completed`}
         >
           {data.references.categoryScores.map((c) => (
-            <CategoryRow key={c.category} label={c.label} score={c.value * 20} comment={`${c.value.toFixed(1)} / 5`} />
+            <CategoryRow key={c.category} label={c.label} score={c.value * 20} />
           ))}
           <div style={{ borderTop: "1px solid #E6E1ED", marginTop: 4, paddingTop: 10 }}>
             {data.references.referees.map((r, i) => (

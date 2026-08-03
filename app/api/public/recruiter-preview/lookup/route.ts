@@ -11,8 +11,6 @@ type LookupFitmentReport = {
   overallScore: number;
   categories: ResumeMatchCategory[];
   summary: string;
-  strongPoints: string[];
-  weakPoints: string[];
 };
 
 type LookupInterview = {
@@ -99,8 +97,6 @@ export async function POST(request: Request) {
         overallScore: fullFitment.overallScore,
         categories: fullFitment.categories,
         summary: fullFitment.summary,
-        strongPoints: fullFitment.strongPoints,
-        weakPoints: fullFitment.weakPoints,
       },
       matchedAgainstRoleTitle: roleTitle,
     };

@@ -150,10 +150,12 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
     expect(body.candidateLevel).toBe("mid");
     expect(body.sections).toEqual(["fitment", "interview", "personality"]);
     expect(body.fitment).toEqual({
-      report: { overallScore: 82, categories: [], summary: "Good fit", strongPoints: [], weakPoints: [] },
+      report: { overallScore: 82, categories: [], summary: "Good fit" },
       matchedAgainstRoleTitle: "Data Analyst",
     });
     expect(body.fitment.report).not.toHaveProperty("rank");
+    expect(body.fitment.report).not.toHaveProperty("strongPoints");
+    expect(body.fitment.report).not.toHaveProperty("weakPoints");
     expect(body.personality).toEqual({
       scores: { O: { pct: 70, raw: 44, band: 3 } },
       completedAt: "2026-07-28T09:00:00.000Z",

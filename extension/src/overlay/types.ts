@@ -21,8 +21,6 @@ export type LookupResponse = {
       overallScore: number;
       categories: ResumeMatchCategory[];
       summary: string;
-      strongPoints: string[];
-      weakPoints: string[];
     };
     matchedAgainstRoleTitle: string;
   } | null;
