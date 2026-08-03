@@ -1,4 +1,5 @@
 import { useState } from "react";
+import logoUrl from "../assets/logo.png";
 import type { LookupResponse, TraitKey } from "./types";
 
 const SERIF = "'Charter', 'Georgia', 'Cambria', serif";
@@ -53,7 +54,7 @@ function Badge({ onClick }: { onClick: () => void }) {
         cursor: "pointer",
       }}
     >
-      <span style={{ fontFamily: SERIF, fontWeight: 700 }}>Merito</span>
+      <img src={logoUrl} alt="Merito" style={{ height: 16, width: "auto", display: "block" }} />
       <span style={{ width: 1, height: 14, background: "#E6E1ED" }} />
       Preview available
     </button>
@@ -373,7 +374,7 @@ export function Overlay({ data }: { data: LookupResponse }) {
     >
       <div style={{ padding: "14px 16px 0" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 15 }}>Merito</span>
+          <img src={logoUrl} alt="Merito" style={{ height: 20, width: "auto", display: "block" }} />
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span
               style={{
