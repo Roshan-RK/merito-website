@@ -170,7 +170,7 @@ function SecondaryMetric({
         width: "100%",
       }}
     >
-      <div style={{ margin: "0 auto 4px" }}>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 4 }}>
         <Ring size={44} stroke={4.5} score={score} color={band.color} track={band.track} centerLabel={centerLabel} />
       </div>
       <div style={{ fontSize: 9.5, fontWeight: 500, fontFamily: SANS }}>{label}</div>
