@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import logoPath from "../assets/logo.png";
-import type { CandidateLevel, LookupResponse, TraitKey } from "./types";
+import type { CandidateLevel, LookupResponse } from "./types";
 
 const logoUrl = chrome.runtime.getURL(logoPath.replace(/^\//, ""));
 
@@ -18,15 +18,6 @@ function getBand(score: number): Band {
   if (clamped >= 40) return { label: "Developing", color: "#4b4b4d", track: "#f0e6ea" };
   return { label: "Needs work", color: "#ed1a24", track: "#fdeced" };
 }
-
-const TRAIT_LABELS: Record<TraitKey, string> = {
-  O: "Openness",
-  C: "Conscientiousness",
-  E: "Extraversion",
-  A: "Agreeableness",
-  ES: "Emotional Stability",
-};
-const TRAIT_ORDER: TraitKey[] = ["O", "C", "E", "A", "ES"];
 
 const LEVEL_LABELS: Record<CandidateLevel, string> = {
   entry: "Entry-level",
@@ -362,7 +353,7 @@ export function Overlay({ data }: { data: LookupResponse }) {
 
   const secondaryMetrics: { key: SectionKey; node: React.ReactNode }[] = [];
   if (sections.has("personality") && data.personality) {
-    const traitCount = TRAIT_ORDER.filter((t) => data.personality?.scores[t]).length;
+    const traitCount = data.personality.traits.length;
     secondaryMetrics.push({
       key: "personality",
       node: (
@@ -553,8 +544,13 @@ export function Overlay({ data }: { data: LookupResponse }) {
               : "Based on self-reported assessment"
           }
         >
-          {TRAIT_ORDER.filter((t) => data.personality?.scores[t]).map((t) => (
-            <TraitBar key={t} label={TRAIT_LABELS[t]} pct={data.personality!.scores[t].pct} />
+          {data.personality.summary && (
+            <p style={{ fontSize: 12, lineHeight: 1.6, color: "#332D41", margin: "0 0 12px", fontFamily: SANS }}>
+              {data.personality.summary}
+            </p>
+          )}
+          {data.personality.traits.map((trait) => (
+            <TraitBar key={trait.key} label={trait.label} pct={trait.pct} />
           ))}
         </DetailSection>
       )}

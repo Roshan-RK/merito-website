@@ -1,6 +1,6 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { getReferenceCheckStatus, computeReferenceReport } from "@/lib/referenceChecks";
-import { nameFromEmail, type Scores } from "@/lib/personality";
+import { nameFromEmail, TRAIT_NAME, TRAIT_WORK_IMPLICATION, BANDS, traitLevel, type Scores, type TraitKey } from "@/lib/personality";
 import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "@/lib/linkedinUrl";
 import type { ResumeMatchReportReady, ResumeMatchCategory } from "@/lib/intervuebox/reports";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
@@ -23,10 +23,30 @@ type LookupInterview = {
   approxDurationMinutes: number | null;
 };
 
+type LookupPersonalityTrait = {
+  key: TraitKey;
+  label: string;
+  pct: number;
+  bandLabel: string;
+};
+
 type LookupPersonality = {
-  scores: Scores;
+  traits: LookupPersonalityTrait[];
+  summary: string;
   completedAt: string | null;
 };
+
+const TRAIT_ORDER: TraitKey[] = ["E", "A", "C", "ES", "O"];
+
+function buildPersonalitySummary(candidateName: string, traits: LookupPersonalityTrait[]): string {
+  const firstName = candidateName.split(/\s+/)[0] || candidateName;
+  const sorted = [...traits].sort((a, b) => b.pct - a.pct);
+  const top = sorted[0];
+  const second = sorted[1];
+  if (!top || !second) return "";
+  const workLine = TRAIT_WORK_IMPLICATION[top.key][traitLevel(top.pct)](firstName);
+  return `${firstName} scores highest in ${top.label} and ${second.label}. ${workLine}`;
+}
 
 export async function POST(request: Request) {
   const expectedKey = process.env.RECRUITER_EXTENSION_KEY;
@@ -111,8 +131,16 @@ export async function POST(request: Request) {
       .eq("role_title", roleTitle)
       .maybeSingle();
     if (personalityRow?.scores) {
+      const scores = personalityRow.scores as Scores;
+      const traits = TRAIT_ORDER.filter((key) => scores[key]).map((key) => ({
+        key,
+        label: TRAIT_NAME[key],
+        pct: scores[key].pct,
+        bandLabel: BANDS[scores[key].band],
+      }));
       personality = {
-        scores: personalityRow.scores as Scores,
+        traits,
+        summary: buildPersonalitySummary(candidateName, traits),
         completedAt: (personalityRow.completed_at as string | null) ?? null,
       };
     }

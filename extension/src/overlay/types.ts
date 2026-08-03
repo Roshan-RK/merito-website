@@ -6,8 +6,13 @@ export type ResumeMatchCategory = {
 };
 
 export type TraitKey = "E" | "A" | "C" | "ES" | "O";
-export type TraitScore = { raw: number; pct: number; band: number };
-export type Scores = Record<TraitKey, TraitScore>;
+
+export type PersonalityTrait = {
+  key: TraitKey;
+  label: string;
+  pct: number;
+  bandLabel: string;
+};
 
 export type CandidateLevel = "entry" | "mid" | "senior";
 
@@ -24,7 +29,7 @@ export type LookupResponse = {
     };
     matchedAgainstRoleTitle: string;
   } | null;
-  personality: { scores: Scores; completedAt: string | null } | null;
+  personality: { traits: PersonalityTrait[]; summary: string; completedAt: string | null } | null;
   interview: {
     overallScore: number;
     skillMetrics: Record<string, number>;

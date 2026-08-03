@@ -111,7 +111,16 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
       ],
     });
     tableResults.personality_tests = makeQueryStub({
-      data: { scores: { O: { pct: 70, raw: 44, band: 3 } }, completed_at: "2026-07-28T09:00:00.000Z" },
+      data: {
+        scores: {
+          E: { pct: 40, raw: 20, band: 2 },
+          A: { pct: 55, raw: 30, band: 2 },
+          C: { pct: 82, raw: 45, band: 4 },
+          ES: { pct: 78, raw: 42, band: 4 },
+          O: { pct: 70, raw: 44, band: 3 },
+        },
+        completed_at: "2026-07-28T09:00:00.000Z",
+      },
     });
     tableResults.fitment_interviews = makeQueryStub({
       data: {
@@ -157,7 +166,15 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
     expect(body.fitment.report).not.toHaveProperty("strongPoints");
     expect(body.fitment.report).not.toHaveProperty("weakPoints");
     expect(body.personality).toEqual({
-      scores: { O: { pct: 70, raw: 44, band: 3 } },
+      traits: [
+        { key: "E", label: "Extroversion", pct: 40, bandLabel: "Average" },
+        { key: "A", label: "Agreeableness", pct: 55, bandLabel: "Average" },
+        { key: "C", label: "Conscientiousness", pct: 82, bandLabel: "Very High" },
+        { key: "ES", label: "Emotional Stability", pct: 78, bandLabel: "Very High" },
+        { key: "O", label: "Openness to Experience", pct: 70, bandLabel: "High" },
+      ],
+      summary:
+        "Jane scores highest in Conscientiousness and Emotional Stability. Jane is likely to be organised, reliable and thorough — strong on deadlines, detail and follow-through. Watch-out: rigidity or perfectionism when priorities shift suddenly. Best fit: roles that reward rigour, process and accountability.",
       completedAt: "2026-07-28T09:00:00.000Z",
     });
     expect(body.references).toBeNull();
