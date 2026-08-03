@@ -1,6 +1,6 @@
 import type { LookupResponse } from "../overlay/types";
 
-const LOOKUP_URL = "https://www.merito.in/api/public/recruiter-preview/lookup";
+const LOOKUP_URL = "https://www.merito.ai/api/public/recruiter-preview/lookup";
 
 export async function lookupCandidate(linkedinUrl: string): Promise<LookupResponse | null> {
   const extensionKey = import.meta.env.VITE_RECRUITER_EXTENSION_KEY as string;

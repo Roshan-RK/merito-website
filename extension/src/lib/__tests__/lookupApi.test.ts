@@ -18,7 +18,7 @@ describe("lookupCandidate", () => {
     const { lookupCandidate } = await importLookupApi();
     await lookupCandidate("https://www.linkedin.com/in/jane-doe");
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://www.merito.in/api/public/recruiter-preview/lookup",
+      "https://www.merito.ai/api/public/recruiter-preview/lookup",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({ "x-merito-extension-key": "test-key" }),

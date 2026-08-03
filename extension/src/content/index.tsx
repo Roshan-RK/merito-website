@@ -1,6 +1,5 @@
 import { createRoot, type Root } from "react-dom/client";
 import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "./linkedinUrl";
-import { lookupCandidate } from "../lib/lookupApi";
 import { Overlay } from "../overlay/Overlay";
 import type { LookupResponse } from "../overlay/types";
 
@@ -40,7 +39,10 @@ async function handleUrlChange() {
   const normalized = normalizeLinkedinUrl(url);
   if (!LINKEDIN_URL_PATTERN.test(normalized)) return;
 
-  const result = await lookupCandidate(normalized);
+  const result = (await chrome.runtime.sendMessage({
+    type: "LOOKUP_CANDIDATE",
+    linkedinUrl: normalized,
+  })) as LookupResponse | null;
   if (result) mountOverlay(result);
 }
 
