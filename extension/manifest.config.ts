@@ -15,4 +15,10 @@ export default defineManifest({
     service_worker: "src/background/index.ts",
   },
   host_permissions: ["https://www.linkedin.com/*", "https://www.merito.ai/*"],
+  web_accessible_resources: [
+    {
+      resources: ["assets/*.png"],
+      matches: ["https://www.linkedin.com/*"],
+    },
+  ],
 });
