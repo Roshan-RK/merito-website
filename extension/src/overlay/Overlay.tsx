@@ -46,6 +46,18 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
 }
 
+function parseBullets(text: string): { label: string | null; text: string }[] {
+  return text
+    .split("\n")
+    .map((line) => line.replace(/^-\s*/, "").trim())
+    .filter(Boolean)
+    .map((line) => {
+      const match = line.match(/^\*\*(.+?)\*\*\s*(.*)$/);
+      if (!match) return { label: null, text: line };
+      return { label: match[1].replace(/:$/, ""), text: match[2] };
+    });
+}
+
 function Badge({ onClick }: { onClick: () => void }) {
   return (
     <button
@@ -154,8 +166,7 @@ function SecondaryMetric({
         cursor: "pointer",
         padding: 4,
         borderRadius: 10,
-        outline: active ? `2px solid ${band.color}` : "2px solid transparent",
-        outlineOffset: 2,
+        boxShadow: active ? `0 0 0 2px ${band.color}` : "0 0 0 2px transparent",
         width: "100%",
       }}
     >
@@ -586,7 +597,13 @@ export function Overlay({ data }: { data: LookupResponse }) {
               <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "#16803c", margin: "0 0 4px", fontFamily: SANS }}>
                 Strengths
               </p>
-              <p style={{ fontSize: 11.5, margin: 0, lineHeight: 1.5, fontFamily: SANS }}>{data.interview.strengths}</p>
+              {parseBullets(data.interview.strengths).map((item, i) => (
+                <p key={i} style={{ fontSize: 11.5, margin: "0 0 4px", lineHeight: 1.5, fontFamily: SANS }}>
+                  {item.label && <strong>{item.label}</strong>}
+                  {item.label ? " — " : ""}
+                  {item.text}
+                </p>
+              ))}
             </div>
           )}
           {Object.entries(data.interview.skillReport).map(([skill, entry]) => (
