@@ -31,12 +31,11 @@ function mountOverlay(data: LookupResponse) {
 }
 
 async function handleUrlChange() {
-  const url = window.location.href;
-  if (url === currentUrl) return;
-  currentUrl = url;
+  const normalized = normalizeLinkedinUrl(window.location.href);
+  if (normalized === currentUrl) return;
+  currentUrl = normalized;
   unmountOverlay();
 
-  const normalized = normalizeLinkedinUrl(url);
   if (!LINKEDIN_URL_PATTERN.test(normalized)) return;
 
   const result = (await chrome.runtime.sendMessage({
