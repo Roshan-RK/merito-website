@@ -10,7 +10,8 @@ type SectionKey = "fitment" | "personality" | "interview" | "references";
 
 function getBand(score: number): Band {
   const clamped = Math.min(100, Math.max(0, score));
-  if (clamped >= 70) return { label: "Strong", color: "#16803c", track: "#eefdf1" };
+  if (clamped >= 75) return { label: "Strong", color: "#16803c", track: "#eefdf1" };
+  if (clamped >= 60) return { label: "Moderate", color: "#bd7e12", track: "#fbf1df" };
   if (clamped >= 40) return { label: "Developing", color: "#4b4b4d", track: "#f0e6ea" };
   return { label: "Needs work", color: "#ed1a24", track: "#fdeced" };
 }
@@ -203,13 +204,36 @@ function DetailSection({
   );
 }
 
+function ScorePill({ band }: { band: Band }) {
+  return (
+    <span
+      style={{
+        fontFamily: MONO,
+        fontSize: 8,
+        letterSpacing: "0.04em",
+        textTransform: "uppercase",
+        fontWeight: 600,
+        padding: "2px 6px",
+        borderRadius: 20,
+        background: band.track,
+        color: band.color,
+      }}
+    >
+      {band.label}
+    </span>
+  );
+}
+
 function CategoryRow({ label, score, comment }: { label: string; score: number; comment: string }) {
   const band = getBand(score);
   return (
     <div style={{ marginBottom: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
         <span style={{ fontSize: 11.5, fontWeight: 600, fontFamily: SANS }}>{label}</span>
-        <span style={{ fontSize: 11.5, fontWeight: 600, color: band.color, fontFamily: SANS }}>{score}%</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 11.5, fontWeight: 600, color: band.color, fontFamily: SANS }}>{score}%</span>
+          <ScorePill band={band} />
+        </span>
       </div>
       <p style={{ fontSize: 11, color: "#6C6779", margin: 0, lineHeight: 1.5, fontFamily: SANS }}>{comment}</p>
     </div>
@@ -235,9 +259,12 @@ function SkillRow({ skill, score, comment }: { skill: string; score: number; com
   const band = getBand(score);
   return (
     <div style={{ marginBottom: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
         <span style={{ fontSize: 11.5, fontWeight: 600, fontFamily: SANS }}>{skill}</span>
-        <span style={{ fontSize: 11.5, fontWeight: 600, color: band.color, fontFamily: SANS }}>{Math.round(score)}%</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 11.5, fontWeight: 600, color: band.color, fontFamily: SANS }}>{Math.round(score)}%</span>
+          <ScorePill band={band} />
+        </span>
       </div>
       <p style={{ fontSize: 11, color: "#6C6779", margin: 0, lineHeight: 1.5, fontFamily: SANS }}>{comment}</p>
     </div>
@@ -256,12 +283,17 @@ function RefereeQuote({
   feedback: string | null;
 }) {
   return (
-    <div style={{ marginBottom: 10 }}>
-      <p style={{ fontSize: 11.5, fontWeight: 600, margin: "0 0 2px", fontFamily: SANS }}>
-        {name} — {role}
-        {organization ? ` · ${organization}` : ""}
+    <div style={{ borderLeft: "3px solid #ed1a24", paddingLeft: 12, marginBottom: 12 }}>
+      {feedback && (
+        <p style={{ fontSize: 12, fontStyle: "italic", margin: "0 0 4px", lineHeight: 1.55, fontFamily: SANS }}>
+          <span style={{ fontFamily: SERIF, fontSize: 18, color: "#ed1a24", marginRight: 2, fontStyle: "normal" }}>&ldquo;</span>
+          {feedback}
+        </p>
+      )}
+      <p style={{ fontFamily: MONO, fontSize: 9.5, color: "#6C6779", letterSpacing: "0.03em", margin: 0 }}>
+        — {name} · {role}
+        {organization ? ` · ${organization}` : ""} · Verified
       </p>
-      {feedback && <p style={{ fontSize: 11, color: "#6C6779", margin: 0, lineHeight: 1.5, fontFamily: SANS }}>{feedback}</p>}
     </div>
   );
 }
