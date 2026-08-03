@@ -6,6 +6,7 @@ const MONO = "'IBM Plex Mono', ui-monospace, 'SF Mono', 'Cascadia Code', Consola
 const SANS = "-apple-system, 'Segoe UI', Roboto, sans-serif";
 
 type Band = { label: string; color: string; track: string };
+type SectionKey = "fitment" | "personality" | "interview" | "references";
 
 function getBand(score: number): Band {
   const clamped = Math.min(100, Math.max(0, score));
@@ -14,6 +15,13 @@ function getBand(score: number): Band {
   return { label: "Needs work", color: "#ed1a24", track: "#fdeced" };
 }
 
+const TRAIT_LABELS: Record<TraitKey, string> = {
+  O: "Openness",
+  C: "Conscientiousness",
+  E: "Extraversion",
+  A: "Agreeableness",
+  ES: "Emotional Stability",
+};
 const TRAIT_ORDER: TraitKey[] = ["O", "C", "E", "A", "ES"];
 
 function formatDate(iso: string): string {
@@ -104,15 +112,40 @@ function Ring({
   );
 }
 
-function SecondaryMetric({ label, score, centerLabel }: { label: string; score: number; centerLabel: string }) {
+function SecondaryMetric({
+  label,
+  score,
+  centerLabel,
+  active,
+  onClick,
+}: {
+  label: string;
+  score: number;
+  centerLabel: string;
+  active: boolean;
+  onClick: () => void;
+}) {
   const band = getBand(score);
   return (
-    <div style={{ textAlign: "center" }}>
+    <button
+      onClick={onClick}
+      style={{
+        textAlign: "center",
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        padding: 4,
+        borderRadius: 10,
+        outline: active ? `2px solid ${band.color}` : "2px solid transparent",
+        outlineOffset: 2,
+        width: "100%",
+      }}
+    >
       <div style={{ margin: "0 auto 4px" }}>
         <Ring size={44} stroke={4.5} score={score} color={band.color} track={band.track} centerLabel={centerLabel} />
       </div>
       <div style={{ fontSize: 9.5, fontWeight: 500, fontFamily: SANS }}>{label}</div>
-    </div>
+    </button>
   );
 }
 
@@ -123,8 +156,7 @@ function DetailSection({
   pillColor,
   pillBg,
   sourceLine,
-  body,
-  last,
+  children,
 }: {
   index: string;
   label: string;
@@ -132,11 +164,10 @@ function DetailSection({
   pillColor: string;
   pillBg: string;
   sourceLine: string;
-  body: string;
-  last?: boolean;
+  children: React.ReactNode;
 }) {
   return (
-    <div style={{ borderTop: "1px solid #E6E1ED", padding: `12px 16px ${last ? 16 : 12}px` }}>
+    <div style={{ borderTop: "1px solid #E6E1ED", padding: "12px 16px 16px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
         <span
           style={{
@@ -166,26 +197,98 @@ function DetailSection({
           {pillText}
         </span>
       </div>
-      <div style={{ fontSize: 10.5, color: "#6C6779", marginBottom: 6, fontFamily: SANS }}>{sourceLine}</div>
-      <div style={{ fontSize: 12, lineHeight: 1.55, fontFamily: SANS }}>{body}</div>
+      <div style={{ fontSize: 10.5, color: "#6C6779", marginBottom: 8, fontFamily: SANS }}>{sourceLine}</div>
+      {children}
+    </div>
+  );
+}
+
+function CategoryRow({ label, score, comment }: { label: string; score: number; comment: string }) {
+  const band = getBand(score);
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+        <span style={{ fontSize: 11.5, fontWeight: 600, fontFamily: SANS }}>{label}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 600, color: band.color, fontFamily: SANS }}>{score}%</span>
+      </div>
+      <p style={{ fontSize: 11, color: "#6C6779", margin: 0, lineHeight: 1.5, fontFamily: SANS }}>{comment}</p>
+    </div>
+  );
+}
+
+function TraitBar({ label, pct }: { label: string; pct: number }) {
+  const clamped = Math.min(100, Math.max(0, pct));
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+        <span style={{ fontSize: 11.5, fontFamily: SANS }}>{label}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 600, color: "#4b4b4d", fontFamily: SANS }}>{Math.round(clamped)}%</span>
+      </div>
+      <div style={{ background: "#f0e6ea", borderRadius: 999, height: 6, overflow: "hidden" }}>
+        <div style={{ width: `${clamped}%`, height: "100%", background: "#4B4894", borderRadius: 999 }} />
+      </div>
+    </div>
+  );
+}
+
+function SkillRow({ skill, score, comment }: { skill: string; score: number; comment: string }) {
+  const band = getBand(score);
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+        <span style={{ fontSize: 11.5, fontWeight: 600, fontFamily: SANS }}>{skill}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 600, color: band.color, fontFamily: SANS }}>{Math.round(score)}%</span>
+      </div>
+      <p style={{ fontSize: 11, color: "#6C6779", margin: 0, lineHeight: 1.5, fontFamily: SANS }}>{comment}</p>
+    </div>
+  );
+}
+
+function RefereeQuote({
+  name,
+  role,
+  organization,
+  feedback,
+}: {
+  name: string;
+  role: string;
+  organization: string | null;
+  feedback: string | null;
+}) {
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <p style={{ fontSize: 11.5, fontWeight: 600, margin: "0 0 2px", fontFamily: SANS }}>
+        {name} — {role}
+        {organization ? ` · ${organization}` : ""}
+      </p>
+      {feedback && <p style={{ fontSize: 11, color: "#6C6779", margin: 0, lineHeight: 1.5, fontFamily: SANS }}>{feedback}</p>}
     </div>
   );
 }
 
 export function Overlay({ data }: { data: LookupResponse }) {
   const [expanded, setExpanded] = useState(false);
+  const [activeSection, setActiveSection] = useState<SectionKey>("fitment");
   const sections = new Set(data.sections);
 
   if (!expanded) {
     return <Badge onClick={() => setExpanded(true)} />;
   }
 
-  const secondaryMetrics: { key: string; node: React.ReactNode }[] = [];
+  const secondaryMetrics: { key: SectionKey; node: React.ReactNode }[] = [];
   if (sections.has("personality") && data.personality) {
     const traitCount = TRAIT_ORDER.filter((t) => data.personality?.scores[t]).length;
     secondaryMetrics.push({
       key: "personality",
-      node: <SecondaryMetric label="Personality" score={100} centerLabel={`${traitCount}/5`} />,
+      node: (
+        <SecondaryMetric
+          label="Personality"
+          score={100}
+          centerLabel={`${traitCount}/5`}
+          active={activeSection === "personality"}
+          onClick={() => setActiveSection("personality")}
+        />
+      ),
     });
   }
   if (sections.has("interview") && data.interview) {
@@ -196,6 +299,8 @@ export function Overlay({ data }: { data: LookupResponse }) {
           label="AI interview"
           score={data.interview.overallScore}
           centerLabel={`${Math.round(data.interview.overallScore)}%`}
+          active={activeSection === "interview"}
+          onClick={() => setActiveSection("interview")}
         />
       ),
     });
@@ -208,6 +313,8 @@ export function Overlay({ data }: { data: LookupResponse }) {
           label="References"
           score={data.references.overallScore * 20}
           centerLabel={data.references.overallScore.toFixed(1)}
+          active={activeSection === "references"}
+          onClick={() => setActiveSection("references")}
         />
       ),
     });
@@ -266,45 +373,50 @@ export function Overlay({ data }: { data: LookupResponse }) {
       </div>
 
       {sections.has("fitment") && data.fitment && fitmentBand && (
-        <div
+        <button
+          onClick={() => setActiveSection("fitment")}
           style={{
+            display: "block",
+            width: "calc(100% - 32px)",
+            textAlign: "left",
             margin: "14px 16px 0",
             padding: 14,
             borderRadius: 12,
             background: fitmentBand.track,
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
+            border: activeSection === "fitment" ? `2px solid ${fitmentBand.color}` : "2px solid transparent",
+            cursor: "pointer",
           }}
         >
-          <Ring
-            size={64}
-            stroke={6}
-            score={data.fitment.report.overallScore}
-            color={fitmentBand.color}
-            track="rgba(0,0,0,0.08)"
-            centerLabel={`${Math.round(data.fitment.report.overallScore)}%`}
-          />
-          <div>
-            <div
-              style={{
-                fontFamily: MONO,
-                fontSize: 9,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                fontWeight: 600,
-                color: fitmentBand.color,
-                marginBottom: 3,
-              }}
-            >
-              Overall fitment
-            </div>
-            <div style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 17, color: fitmentBand.color }}>{fitmentBand.label}</div>
-            <div style={{ fontSize: 10.5, color: "#6C6779", marginTop: 3, fontFamily: SANS }}>
-              Matched against: {data.fitment.matchedAgainstRoleTitle}
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <Ring
+              size={64}
+              stroke={6}
+              score={data.fitment.report.overallScore}
+              color={fitmentBand.color}
+              track="rgba(0,0,0,0.08)"
+              centerLabel={`${Math.round(data.fitment.report.overallScore)}%`}
+            />
+            <div>
+              <div
+                style={{
+                  fontFamily: MONO,
+                  fontSize: 9,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  fontWeight: 600,
+                  color: fitmentBand.color,
+                  marginBottom: 3,
+                }}
+              >
+                Overall fitment
+              </div>
+              <div style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 17, color: fitmentBand.color }}>{fitmentBand.label}</div>
+              <div style={{ fontSize: 10.5, color: "#6C6779", marginTop: 3, fontFamily: SANS }}>
+                Matched against: {data.fitment.matchedAgainstRoleTitle}
+              </div>
             </div>
           </div>
-        </div>
+        </button>
       )}
 
       {secondaryMetrics.length > 0 && (
@@ -315,9 +427,48 @@ export function Overlay({ data }: { data: LookupResponse }) {
         </div>
       )}
 
-      {sections.has("personality") && data.personality && (
+      {activeSection === "fitment" && sections.has("fitment") && data.fitment && (
         <DetailSection
           index="01"
+          label="Fitment"
+          pillText={fitmentBand!.label}
+          pillColor={fitmentBand!.color}
+          pillBg={fitmentBand!.track}
+          sourceLine={`Matched against: ${data.fitment.matchedAgainstRoleTitle}`}
+        >
+          {data.fitment.report.strongPoints.length > 0 && (
+            <div style={{ marginBottom: 10 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "#16803c", margin: "0 0 4px", fontFamily: SANS }}>
+                Strengths
+              </p>
+              {data.fitment.report.strongPoints.map((point, i) => (
+                <p key={i} style={{ fontSize: 11.5, margin: "0 0 3px", lineHeight: 1.5, fontFamily: SANS }}>
+                  • {point}
+                </p>
+              ))}
+            </div>
+          )}
+          {data.fitment.report.weakPoints.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "#6C6779", margin: "0 0 4px", fontFamily: SANS }}>
+                Areas to note
+              </p>
+              {data.fitment.report.weakPoints.map((point, i) => (
+                <p key={i} style={{ fontSize: 11.5, margin: "0 0 3px", lineHeight: 1.5, fontFamily: SANS }}>
+                  • {point}
+                </p>
+              ))}
+            </div>
+          )}
+          {data.fitment.report.categories.map((c) => (
+            <CategoryRow key={c.key} label={c.label} score={c.score} comment={c.comment} />
+          ))}
+        </DetailSection>
+      )}
+
+      {activeSection === "personality" && sections.has("personality") && data.personality && (
+        <DetailSection
+          index="02"
           label="Personality"
           pillText="Descriptive, not scored"
           pillColor="#4B4894"
@@ -327,13 +478,16 @@ export function Overlay({ data }: { data: LookupResponse }) {
               ? `Based on self-reported assessment · ${formatDate(data.personality.completedAt)}`
               : "Based on self-reported assessment"
           }
-          body={`Reports across ${TRAIT_ORDER.filter((t) => data.personality?.scores[t]).length} of 5 traits — see the full breakdown in the Hub for detail.`}
-        />
+        >
+          {TRAIT_ORDER.filter((t) => data.personality?.scores[t]).map((t) => (
+            <TraitBar key={t} label={TRAIT_LABELS[t]} pct={data.personality!.scores[t].pct} />
+          ))}
+        </DetailSection>
       )}
 
-      {sections.has("interview") && data.interview && (
+      {activeSection === "interview" && sections.has("interview") && data.interview && (
         <DetailSection
-          index="02"
+          index="03"
           label="AI interview"
           pillText={getBand(data.interview.overallScore).label}
           pillColor={getBand(data.interview.overallScore).color}
@@ -341,13 +495,25 @@ export function Overlay({ data }: { data: LookupResponse }) {
           sourceLine={`AI-proctored${
             data.interview.approxDurationMinutes ? ` · ~${data.interview.approxDurationMinutes} min` : ""
           } · ${formatDate(data.interview.completedAt)}`}
-          body={data.interview.overallSummary}
-        />
+        >
+          <p style={{ fontSize: 12, lineHeight: 1.55, margin: "0 0 10px", fontFamily: SANS }}>{data.interview.overallSummary}</p>
+          {data.interview.strengths && (
+            <div style={{ marginBottom: 10 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "#16803c", margin: "0 0 4px", fontFamily: SANS }}>
+                Strengths
+              </p>
+              <p style={{ fontSize: 11.5, margin: 0, lineHeight: 1.5, fontFamily: SANS }}>{data.interview.strengths}</p>
+            </div>
+          )}
+          {Object.entries(data.interview.skillReport).map(([skill, entry]) => (
+            <SkillRow key={skill} skill={skill} score={entry.score} comment={entry.comment} />
+          ))}
+        </DetailSection>
       )}
 
-      {sections.has("references") && data.references && (
+      {activeSection === "references" && sections.has("references") && data.references && (
         <DetailSection
-          index="03"
+          index="04"
           label="References"
           pillText={getBand(data.references.overallScore * 20).label}
           pillColor={getBand(data.references.overallScore * 20).color}
@@ -355,9 +521,16 @@ export function Overlay({ data }: { data: LookupResponse }) {
           sourceLine={`${data.references.referees.length} verified reference${
             data.references.referees.length === 1 ? "" : "s"
           } completed`}
-          body={data.references.referees[0]?.overallFeedback ?? "No written feedback provided."}
-          last
-        />
+        >
+          {data.references.categoryScores.map((c) => (
+            <CategoryRow key={c.category} label={c.label} score={c.value * 20} comment={`${c.value.toFixed(1)} / 5`} />
+          ))}
+          <div style={{ borderTop: "1px solid #E6E1ED", marginTop: 4, paddingTop: 10 }}>
+            {data.references.referees.map((r, i) => (
+              <RefereeQuote key={i} name={r.name} role={r.role} organization={r.organization} feedback={r.overallFeedback} />
+            ))}
+          </div>
+        </DetailSection>
       )}
     </div>
   );
