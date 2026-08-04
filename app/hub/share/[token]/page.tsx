@@ -291,9 +291,9 @@ export default async function PublicSharePage({ params }: { params: Promise<{ to
         </div>
       </div>
 
-      <div className="mx-auto" style={{ maxWidth: 940, display: "flex" }}>
-        <PublicReportRail sections={sections} />
-        <div style={{ flex: 1, minWidth: 0, padding: "28px 20px 60px" }}>
+      <PublicReportRail sections={sections} />
+      <div className="mx-auto" style={{ maxWidth: 860 }}>
+        <div style={{ padding: "28px 20px 60px" }}>
           {fitment && fitmentBand && (
             <div id="fitment">
               <SectionHeading index="01 · Role Fitment" title="Matched against six weighted dimensions" blurb={`CV and experience compared against the ${fitment.roleTitle} job description. Scores below 100% usually reflect information missing from the CV, not an absence of capability.`} />

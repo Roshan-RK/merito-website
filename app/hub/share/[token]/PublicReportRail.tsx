@@ -26,17 +26,13 @@ export default function PublicReportRail({ sections }: { sections: { key: string
 
   return (
     <nav
+      className="print:hidden hidden lg:block"
       style={{
-        position: "sticky",
-        top: 0,
-        height: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 72,
-        flexShrink: 0,
-        borderRight: "1px solid #E6E1ED",
-        background: "#F4F1F7",
+        position: "fixed",
+        left: 24,
+        top: "50%",
+        transform: "translateY(-50%)",
+        zIndex: 40,
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 34, alignItems: "center" }}>
