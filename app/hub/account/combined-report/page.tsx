@@ -3,11 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
-import { isReportUnlocked } from "@/lib/reportUnlocks";
-import { getReferenceCheckStatus, computeReferenceReport } from "@/lib/referenceChecks";
-import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
-import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
-import { nameFromEmail, type Scores } from "@/lib/personality";
+import { loadCombinedReportData } from "@/lib/combinedReportData";
 import { getMatchBand } from "../report/ResumeMatchGauge";
 import { getScoreBand } from "../interview/InterviewScoreGauge";
 import { remapBand, remapBandDark } from "./combinedBandColors";
@@ -134,66 +130,18 @@ export default async function CombinedReportPage({
   const interviewSectionsParam = typeof params.interviewSections === "string" ? params.interviewSections : DEFAULT_INTERVIEW_SECTIONS;
   const interviewSections = new Set(interviewSectionsParam.split(",").filter(Boolean));
 
-  let fitment: { roleTitle: string; displayName: string; report: ResumeMatchReportReady } | null = null;
-  if (include.has("fitment")) {
-    const { data: leads } = await supabase
-      .from("fitment_leads")
-      .select("id, role_title, name, resume_match_status, resume_match_raw")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1);
-    const current = leads?.[0];
-    if (current) {
-      const unlocked = await isReportUnlocked(user.id, current.role_title);
-      if (unlocked && current.resume_match_status === "READY" && current.resume_match_raw) {
-        fitment = {
-          roleTitle: current.role_title,
-          displayName: current.name || nameFromEmail(user.email ?? ""),
-          report: current.resume_match_raw as ResumeMatchReportReady,
-        };
-      }
-    }
-  }
-
-  const roleTitle = roleTitleParam ?? fitment?.roleTitle ?? null;
-
-  let personality: { scores: Scores } | null = null;
-  if (include.has("personality") && roleTitle) {
-    const { data: existing } = await supabase
-      .from("personality_tests")
-      .select("scores, validity")
-      .eq("user_id", user.id)
-      .eq("role_title", roleTitle)
-      .maybeSingle();
-    if (existing?.scores && existing?.validity) {
-      personality = { scores: existing.scores as Scores };
-    }
-  }
-
-  let interview: { roleTitle: string; report: InterviewReportReady; updatedAt: string } | null = null;
-  if (include.has("interview")) {
-    let query = supabase.from("fitment_interviews").select("role_title, status, report_raw, updated_at").eq("user_id", user.id);
-    if (roleTitle) query = query.eq("role_title", roleTitle);
-    const { data: row } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
-    if (row && row.status === "ready" && row.report_raw) {
-      interview = { roleTitle: row.role_title, report: row.report_raw as InterviewReportReady, updatedAt: row.updated_at };
-    }
-  }
-
-  let references: ReturnType<typeof computeReferenceReport> | null = null;
-  if (include.has("references")) {
-    const status = await getReferenceCheckStatus(user.id);
-    if (status?.status === "completed") {
-      references = computeReferenceReport(status.referees);
-    }
-  }
+  const { fitment, personality, interview, references, displayName, primaryRole } = await loadCombinedReportData({
+    supabase,
+    userId: user.id,
+    userEmail: user.email,
+    include,
+    roleTitleParam,
+  });
 
   if (!fitment && !personality && !interview && !references) {
     redirect("/hub/account");
   }
 
-  const displayName = fitment?.displayName || nameFromEmail(user.email ?? "");
-  const primaryRole = fitment?.roleTitle || interview?.roleTitle || roleTitle || "—";
   const reportDate = new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" });
   const reportId = `MH-${user.id.split("-")[0].toUpperCase()}`;
   const sortedFitmentCategories = fitment ? [...fitment.report.categories].sort((a, b) => b.score - a.score) : [];
