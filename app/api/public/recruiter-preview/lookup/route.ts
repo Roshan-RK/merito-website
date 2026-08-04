@@ -1,52 +1,19 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { getReferenceCheckStatus, computeReferenceReport } from "@/lib/referenceChecks";
-import { nameFromEmail, TRAIT_NAME, TRAIT_WORK_IMPLICATION, BANDS, traitLevel, type Scores, type TraitKey } from "@/lib/personality";
+import { nameFromEmail, type Scores } from "@/lib/personality";
 import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "@/lib/linkedinUrl";
-import type { ResumeMatchReportReady, ResumeMatchCategory } from "@/lib/intervuebox/reports";
+import {
+  buildLookupFitment,
+  buildLookupPersonality,
+  buildLookupInterview,
+  type LookupFitment,
+  type LookupPersonality,
+  type LookupInterview,
+} from "@/lib/recruiterPreview";
+import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 
 export const runtime = "nodejs";
-
-type LookupFitmentReport = {
-  overallScore: number;
-  categories: ResumeMatchCategory[];
-  summary: string;
-};
-
-type LookupInterview = {
-  overallScore: number;
-  skillMetrics: Record<string, number>;
-  overallSummary: string;
-  skillReport: Record<string, { score: number; comment: string }>;
-  strengths: string | null;
-  completedAt: string;
-  approxDurationMinutes: number | null;
-};
-
-type LookupPersonalityTrait = {
-  key: TraitKey;
-  label: string;
-  pct: number;
-  bandLabel: string;
-};
-
-type LookupPersonality = {
-  traits: LookupPersonalityTrait[];
-  summary: string;
-  completedAt: string | null;
-};
-
-const TRAIT_ORDER: TraitKey[] = ["E", "A", "C", "ES", "O"];
-
-function buildPersonalitySummary(candidateName: string, traits: LookupPersonalityTrait[]): string {
-  const firstName = candidateName.split(/\s+/)[0] || candidateName;
-  const sorted = [...traits].sort((a, b) => b.pct - a.pct);
-  const top = sorted[0];
-  const second = sorted[1];
-  if (!top || !second) return "";
-  const workLine = TRAIT_WORK_IMPLICATION[top.key][traitLevel(top.pct)](firstName);
-  return `${firstName} scores highest in ${top.label} and ${second.label}. ${workLine}`;
-}
 
 export async function POST(request: Request) {
   const expectedKey = process.env.RECRUITER_EXTENSION_KEY;
@@ -103,7 +70,7 @@ export async function POST(request: Request) {
     candidateName = nameFromEmail(authUser?.user?.email ?? "");
   }
 
-  let fitment: { report: LookupFitmentReport; matchedAgainstRoleTitle: string } | null = null;
+  let fitment: LookupFitment | null = null;
   if (
     sections.has("fitment") &&
     currentLead &&
@@ -111,15 +78,7 @@ export async function POST(request: Request) {
     currentLead.resume_match_raw &&
     roleTitle
   ) {
-    const fullFitment = currentLead.resume_match_raw as ResumeMatchReportReady;
-    fitment = {
-      report: {
-        overallScore: fullFitment.overallScore,
-        categories: fullFitment.categories,
-        summary: fullFitment.summary,
-      },
-      matchedAgainstRoleTitle: roleTitle,
-    };
+    fitment = buildLookupFitment(currentLead.resume_match_raw as ResumeMatchReportReady, roleTitle);
   }
 
   let personality: LookupPersonality | null = null;
@@ -131,18 +90,11 @@ export async function POST(request: Request) {
       .eq("role_title", roleTitle)
       .maybeSingle();
     if (personalityRow?.scores) {
-      const scores = personalityRow.scores as Scores;
-      const traits = TRAIT_ORDER.filter((key) => scores[key]).map((key) => ({
-        key,
-        label: TRAIT_NAME[key],
-        pct: scores[key].pct,
-        bandLabel: BANDS[scores[key].band],
-      }));
-      personality = {
-        traits,
-        summary: buildPersonalitySummary(candidateName, traits),
-        completedAt: (personalityRow.completed_at as string | null) ?? null,
-      };
+      personality = buildLookupPersonality(
+        personalityRow.scores as Scores,
+        candidateName,
+        (personalityRow.completed_at as string | null) ?? null
+      );
     }
   }
 
@@ -157,16 +109,7 @@ export async function POST(request: Request) {
       .limit(1)
       .maybeSingle();
     if (interviewRow && interviewRow.status === "ready" && interviewRow.report_raw) {
-      const full = interviewRow.report_raw as InterviewReportReady;
-      interview = {
-        overallScore: full.overallScore,
-        skillMetrics: full.skillMetrics,
-        overallSummary: full.overallSummary,
-        skillReport: full.skillReport,
-        strengths: full.strengths,
-        completedAt: interviewRow.updated_at as string,
-        approxDurationMinutes: full.approxDurationMinutes,
-      };
+      interview = buildLookupInterview(interviewRow.report_raw as InterviewReportReady, interviewRow.updated_at as string);
     }
   }
 
