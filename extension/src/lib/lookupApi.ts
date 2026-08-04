@@ -1,4 +1,4 @@
-import type { LookupResponse } from "../overlay/types";
+import type { LookupResponse } from "../../../shared/recruiter-preview/types";
 
 const LOOKUP_URL = "https://www.merito.ai/api/public/recruiter-preview/lookup";
 

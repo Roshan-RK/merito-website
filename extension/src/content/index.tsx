@@ -1,7 +1,7 @@
 import { createRoot, type Root } from "react-dom/client";
 import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "./linkedinUrl";
 import { Overlay } from "../overlay/Overlay";
-import type { LookupResponse } from "../overlay/types";
+import type { LookupResponse } from "../../../shared/recruiter-preview/types";
 
 let currentUrl = "";
 let shadowHost: HTMLDivElement | null = null;
