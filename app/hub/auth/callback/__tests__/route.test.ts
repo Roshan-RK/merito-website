@@ -72,6 +72,37 @@ describe("GET /hub/auth/callback", () => {
     expect(response.headers.get("location")).toContain("/hub/login?error=expired");
   });
 
+  it("redirects to /admin when next=/admin is present", async () => {
+    verifyOtpMock.mockResolvedValue({
+      data: { user: { id: "user-123", email: "candidate@example.com" } },
+      error: null,
+    });
+    claimFitmentLeadsMock.mockResolvedValue({ claimedCount: 0 });
+
+    const { GET } = await importRoute();
+    const request = new Request("http://localhost/hub/auth/callback?token_hash=valid-hash&type=magiclink&next=/admin");
+    const response = await GET(request);
+
+    expect(response.headers.get("location")).toContain("/admin");
+  });
+
+  it("ignores next values outside the allowlist and falls back to /hub/account", async () => {
+    verifyOtpMock.mockResolvedValue({
+      data: { user: { id: "user-123", email: "candidate@example.com" } },
+      error: null,
+    });
+    claimFitmentLeadsMock.mockResolvedValue({ claimedCount: 0 });
+
+    const { GET } = await importRoute();
+    const request = new Request(
+      "http://localhost/hub/auth/callback?token_hash=valid-hash&type=magiclink&next=" + encodeURIComponent("https://evil.example.com"),
+    );
+    const response = await GET(request);
+
+    expect(response.headers.get("location")).toContain("/hub/account");
+    expect(response.headers.get("location")).not.toContain("evil.example.com");
+  });
+
   it("still redirects to /hub/account even if claiming fails", async () => {
     verifyOtpMock.mockResolvedValue({
       data: { user: { id: "user-123", email: "candidate@example.com" } },

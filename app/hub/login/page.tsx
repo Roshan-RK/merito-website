@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabaseAuth";
 import { getAbsoluteUrl } from "@/lib/site";
 
-export default function LoginPage() {
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = use(searchParams);
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
@@ -14,13 +19,16 @@ export default function LoginPage() {
 
     setStatus("sending");
     const supabase = createSupabaseBrowserClient();
+    // `next` is re-validated against an allowlist server-side in
+    // /hub/auth/callback — this is just passing the candidate value through.
+    const callbackPath = next ? `/hub/auth/callback?next=${encodeURIComponent(next)}` : "/hub/auth/callback";
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {
         // The exact URL this resolves to (both local and production) must be
         // added to the Supabase project's Auth → URL Configuration → Redirect URLs
         // allow-list, or the magic-link email will fail to redirect correctly.
-        emailRedirectTo: getAbsoluteUrl("/hub/auth/callback"),
+        emailRedirectTo: getAbsoluteUrl(callbackPath),
       },
     });
 
