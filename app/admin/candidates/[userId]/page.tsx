@@ -13,6 +13,12 @@ import RoadmapTimeline from "@/app/hub/account/RoadmapTimeline";
 import EvaluatorNotes from "@/app/hub/account/EvaluatorNotes";
 import PersonalityReport from "@/app/hub/account/personality/PersonalityReport";
 import RefereeSummary from "./RefereeSummary";
+import ShareLinkRevokeToggle from "./ShareLinkRevokeToggle";
+
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
+}
 
 const sectionHeading: React.CSSProperties = { fontSize: "1.1rem", margin: "0 0 14px" };
 const emptyNote: React.CSSProperties = { fontSize: 13 };
@@ -147,6 +153,75 @@ export default async function AdminCandidateDetailPage({
         ) : (
           <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={emptyNote}>
             Not started yet.
+          </p>
+        )}
+      </section>
+
+      <section>
+        <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
+          Recruiter Preview
+        </h3>
+        {candidate.recruiterPreview.settings ? (
+          <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, margin: "0 0 14px" }}>
+            {candidate.recruiterPreview.settings.enabled ? "Visible to recruiters" : "Not visible"} ·{" "}
+            {candidate.recruiterPreview.settings.sections.length > 0
+              ? candidate.recruiterPreview.settings.sections.join(", ")
+              : "no sections selected"}
+          </p>
+        ) : (
+          <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ ...emptyNote, marginBottom: 14 }}>
+            Not configured.
+          </p>
+        )}
+
+        {candidate.recruiterPreview.shareLinks.length > 0 ? (
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid #eee" }}>
+                {["Role", "Status", "Views", "Last viewed", "Created", ""].map((label) => (
+                  <th
+                    key={label}
+                    className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]"
+                    style={{ padding: "10px 0", fontSize: 11, letterSpacing: "0.04em", textAlign: "left" }}
+                  >
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {candidate.recruiterPreview.shareLinks.map((link) => (
+                <tr key={link.token} style={{ borderBottom: "1px solid #eee" }}>
+                  <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
+                    {link.roleTitle}
+                  </td>
+                  <td style={{ padding: "10px 0", fontSize: 13 }}>
+                    <span
+                      className="font-[family-name:var(--font-poppins)] font-semibold uppercase"
+                      style={{ color: link.revoked ? "#9c9c9c" : "#16803c", fontSize: 11.5 }}
+                    >
+                      {link.revoked ? "Revoked" : "Active"}
+                    </span>
+                  </td>
+                  <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
+                    {link.viewCount}
+                  </td>
+                  <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
+                    {formatDate(link.lastViewedAt)}
+                  </td>
+                  <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
+                    {formatDate(link.createdAt)}
+                  </td>
+                  <td style={{ padding: "10px 0", fontSize: 14 }}>
+                    <ShareLinkRevokeToggle token={link.token} revoked={link.revoked} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={emptyNote}>
+            No share links created yet.
           </p>
         )}
       </section>

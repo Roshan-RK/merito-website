@@ -89,6 +89,15 @@ export type CandidateLeadDetail = {
   interviewReport: InterviewReportReady | null;
 };
 
+export type ShareLinkDetail = {
+  roleTitle: string;
+  token: string;
+  revoked: boolean;
+  viewCount: number;
+  lastViewedAt: string | null;
+  createdAt: string;
+};
+
 export type CandidateDetail = {
   userId: string;
   email: string;
@@ -96,6 +105,10 @@ export type CandidateDetail = {
   leads: CandidateLeadDetail[];
   personality: { roleTitle: string; scores: Scores; validity: Validity } | null;
   references: { status: string; minReferences: number; report: ReferenceReport; referees: RefereeRow[] } | null;
+  recruiterPreview: {
+    settings: { enabled: boolean; sections: string[]; linkedinUrl: string | null; updatedAt: string } | null;
+    shareLinks: ShareLinkDetail[];
+  };
 };
 
 export async function getCandidateDetail(userId: string): Promise<CandidateDetail | null> {
@@ -126,6 +139,18 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
     .maybeSingle();
 
   const referenceStatus = await getReferenceCheckStatus(userId);
+
+  const { data: previewSettingsRow } = await supabase
+    .from("recruiter_preview_settings")
+    .select("enabled, sections, linkedin_url, updated_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const { data: shareLinkRows } = await supabase
+    .from("report_share_links")
+    .select("role_title, token, revoked_at, view_count, last_viewed_at, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
   const leads: CandidateLeadDetail[] = await Promise.all(
     leadRows.map(async (lead) => {
@@ -160,5 +185,23 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
           referees: referenceStatus.referees,
         }
       : null,
+    recruiterPreview: {
+      settings: previewSettingsRow
+        ? {
+            enabled: previewSettingsRow.enabled,
+            sections: previewSettingsRow.sections,
+            linkedinUrl: previewSettingsRow.linkedin_url,
+            updatedAt: previewSettingsRow.updated_at,
+          }
+        : null,
+      shareLinks: (shareLinkRows ?? []).map((r) => ({
+        roleTitle: r.role_title,
+        token: r.token,
+        revoked: Boolean(r.revoked_at),
+        viewCount: r.view_count,
+        lastViewedAt: r.last_viewed_at,
+        createdAt: r.created_at,
+      })),
+    },
   };
 }

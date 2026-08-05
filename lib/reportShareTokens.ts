@@ -95,6 +95,29 @@ export async function validateShareToken(token: string): Promise<ShareTokenValid
   };
 }
 
+export async function recordShareLinkView(token: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+
+  const { data: existing } = await supabase.from("report_share_links").select("view_count").eq("token", token).maybeSingle();
+  if (!existing) return;
+
+  await supabase
+    .from("report_share_links")
+    .update({ view_count: existing.view_count + 1, last_viewed_at: new Date().toISOString() })
+    .eq("token", token);
+}
+
+export async function setShareLinkRevokedByToken(token: string, revoked: boolean): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase
+    .from("report_share_links")
+    .update({ revoked_at: revoked ? new Date().toISOString() : null, updated_at: new Date().toISOString() })
+    .eq("token", token);
+  if (error) {
+    throw new Error(`Failed to update share link: ${error.message}`);
+  }
+}
+
 export async function getShareLink({
   userId,
   roleTitle,

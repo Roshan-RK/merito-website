@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { validateShareToken } from "@/lib/reportShareTokens";
+import { validateShareToken, recordShareLinkView } from "@/lib/reportShareTokens";
 import { loadCombinedReportData } from "@/lib/combinedReportData";
 import { getMatchBand } from "../../account/report/ResumeMatchGauge";
 import { getScoreBand } from "../../account/interview/InterviewScoreGauge";
@@ -115,6 +115,8 @@ export default async function PublicSharePage({ params }: { params: Promise<{ to
   if (!validation.valid) {
     return <UnavailableState />;
   }
+
+  await recordShareLinkView(token).catch(() => {});
 
   const supabase = getSupabaseServerClient();
   const include = new Set(validation.include);
