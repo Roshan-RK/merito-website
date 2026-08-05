@@ -16,12 +16,16 @@ export async function POST(request: Request) {
 
   const { data: existingLead } = await supabase
     .from("fitment_leads")
-    .select("phone, candidate_level")
+    .select("name, phone, candidate_level")
     .eq("user_id", user.id)
     .not("phone", "is", null)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  if (existingLead?.name) {
+    form.set("name", existingLead.name);
+  }
 
   if (existingLead?.phone) {
     form.set("phone", existingLead.phone);
