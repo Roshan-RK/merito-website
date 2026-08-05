@@ -6,7 +6,7 @@
 
 No admin/oversight surface exists today — only candidate-facing Supabase auth (`app/hub/login`, magic-link OTP). PO has no way to see signups, test/assessment progress, or drop-off without querying Supabase directly. This is the first two slices of `plans/2026-08-05-admin-portal-roadmap.md` — slice 1 (admin foundation) blocks every other slice; slice 2 (funnel overview) is the direct payoff for the original ask.
 
-Single admin user for now (`rushi.humbe@gmail.com`) — no roles table, no invite flow.
+Single admin user for now (`roshan@merito.in`) — no roles table, no invite flow.
 
 ## Decisions
 
