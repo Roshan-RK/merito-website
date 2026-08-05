@@ -3,7 +3,6 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { getApplicant } from "@/lib/intervuebox/applicants";
 import { createInterviewAgent, type CandidateLevel } from "@/lib/intervuebox/agents";
 import { sendInterviewInvitation } from "@/lib/intervuebox/invitations";
-import { createJob } from "@/lib/intervuebox/jobs";
 
 export const runtime = "nodejs";
 
@@ -47,6 +46,39 @@ export async function POST(request: Request) {
 
   const admin = getSupabaseServerClient();
 
+  // IntervueBox permanently ties one interview to one job (vendor-confirmed
+  // 2026-07-28 by Krupal) and won't re-invite a candidate who already has a
+  // completed interview on an agent — reusing the agent silently 0-invites.
+  // A prior attempt tried working around this by spinning up a new job with
+  // slightly-modified JD text, but still invited the OLD job's candidateId
+  // to the NEW job's agent — IntervueBox scopes candidates per-job (they're
+  // created via uploadResume+addApplicant against a specific job), so that
+  // candidateId was never valid on the new job either. There's no cheap fix
+  // without re-collecting the CV, so block instead of silently failing —
+  // and check before the payment-credit consumption below so a blocked
+  // attempt is never charged. role_title is the only link fitment_interviews
+  // has back to an attempt (no lead_id FK), so this fires the same way
+  // whether reached via a retake or via Change Target Role reusing the same
+  // role title text.
+  const { data: priorAttempt } = await admin
+    .from("fitment_interviews")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("role_title", roleTitle)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (priorAttempt) {
+    return Response.json(
+      {
+        error:
+          "You've already completed an AI interview for this role. Each role can only be interviewed once — change your target role to interview again.",
+      },
+      { status: 409 }
+    );
+  }
+
   if (!isRazorpayBypassed()) {
     const { data: credit } = await admin
       .from("razorpay_transactions")
@@ -74,7 +106,7 @@ export async function POST(request: Request) {
 
   const { data: lead, error: leadError } = await supabase
     .from("fitment_leads")
-    .select("ib_job_id, ib_applied_job_id, candidate_level, jd_text")
+    .select("ib_job_id, ib_applied_job_id, candidate_level")
     .eq("user_id", user.id)
     .eq("role_title", roleTitle)
     .order("created_at", { ascending: false })
@@ -87,31 +119,11 @@ export async function POST(request: Request) {
 
   let candidateId: string;
   let ibAgentId: string;
-  let ibJobId = lead.ib_job_id;
+  const ibJobId = lead.ib_job_id;
   try {
     ({ candidateId } = await getApplicant(lead.ib_applied_job_id));
 
-    // IntervueBox permanently ties one interview to one job (vendor-
-    // confirmed 2026-07-28 by Krupal) and won't re-invite a candidate who
-    // already has a completed interview on an agent either — reusing the
-    // agent silently 0-invites. A retake needs a genuinely new job. Vary
-    // the JD text so IntervueBox's content-based job dedup doesn't collide
-    // with the original job.
-    const { data: priorAttempt } = await admin
-      .from("fitment_interviews")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("role_title", roleTitle)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
     const candidateLevel = (lead.candidate_level as CandidateLevel) || "mid";
-
-    if (priorAttempt) {
-      const retakeJD = `${lead.jd_text}\n\n(Retake attempt — ${new Date().toISOString()})`;
-      ({ ibJobId } = await createJob({ title: roleTitle, jobDescription: retakeJD, candidateLevel }));
-    }
 
     ({ ibAgentId } = await createInterviewAgent(ibJobId, roleTitle, candidateLevel));
 

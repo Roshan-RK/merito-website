@@ -64,8 +64,6 @@ const createInterviewAgentMock = vi.fn();
 vi.mock("@/lib/intervuebox/agents", () => ({ createInterviewAgent: createInterviewAgentMock }));
 const sendInterviewInvitationMock = vi.fn();
 vi.mock("@/lib/intervuebox/invitations", () => ({ sendInterviewInvitation: sendInterviewInvitationMock }));
-const createJobMock = vi.fn();
-vi.mock("@/lib/intervuebox/jobs", () => ({ createJob: createJobMock }));
 
 async function importRoute() {
   return await import("../route");
@@ -91,7 +89,6 @@ describe("POST /api/hub/start-ai-interview", () => {
     getApplicantMock.mockReset();
     createInterviewAgentMock.mockReset();
     sendInterviewInvitationMock.mockReset();
-    createJobMock.mockReset();
     creditMaybeSingleMock.mockReset();
     creditMaybeSingleMock.mockResolvedValue({ data: { order_id: "order_credit_1" }, error: null });
     consumeUpdateEqMock.mockClear();
@@ -142,48 +139,32 @@ describe("POST /api/hub/start-ai-interview", () => {
     expect(sendInterviewInvitationMock).toHaveBeenCalled();
   });
 
-  it("creates a new job and a new interview agent on retake instead of reusing the prior job (IntervueBox ties one interview to one job permanently)", async () => {
+  it("blocks with a clear message and never charges when a prior interview row already exists for this role (IntervueBox ties one interview to one job permanently, and the old candidateId isn't valid on a new job either)", async () => {
+    process.env.RAZORPAY_BYPASS = "false";
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     priorAttemptMaybeSingleMock.mockResolvedValue({ data: { id: "row-prior" }, error: null });
-    leadMaybeSingleMock.mockResolvedValue({
-      data: {
-        ib_job_id: "JOB_ORIGINAL",
-        ib_applied_job_id: "APJ_123",
-        candidate_level: "mid",
-        jd_text: "We need a Senior Product Manager...",
-      },
-      error: null,
-    });
-    getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
-    createJobMock.mockResolvedValue({ ibJobId: "JOB_RETAKE" });
-    createInterviewAgentMock.mockResolvedValue({ ibAgentId: "INT_RETAKE" });
-    sendInterviewInvitationMock.mockResolvedValue({ invited: 1, failed: 0 });
 
     const { POST } = await importRoute();
     const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "invited" });
-    expect(createJobMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: "Senior Product Manager",
-        jobDescription: expect.stringContaining("We need a Senior Product Manager..."),
-      })
-    );
-    expect(createInterviewAgentMock).toHaveBeenCalledWith("JOB_RETAKE", "Senior Product Manager", "mid");
-    expect(sendInterviewInvitationMock).toHaveBeenCalledWith("INT_RETAKE", ["USR_123"]);
-    expect(insertMock).toHaveBeenCalledWith(
-      expect.objectContaining({ ib_job_id: "JOB_RETAKE", ib_agent_id: "INT_RETAKE" })
-    );
+    expect(response.status).toBe(409);
+    const body = await response.json();
+    expect(body.error).toMatch(/already completed an AI interview/i);
+    expect(creditMaybeSingleMock).not.toHaveBeenCalled();
+    expect(getApplicantMock).not.toHaveBeenCalled();
+    expect(createInterviewAgentMock).not.toHaveBeenCalled();
+    expect(sendInterviewInvitationMock).not.toHaveBeenCalled();
+    expect(insertMock).not.toHaveBeenCalled();
+    delete process.env.RAZORPAY_BYPASS;
   });
 
-  it("does not create a new job on a first-time attempt (no prior interview row for this role)", async () => {
+  it("proceeds on a first-time attempt (no prior interview row for this role), using the lead's job as-is", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     priorAttemptMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     leadMaybeSingleMock.mockResolvedValue({
-      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid", jd_text: "JD text" },
+      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
       error: null,
     });
     getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
@@ -194,7 +175,6 @@ describe("POST /api/hub/start-ai-interview", () => {
     const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
 
     expect(response.status).toBe(200);
-    expect(createJobMock).not.toHaveBeenCalled();
     expect(createInterviewAgentMock).toHaveBeenCalledWith("JOB_123", "Senior Product Manager", "mid");
     expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ ib_job_id: "JOB_123" }));
   });

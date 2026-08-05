@@ -124,20 +124,6 @@ export default function ProgressRail({
                 Start
               </span>
             );
-          } else if (isInterviewStep && interviewStatus === "ready") {
-            rightBadge = (
-              <span
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onOpenInterviewStart();
-                }}
-                className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-                style={{ fontSize: 11, cursor: "pointer" }}
-              >
-                Retake
-              </span>
-            );
           } else if (isReportLocked) {
             rightBadge = (
               <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 11 }}>
