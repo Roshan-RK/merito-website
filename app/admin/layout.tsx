@@ -20,6 +20,9 @@ export default async function AdminLayout({
         <Link href="/admin/candidates" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
           Candidates
         </Link>
+        <Link href="/admin/payments" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
+          Payments
+        </Link>
       </nav>
       {children}
     </main>
