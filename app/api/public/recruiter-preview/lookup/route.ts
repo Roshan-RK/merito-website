@@ -2,6 +2,7 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { getReferenceCheckStatus, computeReferenceReport } from "@/lib/referenceChecks";
 import { nameFromEmail, type Scores } from "@/lib/personality";
 import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "@/lib/linkedinUrl";
+import { recordLookup } from "@/lib/extensionLookups";
 import {
   buildLookupFitment,
   buildLookupPersonality,
@@ -46,6 +47,8 @@ export async function POST(request: Request) {
     .eq("linkedin_url", normalized)
     .eq("enabled", true)
     .maybeSingle();
+
+  await recordLookup({ linkedinUrl: normalized, matchedUserId: settingsRow?.user_id ?? null });
 
   if (!settingsRow) {
     return Response.json({ error: "Not found." }, { status: 404 });

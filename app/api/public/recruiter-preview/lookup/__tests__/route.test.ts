@@ -8,6 +8,7 @@ function makeQueryStub(result: { data: unknown }) {
   stub.limit = () => stub;
   stub.maybeSingle = async () => result;
   stub.then = (resolve: (value: typeof result) => void) => resolve(result);
+  stub.insert = async () => ({ error: null });
   return stub;
 }
 
@@ -48,6 +49,7 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
       fitment_leads: makeQueryStub({ data: [] }),
       personality_tests: makeQueryStub({ data: null }),
       fitment_interviews: makeQueryStub({ data: null }),
+      extension_lookups: makeQueryStub({ data: null }),
     };
     fromMock.mockClear();
     getUserByIdMock.mockReset();
