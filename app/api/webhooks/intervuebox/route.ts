@@ -42,6 +42,11 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid signature." }, { status: 401 });
   }
 
+  // TEMP (remove after capturing a real payload): dump every validly-signed
+  // delivery so a dashboard "Test" hit on any subscribed event reveals the
+  // undocumented per-event JSON shape in the deploy logs.
+  console.log("[intervuebox webhook] raw delivery", rawBody);
+
   // The webhook delivery body's per-event JSON shape isn't documented by
   // IntervueBox, so this handler doesn't parse it for identifiers at all.
   // Instead, any validly-signed hit re-checks every row we ourselves still
