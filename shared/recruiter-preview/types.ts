@@ -45,3 +45,5 @@ export type LookupResponse = {
     referees: { name: string; role: string; organization: string | null; overallFeedback: string | null }[];
   } | null;
 };
+
+export type RescoreResponse = { fitment: LookupResponse["fitment"] };
