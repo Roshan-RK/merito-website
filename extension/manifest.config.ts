@@ -5,6 +5,9 @@ export default defineManifest({
   name: "Merito Recruiter Preview",
   version: "0.1.0",
   description: "See a candidate's verified Merito Hub report while viewing their LinkedIn profile.",
+  action: {
+    default_popup: "src/popup/index.html",
+  },
   content_scripts: [
     {
       matches: ["https://www.linkedin.com/in/*"],
