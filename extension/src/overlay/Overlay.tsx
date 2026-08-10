@@ -7,6 +7,11 @@ const logoUrl = chrome.runtime.getURL(logoPath.replace(/^\//, ""));
 
 const SANS = "-apple-system, 'Segoe UI', Roboto, sans-serif";
 
+export type RescoreState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ready"; fitment: NonNullable<LookupResponse["fitment"]> };
+
 function Badge({ onClick }: { onClick: () => void }) {
   return (
     <button
@@ -41,7 +46,27 @@ function Badge({ onClick }: { onClick: () => void }) {
   );
 }
 
-export function Overlay({ data }: { data: LookupResponse }) {
+function RescoreBanner({ state }: { state: RescoreState }) {
+  if (state.status !== "loading") return null;
+  return (
+    <div
+      style={{
+        margin: "10px 16px 0",
+        padding: "8px 12px",
+        borderRadius: 10,
+        background: "#ECEBF7",
+        color: "#4B4894",
+        fontSize: 11.5,
+        fontFamily: SANS,
+        fontWeight: 600,
+      }}
+    >
+      Scoring against your JD…
+    </div>
+  );
+}
+
+export function Overlay({ data, rescore = { status: "idle" } }: { data: LookupResponse; rescore?: RescoreState }) {
   const [expanded, setExpanded] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionKey>("fitment");
   const cardRef = useRef<HTMLDivElement>(null);
@@ -54,6 +79,15 @@ export function Overlay({ data }: { data: LookupResponse }) {
   if (!expanded) {
     return <Badge onClick={() => setExpanded(true)} />;
   }
+
+  const mergedData: LookupResponse =
+    rescore.status === "ready"
+      ? {
+          ...data,
+          fitment: rescore.fitment,
+          sections: data.sections.includes("fitment") ? data.sections : [...data.sections, "fitment"],
+        }
+      : data;
 
   return (
     <div
@@ -68,8 +102,9 @@ export function Overlay({ data }: { data: LookupResponse }) {
         borderRadius: 16,
       }}
     >
+      <RescoreBanner state={rescore} />
       <RecruiterPreviewCard
-        data={data}
+        data={mergedData}
         activeSection={activeSection}
         onSelectSection={selectSection}
         logoUrl={logoUrl}
