@@ -28,6 +28,7 @@ export default function DashboardClient({
   initialReportUnlocked,
   initialReport,
   initialInterviewStatus,
+  interviewInvitedAt,
   referenceCheckStatus,
   personalityStatus,
   counsellingPriceLabel,
@@ -46,12 +47,14 @@ export default function DashboardClient({
   initialReportUnlocked: boolean;
   initialReport: ResumeMatchReportReady | null;
   initialInterviewStatus: InterviewStatus;
+  interviewInvitedAt: string | null;
   referenceCheckStatus: "none" | "in_progress" | "completed";
   personalityStatus: PersonalityStatus;
   counsellingPriceLabel: string;
   initialCounsellingRequested: boolean;
 }) {
   const [modal, setModal] = useState<"none" | "report" | "personality" | "references" | "interview" | "generate" | "counselling">("none");
+  const [interviewModalAlreadyInvited, setInterviewModalAlreadyInvited] = useState(false);
   const [reportUnlocked, setReportUnlocked] = useState(initialReportUnlocked);
   const [report, setReport] = useState<ResumeMatchReportReady | null>(initialReport);
   const [interviewStatus, setInterviewStatus] = useState<InterviewStatus>(initialInterviewStatus);
@@ -87,6 +90,7 @@ export default function DashboardClient({
         <ProgressRail
           reportUnlocked={reportUnlocked}
           interviewStatus={interviewStatus}
+          interviewInvitedAt={interviewInvitedAt}
           referenceCheckStatus={referenceCheckStatus}
           personalityStatus={personalityStatus}
           personalityUnlocked={personalityUnlockedState}
@@ -97,6 +101,10 @@ export default function DashboardClient({
           onOpenPersonalityPaywall={() => setModal("personality")}
           onOpenReferencesPaywall={() => setModal("references")}
           onOpenInterviewStart={() => setModal("interview")}
+          onOpenInterviewCheck={() => {
+            setInterviewModalAlreadyInvited(true);
+            setModal("interview");
+          }}
           onOpenGenerateReport={() => setModal("generate")}
         />
 
@@ -190,9 +198,14 @@ export default function DashboardClient({
           roleTitle={roleTitle}
           level={level}
           userEmail={userEmail}
-          onClose={() => setModal("none")}
+          alreadyInvited={interviewModalAlreadyInvited}
+          onClose={() => {
+            setInterviewModalAlreadyInvited(false);
+            setModal("none");
+          }}
           onStarted={(status) => {
             setInterviewStatus(status);
+            setInterviewModalAlreadyInvited(false);
             setModal("none");
           }}
         />

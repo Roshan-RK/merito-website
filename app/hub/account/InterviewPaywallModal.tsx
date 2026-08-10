@@ -49,12 +49,17 @@ export default function InterviewPaywallModal({
   roleTitle,
   level,
   userEmail,
+  alreadyInvited = false,
   onClose,
   onStarted,
 }: {
   roleTitle: string;
   level: CandidateLevel;
   userEmail: string;
+  // True when the row was already "invited" and the candidate is just
+  // rechecking what's happening — skips straight to the confirmation view
+  // instead of the payment screen (no new invite is sent).
+  alreadyInvited?: boolean;
   onClose: () => void;
   onStarted: (status: InterviewStatus) => void;
 }) {
@@ -64,7 +69,7 @@ export default function InterviewPaywallModal({
   // confirmation instead of closing immediately, so the candidate doesn't
   // lose track of the fact that the next step is checking their email, not
   // sitting on this page waiting.
-  const [invitedStatus, setInvitedStatus] = useState<InterviewStatus | null>(null);
+  const [invitedStatus, setInvitedStatus] = useState<InterviewStatus | null>(alreadyInvited ? "invited" : null);
 
   const startInterview = async () => {
     const res = await fetch("/api/hub/start-ai-interview", {
