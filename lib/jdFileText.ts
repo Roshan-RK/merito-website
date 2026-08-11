@@ -1,4 +1,7 @@
-import pdfParse from "pdf-parse";
+// Import the internal module directly, not the package root — root index.js
+// has debug-mode code that tries reading a bundled test fixture on import
+// and throws ENOENT outside pdf-parse's own working directory.
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import mammoth from "mammoth";
 
 const PDF_MIME = "application/pdf";

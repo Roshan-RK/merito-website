@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const pdfParseMock = vi.fn();
-vi.mock("pdf-parse", () => ({ default: pdfParseMock }));
+vi.mock("pdf-parse/lib/pdf-parse.js", () => ({ default: pdfParseMock }));
 
 const extractRawTextMock = vi.fn();
 vi.mock("mammoth", () => ({ default: { extractRawText: extractRawTextMock } }));
