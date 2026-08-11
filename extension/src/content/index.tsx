@@ -1,14 +1,31 @@
 import { createRoot, type Root } from "react-dom/client";
 import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "./linkedinUrl";
 import { Overlay, type RescoreState } from "../overlay/Overlay";
-import type { LookupResponse, RescoreResponse } from "../../../shared/recruiter-preview/types";
+import { ProspectOverlay } from "../overlay/ProspectOverlay";
+import { scrapeProfile } from "../lib/scrapeProfile";
+import type { LookupResponse, RescoreResponse, ScoreProspectResponse } from "../../../shared/recruiter-preview/types";
 
 const JD_STORAGE_KEY = "meritoJdText";
+const EMAIL_STORAGE_KEY = "meritoRecruiterEmail";
+const LEVEL_STORAGE_KEY = "meritoCandidateLevel";
 
 let currentUrl = "";
 let shadowHost: HTMLDivElement | null = null;
 let reactRoot: Root | null = null;
 let currentLookup: LookupResponse | null = null;
+
+function mountRoot(): Root {
+  if (!shadowHost) {
+    shadowHost = document.createElement("div");
+    shadowHost.id = "merito-recruiter-preview-root";
+    document.body.appendChild(shadowHost);
+    const shadow = shadowHost.attachShadow({ mode: "open" });
+    const mountPoint = document.createElement("div");
+    shadow.appendChild(mountPoint);
+    reactRoot = createRoot(mountPoint);
+  }
+  return reactRoot!;
+}
 
 function unmountOverlay() {
   if (reactRoot) {
@@ -23,16 +40,65 @@ function unmountOverlay() {
 }
 
 function renderOverlay(data: LookupResponse, rescore: RescoreState) {
-  if (!shadowHost) {
-    shadowHost = document.createElement("div");
-    shadowHost.id = "merito-recruiter-preview-root";
-    document.body.appendChild(shadowHost);
-    const shadow = shadowHost.attachShadow({ mode: "open" });
-    const mountPoint = document.createElement("div");
-    shadow.appendChild(mountPoint);
-    reactRoot = createRoot(mountPoint);
+  mountRoot().render(<Overlay data={data} rescore={rescore} />);
+}
+
+async function runProspectFlow(linkedinUrl: string) {
+  const stored = await chrome.storage.local.get([JD_STORAGE_KEY, EMAIL_STORAGE_KEY, LEVEL_STORAGE_KEY]);
+  const jdText = stored[JD_STORAGE_KEY] as string | undefined;
+  const recruiterEmail = stored[EMAIL_STORAGE_KEY] as string | undefined;
+  const candidateLevel = (stored[LEVEL_STORAGE_KEY] as "entry" | "mid" | "senior" | undefined) ?? "mid";
+
+  if (!jdText || !recruiterEmail) {
+    mountRoot().render(<ProspectOverlay state={{ status: "needs_setup" }} onScore={() => runProspectFlow(linkedinUrl)} onShortlist={() => {}} />);
+    return;
   }
-  reactRoot?.render(<Overlay data={data} rescore={rescore} />);
+
+  mountRoot().render(<ProspectOverlay state={{ status: "loading" }} onScore={() => {}} onShortlist={() => {}} />);
+
+  const candidateFields = scrapeProfile();
+  const result = (await chrome.runtime.sendMessage({
+    type: "SCORE_PROSPECT",
+    input: { recruiterEmail, linkedinUrl, jdText, candidateLevel, candidateFields },
+  })) as { status: string; data?: ScoreProspectResponse };
+
+  if (linkedinUrl !== currentUrl) return;
+
+  if (result.status === "verification_required") {
+    mountRoot().render(<ProspectOverlay state={{ status: "verification_required" }} onScore={() => runProspectFlow(linkedinUrl)} onShortlist={() => {}} />);
+    return;
+  }
+  if (result.status === "cap_exceeded") {
+    mountRoot().render(<ProspectOverlay state={{ status: "cap_exceeded" }} onScore={() => {}} onShortlist={() => {}} />);
+    return;
+  }
+  if (result.status !== "ready" || !result.data) {
+    mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={() => runProspectFlow(linkedinUrl)} onShortlist={() => {}} />);
+    return;
+  }
+
+  const { prospectId, fitment } = result.data;
+  if (!fitment) {
+    mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={() => runProspectFlow(linkedinUrl)} onShortlist={() => {}} />);
+    return;
+  }
+  mountRoot().render(
+    <ProspectOverlay
+      state={{ status: "ready", fitment, prospectId }}
+      onScore={() => {}}
+      onShortlist={async () => {
+        const shortlistResult = (await chrome.runtime.sendMessage({ type: "SHORTLIST_PROSPECT", prospectId })) as {
+          claimUrl: string;
+          inviteText: string;
+        } | null;
+        if (shortlistResult) {
+          mountRoot().render(
+            <ProspectOverlay state={{ status: "shortlisted", fitment, prospectId, ...shortlistResult }} onScore={() => {}} onShortlist={() => {}} />
+          );
+        }
+      }}
+    />
+  );
 }
 
 async function runRescoreIfJdSet(linkedinUrl: string) {
@@ -67,7 +133,13 @@ async function handleUrlChange() {
     type: "LOOKUP_CANDIDATE",
     linkedinUrl: normalized,
   })) as LookupResponse | null;
-  if (!result) return;
+
+  if (normalized !== currentUrl) return;
+
+  if (!result) {
+    runProspectFlow(normalized);
+    return;
+  }
 
   currentLookup = result;
   renderOverlay(result, { status: "idle" });

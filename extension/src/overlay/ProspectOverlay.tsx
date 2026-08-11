@@ -1,0 +1,120 @@
+import { useState } from "react";
+import logoPath from "../assets/logo.png";
+import type { LookupResponse } from "../../../shared/recruiter-preview/types";
+
+const logoUrl = chrome.runtime.getURL(logoPath.replace(/^\//, ""));
+const SANS = "-apple-system, 'Segoe UI', Roboto, sans-serif";
+
+export type ProspectState =
+  | { status: "needs_setup" }
+  | { status: "loading" }
+  | { status: "verification_required" }
+  | { status: "cap_exceeded" }
+  | { status: "error" }
+  | { status: "ready"; fitment: NonNullable<LookupResponse["fitment"]>; prospectId: string }
+  | { status: "shortlisted"; fitment: NonNullable<LookupResponse["fitment"]>; prospectId: string; claimUrl: string; inviteText: string };
+
+const CARD_STYLE: React.CSSProperties = {
+  position: "fixed",
+  top: 90,
+  right: 24,
+  width: 300,
+  background: "#ffffff",
+  border: "1px solid #E6E1ED",
+  borderRadius: 16,
+  boxShadow: "0 3px 10px rgba(20,15,35,0.12)",
+  padding: 16,
+  zIndex: 999999,
+  fontFamily: SANS,
+  fontSize: 12.5,
+  color: "#211D2C",
+};
+
+function Header() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+      <img src={logoUrl} alt="Merito" style={{ height: 16 }} />
+      <strong>Not yet on Merito</strong>
+    </div>
+  );
+}
+
+export function ProspectOverlay({
+  state,
+  onScore,
+  onShortlist,
+}: {
+  state: ProspectState;
+  onScore: () => void;
+  onShortlist: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  if (state.status === "needs_setup") {
+    return (
+      <div style={CARD_STYLE}>
+        <Header />
+        <p>Set your JD and confirm your email in the extension popup to score this profile.</p>
+      </div>
+    );
+  }
+  if (state.status === "loading") {
+    return (
+      <div style={CARD_STYLE}>
+        <Header />
+        <p>Scoring against your JD…</p>
+      </div>
+    );
+  }
+  if (state.status === "verification_required") {
+    return (
+      <div style={CARD_STYLE}>
+        <Header />
+        <p>Confirm your email (check your inbox) then click retry.</p>
+        <button onClick={onScore}>Retry</button>
+      </div>
+    );
+  }
+  if (state.status === "cap_exceeded") {
+    return (
+      <div style={CARD_STYLE}>
+        <Header />
+        <p>You&apos;ve reached your 10 scored profiles this month. Resets next month.</p>
+      </div>
+    );
+  }
+  if (state.status === "error") {
+    return (
+      <div style={CARD_STYLE}>
+        <Header />
+        <p>Something went wrong.</p>
+        <button onClick={onScore}>Retry</button>
+      </div>
+    );
+  }
+
+  const score = state.fitment?.report.overallScore;
+  return (
+    <div style={CARD_STYLE}>
+      <Header />
+      <p>
+        Fit score: <strong>{score != null ? Math.round(score) : "-"}/100</strong>
+      </p>
+      <p style={{ color: "#4B4894" }}>{state.fitment?.report.summary}</p>
+      {state.status === "ready" && <button onClick={onShortlist}>Shortlist &amp; get invite link</button>}
+      {state.status === "shortlisted" && (
+        <div>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(state.inviteText);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            }}
+          >
+            {copied ? "Copied" : "Copy invite message"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
