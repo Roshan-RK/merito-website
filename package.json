@@ -10,13 +10,16 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
     "@sparticuz/chromium": "^149.0.0",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.5",
     "@vercel/analytics": "^2.0.1",
     "lucide-react": "^1.14.0",
+    "mammoth": "^1.12.1",
     "motion": "^12.38.0",
     "next": "16.2.4",
+    "pdf-parse": "^2.4.5",
     "puppeteer-core": "^25.3.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -26,6 +29,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
