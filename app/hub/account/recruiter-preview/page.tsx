@@ -79,6 +79,7 @@ export default async function RecruiterPreviewPage() {
     personality,
     interview,
     references,
+    contactDetails: null,
   };
 
   const { data: settingsRow } = await supabase

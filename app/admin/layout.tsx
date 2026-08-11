@@ -29,6 +29,9 @@ export default async function AdminLayout({
         <Link href="/admin/extension" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
           Extension
         </Link>
+        <Link href="/admin/contact-requests" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
+          Contact Requests
+        </Link>
         <Link href="/admin/learned-skills" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
           Learned Skills
         </Link>
