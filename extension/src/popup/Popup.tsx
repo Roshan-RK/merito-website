@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { extractJdTextFromFile } from "../lib/extractJdTextApi";
 
 const JD_STORAGE_KEY = "meritoJdText";
 const EMAIL_STORAGE_KEY = "meritoRecruiterEmail";
 const LEVEL_STORAGE_KEY = "meritoCandidateLevel";
 const SANS = "-apple-system, 'Segoe UI', Roboto, sans-serif";
+const MAX_JD_FILE_BYTES = 5 * 1024 * 1024;
 const LEVELS: { value: "entry" | "mid" | "senior"; label: string }[] = [
   { value: "entry", label: "Entry" },
   { value: "mid", label: "Mid" },
@@ -16,6 +18,31 @@ export function Popup() {
   const [level, setLevel] = useState<"entry" | "mid" | "senior">("mid");
   const [saved, setSaved] = useState(false);
   const [verifySent, setVerifySent] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [extractError, setExtractError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFilePick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (file.size > MAX_JD_FILE_BYTES) {
+      setExtractError("That file is too large — please upload a JD under 5MB.");
+      return;
+    }
+
+    setExtractError(null);
+    setExtracting(true);
+    const result = await extractJdTextFromFile(file);
+    setExtracting(false);
+
+    if ("error" in result) {
+      setExtractError(result.error);
+      return;
+    }
+    setJdText(result.jdText);
+  }
 
   useEffect(() => {
     chrome.storage.local.get([JD_STORAGE_KEY, EMAIL_STORAGE_KEY, LEVEL_STORAGE_KEY]).then((result) => {
@@ -74,12 +101,30 @@ export function Popup() {
           </option>
         ))}
       </select>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.docx"
+          onChange={handleFilePick}
+          style={{ display: "none" }}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={extracting}
+          style={{ fontSize: 11.5, padding: "4px 8px" }}
+        >
+          {extracting ? "Extracting…" : "Upload JD file (PDF/DOCX)"}
+        </button>
+      </div>
+      {extractError && <p style={{ fontSize: 11, color: "#c0392b", margin: "0 0 6px" }}>{extractError}</p>}
       <textarea
         value={jdText}
         onChange={(e) => setJdText(e.target.value)}
         rows={10}
         style={{ width: "100%", boxSizing: "border-box", fontSize: 12, padding: 8, fontFamily: SANS }}
-        placeholder="Paste job description..."
+        placeholder="Paste job description, or upload a file above..."
       />
       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
         <button onClick={save} style={{ flex: 1 }}>
