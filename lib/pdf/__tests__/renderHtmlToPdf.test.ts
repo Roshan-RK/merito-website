@@ -22,7 +22,7 @@ describe("renderHtmlToPdf", () => {
     const { renderHtmlToPdf } = await import("../renderHtmlToPdf");
     const result = await renderHtmlToPdf("<html><body>hi</body></html>");
 
-    expect(setContentMock).toHaveBeenCalledWith("<html><body>hi</body></html>", { waitUntil: "networkidle0" });
+    expect(setContentMock).toHaveBeenCalledWith("<html><body>hi</body></html>", { waitUntil: "load" });
     expect(result).toBeInstanceOf(Buffer);
     expect(closeMock).toHaveBeenCalled();
   });

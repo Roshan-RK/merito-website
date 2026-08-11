@@ -1,6 +1,6 @@
 import http from "http";
 import https from "https";
-import { IntervueBoxError, type IntervueBoxErrorShape } from "./client";
+import { IntervueBoxError, intervueBoxFetch, type IntervueBoxErrorShape } from "./client";
 import type { CriteriaMatchStatus } from "../criteriaStatus";
 
 // Real shape confirmed 2026-07-28 against a live isCriteriaMatch:true report.
@@ -180,6 +180,38 @@ function computeApproxDurationMinutes(answers: Array<{ timestamp: string }> | un
   const lastTimestamp = answers[answers.length - 1].timestamp;
   const minutes = Math.ceil(parseTimestampToSeconds(lastTimestamp) / 60);
   return Number.isFinite(minutes) ? minutes : null;
+}
+
+type CandidatesForInterviewResponse = {
+  total: number;
+  candidates: Array<{ candidateId: string; interviewStatus: string }>;
+};
+
+// IntervueBox's outcome status for a candidate on an interview -- live-
+// confirmed values include "INVITED" (not started) and "TERMINATED" (ended
+// without reaching an evaluated outcome). Report generation is only
+// automatic for outcomes reached normally; TERMINATED needs an explicit
+// generateInterviewReport call (see below). Returns null if the candidate
+// has no session on this interview at all yet.
+export async function getInterviewCandidateStatus(interviewId: string, candidateId: string): Promise<string | null> {
+  const response = await intervueBoxFetch<CandidatesForInterviewResponse>(
+    `/public/interviews/${interviewId}/candidates`
+  );
+  return response.candidates.find((c) => c.candidateId === candidateId)?.interviewStatus ?? null;
+}
+
+// Vendor-confirmed (Krupal, 2026-08-10): a terminated interview's report is
+// never auto-generated -- IntervueBox only evaluates outcomes reached
+// normally (evaluated/shortlisted/hold/rejected/qualified). This kicks off
+// generation for one or more candidates on an interview explicitly; the
+// resulting report still has to be picked up afterward via the existing
+// getInterviewReport poll/webhook, same as a normal completion.
+export async function generateInterviewReport(interviewId: string, candidateIds: string[]): Promise<void> {
+  await intervueBoxFetch<unknown>("/public/reports/interviews/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ interviewId, candidateIds }),
+  });
 }
 
 export async function getInterviewReport(interviewId: string, candidateId: string): Promise<InterviewReport> {

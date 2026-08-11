@@ -4,7 +4,9 @@ const deleteLtMock = vi.fn();
 const fromMock = vi.fn(() => ({
   delete: () => ({
     lt: () => ({
-      is: () => deleteLtMock(),
+      is: () => ({
+        select: () => deleteLtMock(),
+      }),
     }),
   }),
 }));

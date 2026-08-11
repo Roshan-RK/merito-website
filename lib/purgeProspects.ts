@@ -10,7 +10,8 @@ export async function purgeStaleProspects(): Promise<{ purgedCount: number }> {
     .from("recruiter_sourced_prospects")
     .delete()
     .lt("created_at", cutoff)
-    .is("converted_lead_id", null);
+    .is("converted_lead_id", null)
+    .select("id");
 
   if (error) {
     throw new Error(`Failed to purge stale prospects: ${error.message}`);
