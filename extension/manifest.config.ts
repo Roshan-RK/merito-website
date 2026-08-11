@@ -17,6 +17,7 @@ export default defineManifest({
   background: {
     service_worker: "src/background/index.ts",
   },
+  permissions: ["storage"],
   host_permissions: ["https://www.linkedin.com/*", "https://www.merito.ai/*"],
   web_accessible_resources: [
     {
