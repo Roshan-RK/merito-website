@@ -73,7 +73,7 @@ export function Overlay({
 }: {
   data: LookupResponse;
   rescore?: RescoreState;
-  onRequestContactDetails?: () => Promise<{ status: "pending" | "approved" | "denied" } | null>;
+  onRequestContactDetails?: () => Promise<{ email: string } | { error: string } | null>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionKey>("fitment");

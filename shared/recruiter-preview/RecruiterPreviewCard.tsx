@@ -360,16 +360,22 @@ export function RecruiterPreviewCard({
   onSelectSection: (key: SectionKey) => void;
   logoUrl: string;
   onClose?: () => void;
-  onRequestContactDetails?: () => Promise<{ status: "pending" | "approved" | "denied" } | null>;
+  onRequestContactDetails?: () => Promise<{ email: string } | { error: string } | null>;
 }) {
   const sections = new Set(data.sections);
-  const [contactRequestState, setContactRequestState] = useState<"idle" | "requesting" | "pending" | "approved" | "denied">("idle");
+  const [revealedEmail, setRevealedEmail] = useState<string | null>(null);
+  const [contactState, setContactState] = useState<"idle" | "revealing" | "error">("idle");
 
-  async function handleRequestContactDetails() {
+  async function handleRevealEmail() {
     if (!onRequestContactDetails) return;
-    setContactRequestState("requesting");
+    setContactState("revealing");
     const result = await onRequestContactDetails();
-    setContactRequestState(result?.status ?? "idle");
+    if (result && "email" in result) {
+      setRevealedEmail(result.email);
+      setContactState("idle");
+    } else {
+      setContactState("error");
+    }
   }
 
   const secondaryMetrics: { key: SectionKey; node: React.ReactNode }[] = [];
@@ -486,23 +492,18 @@ export function RecruiterPreviewCard({
 
       {onRequestContactDetails && (
         <div style={{ padding: "0 16px", marginTop: 10 }}>
-          {data.contactDetails ? (
+          {revealedEmail ? (
             <div style={{ background: "#eefdf1", borderRadius: 10, padding: 10, fontSize: 11.5, fontFamily: SANS }}>
-              <div style={{ fontWeight: 600, color: "#16803c", marginBottom: 3 }}>Contact details shared</div>
-              <div>{data.contactDetails.email}</div>
-              <div>{data.contactDetails.phone}</div>
+              <div style={{ fontWeight: 600, color: "#16803c", marginBottom: 3 }}>Contact email</div>
+              <div>{revealedEmail}</div>
             </div>
-          ) : contactRequestState === "requesting" ? (
-            <div style={{ fontSize: 11.5, color: "#6C6779", fontFamily: SANS }}>Requesting…</div>
-          ) : contactRequestState === "pending" ? (
-            <div style={{ fontSize: 11.5, color: "#6C6779", fontFamily: SANS }}>
-              Request sent — you&apos;ll see contact details here once approved.
-            </div>
-          ) : contactRequestState === "denied" ? (
-            <div style={{ fontSize: 11.5, color: "#6C6779", fontFamily: SANS }}>Request declined.</div>
+          ) : contactState === "revealing" ? (
+            <div style={{ fontSize: 11.5, color: "#6C6779", fontFamily: SANS }}>Revealing…</div>
+          ) : contactState === "error" ? (
+            <div style={{ fontSize: 11.5, color: "#ed1a24", fontFamily: SANS }}>Couldn&apos;t reveal email — try again.</div>
           ) : (
             <button
-              onClick={handleRequestContactDetails}
+              onClick={handleRevealEmail}
               style={{
                 background: "none",
                 border: "1px solid #E6E1ED",
@@ -515,7 +516,7 @@ export function RecruiterPreviewCard({
                 cursor: "pointer",
               }}
             >
-              Request contact details
+              Reveal email
             </button>
           )}
         </div>

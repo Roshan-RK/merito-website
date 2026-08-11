@@ -44,10 +44,11 @@ export type LookupResponse = {
     categoryScores: { category: string; label: string; value: number }[];
     referees: { name: string; role: string; organization: string | null; overallFeedback: string | null }[];
   } | null;
-  contactDetails: { email: string; phone: string } | null;
 };
 
-export type RescoreResponse = { fitment: LookupResponse["fitment"]; contactDetails: LookupResponse["contactDetails"] };
+export type RescoreResponse = { fitment: LookupResponse["fitment"] };
+
+export type RevealContactResponse = { email: string };
 
 export type ScrapedCandidateFields = {
   name: string;

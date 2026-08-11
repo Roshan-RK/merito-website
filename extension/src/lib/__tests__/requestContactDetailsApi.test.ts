@@ -14,7 +14,7 @@ describe("requestContactDetails", () => {
   });
 
   it("posts to the request-details endpoint with the key header and linkedinUrl", async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ status: "pending" }) });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ email: "jane@example.com" }) });
     const { requestContactDetails } = await importModule();
     const result = await requestContactDetails("https://www.linkedin.com/in/jane-doe");
     expect(fetchMock).toHaveBeenCalledWith(
@@ -25,13 +25,13 @@ describe("requestContactDetails", () => {
         body: JSON.stringify({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }),
       })
     );
-    expect(result).toEqual({ status: "pending" });
+    expect(result).toEqual({ email: "jane@example.com" });
   });
 
-  it("returns null on a non-ok response", async () => {
-    fetchMock.mockResolvedValue({ ok: false });
+  it("returns the server error message on a non-ok response", async () => {
+    fetchMock.mockResolvedValue({ ok: false, json: async () => ({ error: "Not found." }) });
     const { requestContactDetails } = await importModule();
-    expect(await requestContactDetails("https://www.linkedin.com/in/jane-doe")).toBeNull();
+    expect(await requestContactDetails("https://www.linkedin.com/in/jane-doe")).toEqual({ error: "Not found." });
   });
 
   it("returns null on a network error", async () => {

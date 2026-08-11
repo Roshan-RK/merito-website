@@ -1,6 +1,6 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "@/lib/linkedinUrl";
-import { upsertContactDetailRequest } from "@/lib/contactDetailRequests";
+import { logAndGetContactEmail } from "@/lib/contactDetailRequests";
 import { sendRecruiterViewedEmail } from "@/lib/recruiterViewEmails";
 
 export const runtime = "nodejs";
@@ -43,21 +43,22 @@ export async function POST(request: Request) {
 
   const { data: leads } = await admin
     .from("fitment_leads")
-    .select("role_title, name, email")
+    .select("role_title, name")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(1);
-  const lead = leads?.[0] as { role_title?: string; name?: string; email?: string } | undefined;
+  const lead = leads?.[0] as { role_title?: string; name?: string } | undefined;
 
-  const result = await upsertContactDetailRequest(userId, normalized, lead?.role_title ?? null);
-
-  if (result.isNewOrReset && lead?.email) {
-    try {
-      await sendRecruiterViewedEmail(lead.email, lead.name || "there");
-    } catch (err) {
-      console.error("Failed to send contact-request email", err);
-    }
+  const email = await logAndGetContactEmail(userId, normalized, lead?.role_title ?? null);
+  if (!email) {
+    return Response.json({ error: "Not found." }, { status: 404 });
   }
 
-  return Response.json({ status: result.status });
+  try {
+    await sendRecruiterViewedEmail(email, lead?.name || "there");
+  } catch (err) {
+    console.error("Failed to send contact-reveal email", err);
+  }
+
+  return Response.json({ email });
 }

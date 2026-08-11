@@ -17,9 +17,9 @@ vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({ from: fromMock }),
 }));
 
-const upsertContactDetailRequestMock = vi.fn();
+const logAndGetContactEmailMock = vi.fn();
 vi.mock("@/lib/contactDetailRequests", () => ({
-  upsertContactDetailRequest: upsertContactDetailRequestMock,
+  logAndGetContactEmail: logAndGetContactEmailMock,
 }));
 
 const sendRecruiterViewedEmailMock = vi.fn().mockResolvedValue(undefined);
@@ -47,7 +47,7 @@ describe("POST /api/public/recruiter-preview/request-details", () => {
       fitment_leads: makeQueryStub({ data: [] }),
     };
     fromMock.mockClear();
-    upsertContactDetailRequestMock.mockReset();
+    logAndGetContactEmailMock.mockReset();
     sendRecruiterViewedEmailMock.mockClear();
   });
 
@@ -69,47 +69,44 @@ describe("POST /api/public/recruiter-preview/request-details", () => {
     const body = await response.json();
     expect(response.status).toBe(404);
     expect(body).toEqual({ error: "Not found." });
-    expect(upsertContactDetailRequestMock).not.toHaveBeenCalled();
+    expect(logAndGetContactEmailMock).not.toHaveBeenCalled();
   });
 
-  it("creates a new request, sends the email, and returns pending", async () => {
+  it("returns 404 when the candidate has no email on file", async () => {
     tableResults.recruiter_preview_settings = makeQueryStub({ data: { user_id: "user-1" } });
-    tableResults.fitment_leads = makeQueryStub({ data: [{ role_title: "Backend Engineer", name: "Jane Doe", email: "jane@example.com" }] });
-    upsertContactDetailRequestMock.mockResolvedValue({ status: "pending", isNewOrReset: true });
+    tableResults.fitment_leads = makeQueryStub({ data: [{ role_title: "Backend Engineer", name: "Jane Doe" }] });
+    logAndGetContactEmailMock.mockResolvedValue(null);
+
+    const { POST } = await importRoute();
+    const response = await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }));
+    expect(response.status).toBe(404);
+    expect(sendRecruiterViewedEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("reveals the email and notifies the candidate on every call", async () => {
+    tableResults.recruiter_preview_settings = makeQueryStub({ data: { user_id: "user-1" } });
+    tableResults.fitment_leads = makeQueryStub({ data: [{ role_title: "Backend Engineer", name: "Jane Doe" }] });
+    logAndGetContactEmailMock.mockResolvedValue("jane@example.com");
 
     const { POST } = await importRoute();
     const response = await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }));
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ status: "pending" });
-    expect(upsertContactDetailRequestMock).toHaveBeenCalledWith("user-1", "https://www.linkedin.com/in/jane-doe", "Backend Engineer");
+    expect(body).toEqual({ email: "jane@example.com" });
+    expect(logAndGetContactEmailMock).toHaveBeenCalledWith("user-1", "https://www.linkedin.com/in/jane-doe", "Backend Engineer");
     expect(sendRecruiterViewedEmailMock).toHaveBeenCalledWith("jane@example.com", "Jane Doe");
   });
 
-  it("does not resend the email when the request already existed (no-op)", async () => {
+  it("notifies again on a second reveal for the same candidate (not deduped)", async () => {
     tableResults.recruiter_preview_settings = makeQueryStub({ data: { user_id: "user-1" } });
-    tableResults.fitment_leads = makeQueryStub({ data: [{ role_title: "Backend Engineer", name: "Jane Doe", email: "jane@example.com" }] });
-    upsertContactDetailRequestMock.mockResolvedValue({ status: "pending", isNewOrReset: false });
+    tableResults.fitment_leads = makeQueryStub({ data: [{ role_title: "Backend Engineer", name: "Jane Doe" }] });
+    logAndGetContactEmailMock.mockResolvedValue("jane@example.com");
 
     const { POST } = await importRoute();
-    const response = await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }));
-    const body = await response.json();
+    await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }));
+    await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }));
 
-    expect(body).toEqual({ status: "pending" });
-    expect(sendRecruiterViewedEmailMock).not.toHaveBeenCalled();
-  });
-
-  it("returns the approved status without resending an email", async () => {
-    tableResults.recruiter_preview_settings = makeQueryStub({ data: { user_id: "user-1" } });
-    tableResults.fitment_leads = makeQueryStub({ data: [{ role_title: "Backend Engineer", name: "Jane Doe", email: "jane@example.com" }] });
-    upsertContactDetailRequestMock.mockResolvedValue({ status: "approved", isNewOrReset: false });
-
-    const { POST } = await importRoute();
-    const response = await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }));
-    const body = await response.json();
-
-    expect(body).toEqual({ status: "approved" });
-    expect(sendRecruiterViewedEmailMock).not.toHaveBeenCalled();
+    expect(sendRecruiterViewedEmailMock).toHaveBeenCalledTimes(2);
   });
 });

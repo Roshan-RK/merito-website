@@ -48,7 +48,6 @@ describe("POST /api/public/recruiter-preview/rescore", () => {
     tableResults = {
       recruiter_preview_settings: makeQueryStub({ data: null }),
       fitment_leads: makeQueryStub({ data: [] }),
-      contact_detail_requests: makeQueryStub({ data: null }),
     };
     fromMock.mockClear();
     getCachedRescoreMock.mockReset().mockResolvedValue(null);
@@ -121,21 +120,6 @@ describe("POST /api/public/recruiter-preview/rescore", () => {
       VALID_BODY.jdText,
       expect.any(String)
     );
-  });
-
-  it("includes contactDetails when a request is approved for this candidate", async () => {
-    tableResults.recruiter_preview_settings = makeQueryStub({ data: { user_id: "user-1" } });
-    tableResults.fitment_leads = makeQueryStub({
-      data: [{ ib_resume_id: "RES_1", name: "Jane Doe", email: "jane@example.com", phone: "9999999999", candidate_level: "mid" }],
-    });
-    tableResults.contact_detail_requests = makeQueryStub({ data: { status: "approved" } });
-    runRescoreMock.mockResolvedValue({ overallScore: 70, rank: null, categories: [], summary: "Decent", strongPoints: [], weakPoints: [] });
-
-    const { POST } = await importRoute();
-    const response = await POST(request(VALID_BODY));
-    const body = await response.json();
-
-    expect(body.contactDetails).toEqual({ email: "jane@example.com", phone: "9999999999" });
   });
 
   it("returns 429 after exceeding the per-candidate rate limit", async () => {
