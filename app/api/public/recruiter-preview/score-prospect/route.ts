@@ -5,6 +5,11 @@ import type { CandidateLevel } from "@/lib/intervuebox/agents";
 import type { ScrapedCandidateFields } from "@/lib/syntheticResume";
 
 export const runtime = "nodejs";
+// scoreProspect polls for up to RESCORE_MAX_WAIT_MS (default 90s) waiting
+// on IntervueBox -- same latent Vercel-default-timeout issue as the
+// rescore route (see comment there). 60s is the ceiling supported on
+// every Vercel plan tier.
+export const maxDuration = 60;
 
 const MAX_JD_CHARS = 20000;
 const VALID_LEVELS: CandidateLevel[] = ["entry", "mid", "senior"];

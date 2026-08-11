@@ -6,6 +6,12 @@ import { hashJd, getCachedRescore, runRescore, type CandidateForRescore } from "
 import type { CandidateLevel } from "@/lib/intervuebox/agents";
 
 export const runtime = "nodejs";
+// runRescore polls for up to RESCORE_MAX_WAIT_MS (default 90s) waiting on
+// IntervueBox -- without this, Vercel kills the function on its plan
+// default (well under that), so the poll loop never gets to write the
+// "ready" result even when IntervueBox itself finishes moments later.
+// 60s is the ceiling supported on every Vercel plan tier.
+export const maxDuration = 60;
 
 const MAX_JD_CHARS = 20000;
 const rescoreRateLimit = createRateLimiter({ max: 5, windowMs: 60 * 60 * 1000 });

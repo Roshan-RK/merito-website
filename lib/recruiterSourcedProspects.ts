@@ -10,7 +10,10 @@ import { hashJd } from "@/lib/recruiterJdRescore";
 
 export const MONTHLY_PROSPECT_CAP = 10;
 const POLL_INTERVAL_MS = Number(process.env.RESCORE_POLL_INTERVAL_MS) || 5_000;
-const MAX_WAIT_MS = Number(process.env.RESCORE_MAX_WAIT_MS) || 90_000;
+// Must stay comfortably under the score-prospect route's maxDuration
+// (60s) -- the deadline here only bounds the polling loop, not job/
+// applicant creation or response serialization time around it.
+const MAX_WAIT_MS = Number(process.env.RESCORE_MAX_WAIT_MS) || 50_000;
 
 export type ScoreProspectInput = {
   recruiterEmail: string;

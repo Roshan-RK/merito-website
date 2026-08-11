@@ -6,7 +6,10 @@ import { getResumeMatchReport, type ResumeMatchReportReady } from "@/lib/intervu
 import type { CandidateLevel } from "@/lib/intervuebox/agents";
 
 const POLL_INTERVAL_MS = Number(process.env.RESCORE_POLL_INTERVAL_MS) || 5_000;
-const MAX_WAIT_MS = Number(process.env.RESCORE_MAX_WAIT_MS) || 90_000;
+// Must stay comfortably under the rescore route's maxDuration (60s) -- the
+// deadline here only bounds the polling loop, not job/applicant creation
+// or response serialization time around it.
+const MAX_WAIT_MS = Number(process.env.RESCORE_MAX_WAIT_MS) || 50_000;
 
 export function hashJd(jdText: string): string {
   return createHash("sha256").update(jdText.trim()).digest("hex");
