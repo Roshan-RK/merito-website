@@ -50,6 +50,7 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
       personality_tests: makeQueryStub({ data: null }),
       fitment_interviews: makeQueryStub({ data: null }),
       extension_lookups: makeQueryStub({ data: null }),
+      contact_detail_requests: makeQueryStub({ data: null }),
     };
     fromMock.mockClear();
     getUserByIdMock.mockReset();
@@ -194,5 +195,52 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
     expect(body.interview).not.toHaveProperty("feedbackToInterviewer");
     expect(body.interview).not.toHaveProperty("criteriaEvaluationTable");
     expect(body.interview).not.toHaveProperty("roadmap");
+  });
+
+  it("includes contactDetails as null when there is no approved request", async () => {
+    tableResults.recruiter_preview_settings = makeQueryStub({
+      data: { user_id: "candidate-1", sections: ["fitment"] },
+    });
+    tableResults.fitment_leads = makeQueryStub({
+      data: [
+        {
+          role_title: "Data Analyst",
+          name: "Jane Doe",
+          resume_match_status: "READY",
+          candidate_level: "mid",
+          resume_match_raw: { overallScore: 82, rank: null, categories: [], summary: "Good fit", strongPoints: [], weakPoints: [] },
+        },
+      ],
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }));
+    const body = await response.json();
+    expect(body.contactDetails).toBeNull();
+  });
+
+  it("includes contactDetails when a request is approved", async () => {
+    tableResults.recruiter_preview_settings = makeQueryStub({
+      data: { user_id: "candidate-1", sections: ["fitment"] },
+    });
+    tableResults.fitment_leads = makeQueryStub({
+      data: [
+        {
+          role_title: "Data Analyst",
+          name: "Jane Doe",
+          resume_match_status: "READY",
+          candidate_level: "mid",
+          resume_match_raw: { overallScore: 82, rank: null, categories: [], summary: "Good fit", strongPoints: [], weakPoints: [] },
+          email: "jane@example.com",
+          phone: "9999999999",
+        },
+      ],
+    });
+    tableResults.contact_detail_requests = makeQueryStub({ data: { status: "approved" } });
+
+    const { POST } = await importRoute();
+    const response = await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }));
+    const body = await response.json();
+    expect(body.contactDetails).toEqual({ email: "jane@example.com", phone: "9999999999" });
   });
 });

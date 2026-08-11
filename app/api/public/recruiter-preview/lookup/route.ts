@@ -3,6 +3,7 @@ import { getReferenceCheckStatus, computeReferenceReport } from "@/lib/reference
 import { nameFromEmail, type Scores } from "@/lib/personality";
 import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "@/lib/linkedinUrl";
 import { recordLookup } from "@/lib/extensionLookups";
+import { getApprovedContactDetails } from "@/lib/contactDetailRequests";
 import {
   buildLookupFitment,
   buildLookupPersonality,
@@ -124,6 +125,8 @@ export async function POST(request: Request) {
     }
   }
 
+  const contactDetails = await getApprovedContactDetails(userId);
+
   return Response.json({
     candidateName,
     roleTitle,
@@ -133,5 +136,6 @@ export async function POST(request: Request) {
     personality,
     interview,
     references,
+    contactDetails,
   });
 }
