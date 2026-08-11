@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { CandidateLevel, LookupResponse } from "./types";
 
 export type JdRescoreStatus = "idle" | "loading" | "ready";
@@ -358,6 +358,7 @@ export function RecruiterPreviewCard({
   onRequestContactDetails,
   jdRescoreStatus,
   onSetJdText,
+  onExtractJdFile,
 }: {
   data: LookupResponse;
   activeSection: SectionKey;
@@ -367,18 +368,44 @@ export function RecruiterPreviewCard({
   onRequestContactDetails?: () => Promise<{ email: string } | { error: string } | null>;
   jdRescoreStatus?: JdRescoreStatus;
   onSetJdText?: (jdText: string) => Promise<void>;
+  onExtractJdFile?: (file: File) => Promise<{ jdText: string } | { error: string } | null>;
 }) {
   const sections = new Set(data.sections);
   const [revealedEmail, setRevealedEmail] = useState<string | null>(null);
   const [contactState, setContactState] = useState<"idle" | "revealing" | "error">("idle");
   const [jdFormOpen, setJdFormOpen] = useState(false);
   const [jdDraft, setJdDraft] = useState("");
+  const [jdExtracting, setJdExtracting] = useState(false);
+  const [jdExtractError, setJdExtractError] = useState<string | null>(null);
+  const jdFileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleSaveJd() {
     if (!onSetJdText || !jdDraft.trim()) return;
     await onSetJdText(jdDraft.trim());
     setJdFormOpen(false);
     setJdDraft("");
+  }
+
+  async function handleJdFilePick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !onExtractJdFile) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setJdExtractError("That file is too large — please upload a JD under 5MB.");
+      return;
+    }
+
+    setJdExtractError(null);
+    setJdExtracting(true);
+    const result = await onExtractJdFile(file);
+    setJdExtracting(false);
+
+    if (result && "jdText" in result) {
+      setJdDraft(result.jdText);
+    } else {
+      setJdExtractError(result?.error ?? "Couldn't read that file — try pasting instead.");
+    }
   }
 
   async function handleRevealEmail() {
@@ -525,7 +552,7 @@ export function RecruiterPreviewCard({
                   resize: "vertical",
                 }}
               />
-              <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
                 <button
                   onClick={handleSaveJd}
                   disabled={!jdDraft.trim()}
@@ -543,6 +570,34 @@ export function RecruiterPreviewCard({
                 >
                   Save &amp; rescore
                 </button>
+                {onExtractJdFile && (
+                  <>
+                    <input
+                      ref={jdFileInputRef}
+                      type="file"
+                      accept=".pdf,.docx"
+                      onChange={handleJdFilePick}
+                      style={{ display: "none" }}
+                    />
+                    <button
+                      onClick={() => jdFileInputRef.current?.click()}
+                      disabled={jdExtracting}
+                      style={{
+                        background: "none",
+                        border: "1px solid #E6E1ED",
+                        borderRadius: 8,
+                        padding: "6px 10px",
+                        fontSize: 11.5,
+                        fontFamily: SANS,
+                        fontWeight: 600,
+                        color: "#4B4894",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {jdExtracting ? "Reading…" : "Upload PDF/DOCX"}
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={() => setJdFormOpen(false)}
                   style={{ background: "none", border: "none", fontSize: 11.5, fontFamily: SANS, color: "#6C6779", cursor: "pointer" }}
@@ -550,6 +605,9 @@ export function RecruiterPreviewCard({
                   Cancel
                 </button>
               </div>
+              {jdExtractError && (
+                <div style={{ fontSize: 11, color: "#ed1a24", fontFamily: SANS, marginTop: 6 }}>{jdExtractError}</div>
+              )}
             </div>
           ) : (
             <button

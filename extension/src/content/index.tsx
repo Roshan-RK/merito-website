@@ -41,12 +41,25 @@ function unmountOverlay() {
 
 function renderOverlay(data: LookupResponse, rescore: RescoreState) {
   mountRoot().render(
-    <Overlay data={data} rescore={rescore} onRequestContactDetails={requestContactDetails} onSetJdText={setJdText} />
+    <Overlay
+      data={data}
+      rescore={rescore}
+      onRequestContactDetails={requestContactDetails}
+      onSetJdText={setJdText}
+      onExtractJdFile={extractJdFileForCard}
+    />
   );
 }
 
 async function setJdText(jdText: string): Promise<void> {
   await chrome.storage.local.set({ [JD_STORAGE_KEY]: jdText });
+}
+
+async function extractJdFileForCard(file: File): Promise<{ jdText: string } | { error: string } | null> {
+  return (await chrome.runtime.sendMessage({ type: "EXTRACT_JD_FILE", file })) as
+    | { jdText: string }
+    | { error: string }
+    | null;
 }
 
 async function requestContactDetails(): Promise<{ email: string } | { error: string } | null> {
