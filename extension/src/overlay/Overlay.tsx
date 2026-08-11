@@ -66,7 +66,15 @@ function RescoreBanner({ state }: { state: RescoreState }) {
   );
 }
 
-export function Overlay({ data, rescore = { status: "idle" } }: { data: LookupResponse; rescore?: RescoreState }) {
+export function Overlay({
+  data,
+  rescore = { status: "idle" },
+  onRequestContactDetails,
+}: {
+  data: LookupResponse;
+  rescore?: RescoreState;
+  onRequestContactDetails?: () => Promise<{ status: "pending" | "approved" | "denied" } | null>;
+}) {
   const [expanded, setExpanded] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionKey>("fitment");
   const cardRef = useRef<HTMLDivElement>(null);
@@ -109,6 +117,7 @@ export function Overlay({ data, rescore = { status: "idle" } }: { data: LookupRe
         onSelectSection={selectSection}
         logoUrl={logoUrl}
         onClose={() => setExpanded(false)}
+        onRequestContactDetails={onRequestContactDetails}
       />
     </div>
   );

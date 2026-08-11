@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { CandidateLevel, LookupResponse } from "./types";
 
 export type SectionKey = "fitment" | "personality" | "interview" | "references";
@@ -352,14 +353,24 @@ export function RecruiterPreviewCard({
   onSelectSection,
   logoUrl,
   onClose,
+  onRequestContactDetails,
 }: {
   data: LookupResponse;
   activeSection: SectionKey;
   onSelectSection: (key: SectionKey) => void;
   logoUrl: string;
   onClose?: () => void;
+  onRequestContactDetails?: () => Promise<{ status: "pending" | "approved" | "denied" } | null>;
 }) {
   const sections = new Set(data.sections);
+  const [contactRequestState, setContactRequestState] = useState<"idle" | "requesting" | "pending" | "approved" | "denied">("idle");
+
+  async function handleRequestContactDetails() {
+    if (!onRequestContactDetails) return;
+    setContactRequestState("requesting");
+    const result = await onRequestContactDetails();
+    setContactRequestState(result?.status ?? "idle");
+  }
 
   const secondaryMetrics: { key: SectionKey; node: React.ReactNode }[] = [];
   if (sections.has("personality") && data.personality?.traits?.length) {
@@ -472,6 +483,43 @@ export function RecruiterPreviewCard({
           </div>
         )}
       </div>
+
+      {onRequestContactDetails && (
+        <div style={{ padding: "0 16px", marginTop: 10 }}>
+          {data.contactDetails ? (
+            <div style={{ background: "#eefdf1", borderRadius: 10, padding: 10, fontSize: 11.5, fontFamily: SANS }}>
+              <div style={{ fontWeight: 600, color: "#16803c", marginBottom: 3 }}>Contact details shared</div>
+              <div>{data.contactDetails.email}</div>
+              <div>{data.contactDetails.phone}</div>
+            </div>
+          ) : contactRequestState === "requesting" ? (
+            <div style={{ fontSize: 11.5, color: "#6C6779", fontFamily: SANS }}>Requesting…</div>
+          ) : contactRequestState === "pending" ? (
+            <div style={{ fontSize: 11.5, color: "#6C6779", fontFamily: SANS }}>
+              Request sent — you&apos;ll see contact details here once approved.
+            </div>
+          ) : contactRequestState === "denied" ? (
+            <div style={{ fontSize: 11.5, color: "#6C6779", fontFamily: SANS }}>Request declined.</div>
+          ) : (
+            <button
+              onClick={handleRequestContactDetails}
+              style={{
+                background: "none",
+                border: "1px solid #E6E1ED",
+                borderRadius: 8,
+                padding: "6px 10px",
+                fontSize: 11.5,
+                fontFamily: SANS,
+                fontWeight: 600,
+                color: "#4B4894",
+                cursor: "pointer",
+              }}
+            >
+              Request contact details
+            </button>
+          )}
+        </div>
+      )}
 
       {sections.has("fitment") && data.fitment && fitmentBand && (
         <button

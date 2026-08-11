@@ -40,7 +40,13 @@ function unmountOverlay() {
 }
 
 function renderOverlay(data: LookupResponse, rescore: RescoreState) {
-  mountRoot().render(<Overlay data={data} rescore={rescore} />);
+  mountRoot().render(<Overlay data={data} rescore={rescore} onRequestContactDetails={requestContactDetails} />);
+}
+
+async function requestContactDetails(): Promise<{ status: "pending" | "approved" | "denied" } | null> {
+  return (await chrome.runtime.sendMessage({ type: "REQUEST_CONTACT_DETAILS", linkedinUrl: currentUrl })) as
+    | { status: "pending" | "approved" | "denied" }
+    | null;
 }
 
 async function runProspectFlow(linkedinUrl: string) {
@@ -115,6 +121,7 @@ async function runRescoreIfJdSet(linkedinUrl: string) {
 
   if (!currentLookup || linkedinUrl !== currentUrl) return;
   if (result?.fitment) {
+    currentLookup = { ...currentLookup, contactDetails: result.contactDetails ?? currentLookup.contactDetails };
     renderOverlay(currentLookup, { status: "ready", fitment: result.fitment });
   } else {
     renderOverlay(currentLookup, { status: "idle" });
