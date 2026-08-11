@@ -40,7 +40,13 @@ function unmountOverlay() {
 }
 
 function renderOverlay(data: LookupResponse, rescore: RescoreState) {
-  mountRoot().render(<Overlay data={data} rescore={rescore} onRequestContactDetails={requestContactDetails} />);
+  mountRoot().render(
+    <Overlay data={data} rescore={rescore} onRequestContactDetails={requestContactDetails} onSetJdText={setJdText} />
+  );
+}
+
+async function setJdText(jdText: string): Promise<void> {
+  await chrome.storage.local.set({ [JD_STORAGE_KEY]: jdText });
 }
 
 async function requestContactDetails(): Promise<{ email: string } | { error: string } | null> {

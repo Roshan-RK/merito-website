@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { CandidateLevel, LookupResponse } from "./types";
 
+export type JdRescoreStatus = "idle" | "loading" | "ready";
+
 export type SectionKey = "fitment" | "personality" | "interview" | "references";
 
 const SERIF = "'Charter', 'Georgia', 'Cambria', serif";
@@ -354,6 +356,8 @@ export function RecruiterPreviewCard({
   logoUrl,
   onClose,
   onRequestContactDetails,
+  jdRescoreStatus,
+  onSetJdText,
 }: {
   data: LookupResponse;
   activeSection: SectionKey;
@@ -361,10 +365,21 @@ export function RecruiterPreviewCard({
   logoUrl: string;
   onClose?: () => void;
   onRequestContactDetails?: () => Promise<{ email: string } | { error: string } | null>;
+  jdRescoreStatus?: JdRescoreStatus;
+  onSetJdText?: (jdText: string) => Promise<void>;
 }) {
   const sections = new Set(data.sections);
   const [revealedEmail, setRevealedEmail] = useState<string | null>(null);
   const [contactState, setContactState] = useState<"idle" | "revealing" | "error">("idle");
+  const [jdFormOpen, setJdFormOpen] = useState(false);
+  const [jdDraft, setJdDraft] = useState("");
+
+  async function handleSaveJd() {
+    if (!onSetJdText || !jdDraft.trim()) return;
+    await onSetJdText(jdDraft.trim());
+    setJdFormOpen(false);
+    setJdDraft("");
+  }
 
   async function handleRevealEmail() {
     if (!onRequestContactDetails) return;
@@ -489,6 +504,63 @@ export function RecruiterPreviewCard({
           </div>
         )}
       </div>
+
+      {onSetJdText && (
+        <div style={{ padding: "0 16px", marginTop: 10 }}>
+          {jdFormOpen ? (
+            <div>
+              <textarea
+                value={jdDraft}
+                onChange={(e) => setJdDraft(e.target.value)}
+                rows={4}
+                placeholder="Paste the JD you're hiring for..."
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  fontSize: 11.5,
+                  fontFamily: SANS,
+                  padding: 8,
+                  border: "1px solid #E6E1ED",
+                  borderRadius: 8,
+                  resize: "vertical",
+                }}
+              />
+              <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                <button
+                  onClick={handleSaveJd}
+                  disabled={!jdDraft.trim()}
+                  style={{
+                    background: "#4B4894",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "6px 10px",
+                    fontSize: 11.5,
+                    fontFamily: SANS,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Save &amp; rescore
+                </button>
+                <button
+                  onClick={() => setJdFormOpen(false)}
+                  style={{ background: "none", border: "none", fontSize: 11.5, fontFamily: SANS, color: "#6C6779", cursor: "pointer" }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setJdFormOpen(true)}
+              style={{ background: "none", border: "none", padding: 0, fontSize: 11.5, fontFamily: SANS, fontWeight: 600, color: "#4B4894", cursor: "pointer", textDecoration: "underline" }}
+            >
+              {jdRescoreStatus === "ready" ? "Rescore against a different JD" : "Score against your own JD"}
+            </button>
+          )}
+        </div>
+      )}
 
       {onRequestContactDetails && (
         <div style={{ padding: "0 16px", marginTop: 10 }}>
