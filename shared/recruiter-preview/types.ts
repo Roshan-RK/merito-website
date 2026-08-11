@@ -47,3 +47,13 @@ export type LookupResponse = {
 };
 
 export type RescoreResponse = { fitment: LookupResponse["fitment"] };
+
+export type ScrapedCandidateFields = {
+  name: string;
+  headline: string;
+  experience: { title: string; company: string; duration: string; description: string }[];
+  education: { school: string; degree: string; duration: string }[];
+  skills: string[];
+};
+
+export type ScoreProspectResponse = { prospectId: string; fitment: LookupResponse["fitment"] };
