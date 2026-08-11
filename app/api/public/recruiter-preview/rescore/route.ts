@@ -3,6 +3,7 @@ import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "@/lib/linkedinUrl";
 import { createRateLimiter } from "@/lib/rateLimit";
 import { buildLookupFitment } from "@/lib/recruiterPreview";
 import { hashJd, getCachedRescore, runRescore, type CandidateForRescore } from "@/lib/recruiterJdRescore";
+import { getApprovedContactDetails } from "@/lib/contactDetailRequests";
 import type { CandidateLevel } from "@/lib/intervuebox/agents";
 
 export const runtime = "nodejs";
@@ -61,7 +62,8 @@ export async function POST(request: Request) {
 
   const cached = await getCachedRescore(userId, jdHash);
   if (cached) {
-    return Response.json({ fitment: buildLookupFitment(cached, deriveRoleLabel(jdText)) });
+    const contactDetails = await getApprovedContactDetails(userId);
+    return Response.json({ fitment: buildLookupFitment(cached, deriveRoleLabel(jdText)), contactDetails });
   }
 
   if (!rescoreRateLimit(userId)) {
@@ -90,7 +92,8 @@ export async function POST(request: Request) {
 
   try {
     const report = await runRescore(candidate, jdText, jdHash);
-    return Response.json({ fitment: buildLookupFitment(report, deriveRoleLabel(jdText)) });
+    const contactDetails = await getApprovedContactDetails(userId);
+    return Response.json({ fitment: buildLookupFitment(report, deriveRoleLabel(jdText)), contactDetails });
   } catch (err) {
     console.error("Recruiter JD rescore failed", err);
     return Response.json({ error: "Something went wrong." }, { status: 502 });
