@@ -59,13 +59,30 @@ export async function scoreProspect(input: ScoreProspectInput): Promise<ScorePro
     return { status: "verification_required" };
   }
 
+  const admin = getSupabaseServerClient();
+  const jdHash = hashJd(input.jdText);
+
+  const { data: existing } = await admin
+    .from("recruiter_sourced_prospects")
+    .select("id, resume_match_raw")
+    .eq("recruiter_email", email)
+    .eq("linkedin_url", input.linkedinUrl)
+    .eq("jd_hash", jdHash)
+    .eq("status", "ready")
+    .maybeSingle();
+
+  if (existing) {
+    return {
+      status: "ready",
+      prospectId: existing.id as string,
+      report: existing.resume_match_raw as ResumeMatchReportReady,
+    };
+  }
+
   const count = await getMonthlyProspectCount(email);
   if (count >= MONTHLY_PROSPECT_CAP) {
     return { status: "cap_exceeded" };
   }
-
-  const admin = getSupabaseServerClient();
-  const jdHash = hashJd(input.jdText);
 
   const { ibJobId } = await createJob({
     title: deriveJobTitle(input.jdText),

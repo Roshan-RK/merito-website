@@ -1,7 +1,7 @@
 import { lookupCandidate } from "../lib/lookupApi";
 import { rescoreCandidate } from "../lib/rescoreApi";
 import { scoreProspect } from "../lib/scoreProspectApi";
-import { requestVerificationEmail } from "../lib/verifyEmailApi";
+import { requestVerificationEmail, checkVerificationStatus } from "../lib/verifyEmailApi";
 import { shortlistProspect } from "../lib/shortlistApi";
 import { requestContactDetails } from "../lib/requestContactDetailsApi";
 import { extractJdTextFromFile } from "../lib/extractJdTextApi";
@@ -23,8 +23,27 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     scoreProspect(message.input).then(sendResponse);
     return true;
   }
-  if (message?.type === "VERIFY_RECRUITER_EMAIL" && typeof message.email === "string") {
-    requestVerificationEmail(message.email).then(sendResponse);
+  if (
+    message?.type === "VERIFY_RECRUITER_EMAIL" &&
+    typeof message.email === "string" &&
+    typeof message.company === "string"
+  ) {
+    requestVerificationEmail(message.email, message.company).then(sendResponse);
+    return true;
+  }
+  if (message?.type === "CHECK_RECRUITER_VERIFIED" && typeof message.email === "string") {
+    checkVerificationStatus(message.email).then(sendResponse);
+    return true;
+  }
+  if (message?.type === "OPEN_POPUP") {
+    if (typeof chrome.action.openPopup !== "function") {
+      sendResponse(false);
+      return false;
+    }
+    chrome.action
+      .openPopup()
+      .then(() => sendResponse(true))
+      .catch(() => sendResponse(false));
     return true;
   }
   if (message?.type === "SHORTLIST_PROSPECT" && typeof message.prospectId === "string") {

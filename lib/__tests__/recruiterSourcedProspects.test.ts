@@ -10,14 +10,16 @@ vi.mock("@/lib/recruiterIdentity", () => ({ isRecruiterEmailVerified: vi.fn() })
 const insertSelectSingleMock = vi.fn().mockResolvedValue({ data: { id: "prospect-1" }, error: null });
 const updateEqMock = vi.fn().mockResolvedValue({ error: null });
 const countThenMock = vi.fn();
+const existingMaybeSingleMock = vi.fn().mockResolvedValue({ data: null });
 const fromMock = vi.fn((table: string) => {
   if (table !== "recruiter_sourced_prospects") throw new Error(`unexpected table ${table}`);
+  const selectChain = {
+    eq: () => selectChain,
+    gte: () => ({ then: countThenMock }),
+    maybeSingle: existingMaybeSingleMock,
+  };
   return {
-    select: () => ({
-      eq: () => ({
-        gte: () => ({ then: countThenMock }),
-      }),
-    }),
+    select: () => selectChain,
     insert: () => ({ select: () => ({ single: insertSelectSingleMock }) }),
     update: () => ({ eq: updateEqMock }),
   };
@@ -38,8 +40,11 @@ describe("scoreProspect", () => {
     const { isRecruiterEmailVerified } = await import("@/lib/recruiterIdentity");
     vi.mocked(isRecruiterEmailVerified).mockReset().mockResolvedValue(true);
     countThenMock.mockReset().mockImplementation((resolve: (v: { count: number }) => void) => resolve({ count: 0 }));
+    existingMaybeSingleMock.mockReset().mockResolvedValue({ data: null });
     const { getResumeMatchReport } = await import("@/lib/intervuebox/reports");
     vi.mocked(getResumeMatchReport).mockReset();
+    const { createJob } = await import("@/lib/intervuebox/jobs");
+    vi.mocked(createJob).mockClear();
   });
   afterEach(() => vi.resetModules());
 
@@ -73,5 +78,21 @@ describe("scoreProspect", () => {
     }
     const { createJob } = await import("@/lib/intervuebox/jobs");
     expect(vi.mocked(createJob)).toHaveBeenCalledWith(expect.objectContaining({ candidateLevel: "mid" }));
+  });
+
+  it("returns the cached result for a repeat visit without re-running IntervueBox or spending the cap", async () => {
+    existingMaybeSingleMock.mockResolvedValue({
+      data: { id: "prospect-1", resume_match_raw: { overallScore: 82, rank: null, categories: [], summary: "Good fit", strongPoints: [], weakPoints: [] } },
+    });
+    const { scoreProspect } = await import("../recruiterSourcedProspects");
+    const result = await scoreProspect(INPUT);
+
+    expect(result.status).toBe("ready");
+    if (result.status === "ready") {
+      expect(result.prospectId).toBe("prospect-1");
+      expect(result.report.overallScore).toBe(82);
+    }
+    const { createJob } = await import("@/lib/intervuebox/jobs");
+    expect(vi.mocked(createJob)).not.toHaveBeenCalled();
   });
 });

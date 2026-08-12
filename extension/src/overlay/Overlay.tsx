@@ -66,18 +66,18 @@ function RescoreBanner({ state }: { state: RescoreState }) {
   );
 }
 
+function openExtensionPopup() {
+  chrome.runtime.sendMessage({ type: "OPEN_POPUP" }).catch(() => {});
+}
+
 export function Overlay({
   data,
   rescore = { status: "idle" },
   onRequestContactDetails,
-  onSetJdText,
-  onExtractJdFile,
 }: {
   data: LookupResponse;
   rescore?: RescoreState;
   onRequestContactDetails?: () => Promise<{ email: string } | { error: string } | null>;
-  onSetJdText?: (jdText: string) => Promise<void>;
-  onExtractJdFile?: (file: File) => Promise<{ jdText: string } | { error: string } | null>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionKey>("fitment");
@@ -114,8 +114,7 @@ export function Overlay({
         onClose={() => setExpanded(false)}
         onRequestContactDetails={onRequestContactDetails}
         jdRescoreStatus={rescore.status}
-        onSetJdText={onSetJdText}
-        onExtractJdFile={onExtractJdFile}
+        onOpenExtension={openExtensionPopup}
         rescoreFitment={rescore.status === "ready" ? rescore.fitment : null}
       />
     </div>

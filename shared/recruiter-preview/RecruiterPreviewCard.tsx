@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { CandidateLevel, LookupResponse } from "./types";
 
 export type JdRescoreStatus = "idle" | "loading" | "ready";
@@ -357,8 +357,7 @@ export function RecruiterPreviewCard({
   onClose,
   onRequestContactDetails,
   jdRescoreStatus,
-  onSetJdText,
-  onExtractJdFile,
+  onOpenExtension,
   rescoreFitment,
 }: {
   data: LookupResponse;
@@ -368,52 +367,17 @@ export function RecruiterPreviewCard({
   onClose?: () => void;
   onRequestContactDetails?: () => Promise<{ email: string } | { error: string } | null>;
   jdRescoreStatus?: JdRescoreStatus;
-  onSetJdText?: (jdText: string) => Promise<void>;
-  onExtractJdFile?: (file: File) => Promise<{ jdText: string } | { error: string } | null>;
+  onOpenExtension?: () => void;
   rescoreFitment?: LookupResponse["fitment"] | null;
 }) {
   const sections = new Set(data.sections);
   const [activeFitmentView, setActiveFitmentView] = useState<"own" | "jd">("own");
   const [revealedEmail, setRevealedEmail] = useState<string | null>(null);
   const [contactState, setContactState] = useState<"idle" | "revealing" | "error">("idle");
-  const [jdFormOpen, setJdFormOpen] = useState(false);
-  const [jdDraft, setJdDraft] = useState("");
-  const [jdExtracting, setJdExtracting] = useState(false);
-  const [jdExtractError, setJdExtractError] = useState<string | null>(null);
-  const jdFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (rescoreFitment) setActiveFitmentView("jd");
   }, [rescoreFitment]);
-
-  async function handleSaveJd() {
-    if (!onSetJdText || !jdDraft.trim()) return;
-    await onSetJdText(jdDraft.trim());
-    setJdFormOpen(false);
-    setJdDraft("");
-  }
-
-  async function handleJdFilePick(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !onExtractJdFile) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      setJdExtractError("That file is too large — please upload a JD under 5MB.");
-      return;
-    }
-
-    setJdExtractError(null);
-    setJdExtracting(true);
-    const result = await onExtractJdFile(file);
-    setJdExtracting(false);
-
-    if (result && "jdText" in result) {
-      setJdDraft(result.jdText);
-    } else {
-      setJdExtractError(result?.error ?? "Couldn't read that file — try pasting instead.");
-    }
-  }
 
   async function handleRevealEmail() {
     if (!onRequestContactDetails) return;
@@ -542,91 +506,35 @@ export function RecruiterPreviewCard({
         )}
       </div>
 
-      {onSetJdText && (
-        <div style={{ padding: "0 16px", marginTop: 10 }}>
-          {jdFormOpen ? (
-            <div>
-              <textarea
-                value={jdDraft}
-                onChange={(e) => setJdDraft(e.target.value)}
-                rows={4}
-                placeholder="Paste the JD you're hiring for..."
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  fontSize: 11.5,
-                  fontFamily: SANS,
-                  padding: 8,
-                  border: "1px solid #E6E1ED",
-                  borderRadius: 8,
-                  resize: "vertical",
-                }}
-              />
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-                <button
-                  onClick={handleSaveJd}
-                  disabled={!jdDraft.trim()}
-                  style={{
-                    background: "#4B4894",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: "6px 10px",
-                    fontSize: 11.5,
-                    fontFamily: SANS,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  Save &amp; rescore
-                </button>
-                {onExtractJdFile && (
-                  <>
-                    <input
-                      ref={jdFileInputRef}
-                      type="file"
-                      accept=".pdf,.docx"
-                      onChange={handleJdFilePick}
-                      style={{ display: "none" }}
-                    />
-                    <button
-                      onClick={() => jdFileInputRef.current?.click()}
-                      disabled={jdExtracting}
-                      style={{
-                        background: "none",
-                        border: "1px solid #E6E1ED",
-                        borderRadius: 8,
-                        padding: "6px 10px",
-                        fontSize: 11.5,
-                        fontFamily: SANS,
-                        fontWeight: 600,
-                        color: "#4B4894",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {jdExtracting ? "Reading…" : "Upload PDF/DOCX"}
-                    </button>
-                  </>
-                )}
-                <button
-                  onClick={() => setJdFormOpen(false)}
-                  style={{ background: "none", border: "none", fontSize: 11.5, fontFamily: SANS, color: "#6C6779", cursor: "pointer" }}
-                >
-                  Cancel
-                </button>
-              </div>
-              {jdExtractError && (
-                <div style={{ fontSize: 11, color: "#ed1a24", fontFamily: SANS, marginTop: 6 }}>{jdExtractError}</div>
-              )}
-            </div>
-          ) : (
-            <button
-              onClick={() => setJdFormOpen(true)}
-              style={{ background: "none", border: "none", padding: 0, fontSize: 11.5, fontFamily: SANS, fontWeight: 600, color: "#4B4894", cursor: "pointer", textDecoration: "underline" }}
-            >
-              {jdRescoreStatus === "ready" ? "Rescore against a different JD" : "Score against your own JD"}
-            </button>
-          )}
+      {onOpenExtension && jdRescoreStatus !== "ready" && (
+        <div
+          style={{
+            margin: "10px 16px 0",
+            padding: "10px 12px",
+            borderRadius: 10,
+            background: "#FAF9FC",
+            border: "1px solid #E6E1ED",
+          }}
+        >
+          <div style={{ fontSize: 11.5, fontFamily: SANS, color: "#6C6779", marginBottom: 6 }}>
+            Set a JD in the extension popup to score this candidate against it.
+          </div>
+          <button
+            onClick={onOpenExtension}
+            style={{
+              background: "#4B4894",
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              padding: "6px 10px",
+              fontSize: 11.5,
+              fontFamily: SANS,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Open Merito extension
+          </button>
         </div>
       )}
 

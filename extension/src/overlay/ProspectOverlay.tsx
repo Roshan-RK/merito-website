@@ -7,6 +7,7 @@ const SANS = "-apple-system, 'Segoe UI', Roboto, sans-serif";
 
 export type ProspectState =
   | { status: "needs_setup" }
+  | { status: "prompt" }
   | { status: "loading" }
   | { status: "verification_required" }
   | { status: "cap_exceeded" }
@@ -55,6 +56,15 @@ export function ProspectOverlay({
       <div style={CARD_STYLE}>
         <Header />
         <p>Set your JD and confirm your email in the extension popup to score this profile.</p>
+      </div>
+    );
+  }
+  if (state.status === "prompt") {
+    return (
+      <div style={CARD_STYLE}>
+        <Header />
+        <p>Score this candidate against your JD? Uses one of your monthly checks.</p>
+        <button onClick={onScore}>Check this candidate</button>
       </div>
     );
   }

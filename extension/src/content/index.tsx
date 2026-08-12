@@ -40,26 +40,7 @@ function unmountOverlay() {
 }
 
 function renderOverlay(data: LookupResponse, rescore: RescoreState) {
-  mountRoot().render(
-    <Overlay
-      data={data}
-      rescore={rescore}
-      onRequestContactDetails={requestContactDetails}
-      onSetJdText={setJdText}
-      onExtractJdFile={extractJdFileForCard}
-    />
-  );
-}
-
-async function setJdText(jdText: string): Promise<void> {
-  await chrome.storage.local.set({ [JD_STORAGE_KEY]: jdText });
-}
-
-async function extractJdFileForCard(file: File): Promise<{ jdText: string } | { error: string } | null> {
-  return (await chrome.runtime.sendMessage({ type: "EXTRACT_JD_FILE", file })) as
-    | { jdText: string }
-    | { error: string }
-    | null;
+  mountRoot().render(<Overlay data={data} rescore={rescore} onRequestContactDetails={requestContactDetails} />);
 }
 
 async function requestContactDetails(): Promise<{ email: string } | { error: string } | null> {
@@ -80,9 +61,28 @@ async function runProspectFlow(linkedinUrl: string) {
     return;
   }
 
+  // Recruiter explicitly opts in per-profile — scoring a prospect spends one
+  // of their monthly slots, so it must never fire silently on every visit.
+  mountRoot().render(
+    <ProspectOverlay
+      state={{ status: "prompt" }}
+      onScore={() => scoreProspectNow(linkedinUrl, jdText, recruiterEmail, candidateLevel)}
+      onShortlist={() => {}}
+    />
+  );
+}
+
+async function scoreProspectNow(
+  linkedinUrl: string,
+  jdText: string,
+  recruiterEmail: string,
+  candidateLevel: "entry" | "mid" | "senior"
+) {
   mountRoot().render(<ProspectOverlay state={{ status: "loading" }} onScore={() => {}} onShortlist={() => {}} />);
 
   const candidateFields = scrapeProfile();
+  console.log("[Merito] scraped candidate fields:", candidateFields);
+  const retry = () => scoreProspectNow(linkedinUrl, jdText, recruiterEmail, candidateLevel);
   const result = (await chrome.runtime.sendMessage({
     type: "SCORE_PROSPECT",
     input: { recruiterEmail, linkedinUrl, jdText, candidateLevel, candidateFields },
@@ -91,7 +91,7 @@ async function runProspectFlow(linkedinUrl: string) {
   if (linkedinUrl !== currentUrl) return;
 
   if (result.status === "verification_required") {
-    mountRoot().render(<ProspectOverlay state={{ status: "verification_required" }} onScore={() => runProspectFlow(linkedinUrl)} onShortlist={() => {}} />);
+    mountRoot().render(<ProspectOverlay state={{ status: "verification_required" }} onScore={retry} onShortlist={() => {}} />);
     return;
   }
   if (result.status === "cap_exceeded") {
@@ -99,7 +99,7 @@ async function runProspectFlow(linkedinUrl: string) {
     return;
   }
   if (result.status !== "ready" || !result.data) {
-    mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={() => runProspectFlow(linkedinUrl)} onShortlist={() => {}} />);
+    mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={retry} onShortlist={() => {}} />);
     return;
   }
 
@@ -184,7 +184,15 @@ function watchUrlChanges() {
     originalPushState(...args);
     handleUrlChange();
   }) as typeof history.pushState;
+  const originalReplaceState = history.replaceState.bind(history);
+  history.replaceState = ((...args: Parameters<typeof history.replaceState>) => {
+    originalReplaceState(...args);
+    handleUrlChange();
+  }) as typeof history.replaceState;
   window.addEventListener("popstate", handleUrlChange);
+  setInterval(() => {
+    if (normalizeLinkedinUrl(window.location.href) !== currentUrl) handleUrlChange();
+  }, 1000);
 }
 
 watchUrlChanges();
