@@ -4,6 +4,7 @@ import { verifyRecaptchaToken } from "@/lib/recaptcha";
 import { createRateLimiter } from "@/lib/rateLimit";
 import { createJob } from "@/lib/intervuebox/jobs";
 import { uploadResume } from "@/lib/intervuebox/resumes";
+import { extractJdText } from "@/lib/jdFileText";
 import { addApplicant, listApplicantsForJob, isDuplicateApplicantError, type AddApplicantInput } from "@/lib/intervuebox/applicants";
 import { getResumeMatchReport, scoreOutOfTen } from "@/lib/intervuebox/reports";
 import { IntervueBoxError } from "@/lib/intervuebox/client";
@@ -289,11 +290,25 @@ export async function POST(request: Request) {
     }
   }
 
+  // Best-effort local text pull so skill extraction can ground JD skills in
+  // what this candidate actually did, not just what the JD asks for -- an
+  // unsupported/corrupt CV shouldn't block the whole fitment check, so a
+  // failure here silently falls back to the JD-only skill extraction that
+  // already existed. extractJdText is a generic PDF/DOCX text extractor
+  // despite its name; reused as-is rather than duplicating pdf-parse/mammoth
+  // wiring for CVs.
+  let resumeText: string | undefined;
+  try {
+    resumeText = (await extractJdText(cv)).slice(0, MAX_TEXT_CHARS);
+  } catch {
+    resumeText = undefined;
+  }
+
   let ibJobId: string | undefined;
   let ibResumeId: string | undefined;
   let ibAppliedJobId: string;
   try {
-    ({ ibJobId } = await createJob({ title: role, jobDescription: jdForScoring, candidateLevel: validCandidateLevel }));
+    ({ ibJobId } = await createJob({ title: role, jobDescription: jdForScoring, candidateLevel: validCandidateLevel, resumeText }));
     ({ ibResumeId } = await uploadResume(cv, { jobId: ibJobId }));
     ({ ibAppliedJobId } = await addApplicantWithRetry({
       jobId: ibJobId,
@@ -349,6 +364,7 @@ export async function POST(request: Request) {
       ib_job_id: ibJobId,
       ib_resume_id: ibResumeId,
       ib_applied_job_id: ibAppliedJobId,
+      resume_text: resumeText || null,
       resume_match_status: report.status,
       resume_match_score: report.status === "READY" ? report.overallScore : null,
       resume_match_raw:

@@ -122,6 +122,23 @@ describe("POST /api/public/recruiter-preview/rescore", () => {
     );
   });
 
+  it("passes the lead's stored resume_text through as resumeText for skill grounding", async () => {
+    tableResults.recruiter_preview_settings = makeQueryStub({ data: { user_id: "user-1" } });
+    tableResults.fitment_leads = makeQueryStub({
+      data: [{ ib_resume_id: "RES_1", name: "Jane Doe", email: "jane@example.com", phone: "9999999999", candidate_level: "mid", resume_text: "Built AWS partnerships." }],
+    });
+    runRescoreMock.mockResolvedValue({ overallScore: 70, rank: null, categories: [], summary: "Decent", strongPoints: [], weakPoints: [] });
+
+    const { POST } = await importRoute();
+    await POST(request(VALID_BODY));
+
+    expect(runRescoreMock).toHaveBeenCalledWith(
+      expect.objectContaining({ resumeText: "Built AWS partnerships." }),
+      VALID_BODY.jdText,
+      expect.any(String)
+    );
+  });
+
   it("returns 429 after exceeding the per-candidate rate limit", async () => {
     tableResults.recruiter_preview_settings = makeQueryStub({ data: { user_id: "rate-limit-user" } });
     tableResults.fitment_leads = makeQueryStub({

@@ -76,7 +76,7 @@ export async function POST(request: Request) {
 
   const { data: leads } = await admin
     .from("fitment_leads")
-    .select("ib_resume_id, name, email, phone, candidate_level")
+    .select("ib_resume_id, name, email, phone, candidate_level, resume_text")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(1);
@@ -92,6 +92,7 @@ export async function POST(request: Request) {
     email: lead.email as string,
     phone: lead.phone as string,
     candidateLevel: (lead.candidate_level as CandidateLevel) || "entry",
+    resumeText: (lead.resume_text as string | null) || undefined,
   };
 
   try {

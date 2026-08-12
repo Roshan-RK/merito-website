@@ -76,3 +76,25 @@ export function buildResumeHtml(fields: ScrapedCandidateFields): string {
 export async function buildSyntheticResumePdf(fields: ScrapedCandidateFields): Promise<Buffer> {
   return renderHtmlToPdf(buildResumeHtml(fields));
 }
+
+// Plain-text form of the same scraped fields, for feeding the skill
+// extractor -- built straight from the structured data instead of rendering
+// the PDF and parsing it back to text, which would be a lossy, wasteful
+// round trip of data we already have.
+export function buildResumeText(fields: ScrapedCandidateFields): string {
+  const experienceText = fields.experience
+    .map((exp) => `${exp.title} — ${exp.company} (${exp.duration})\n${exp.description}`)
+    .join("\n\n");
+  const educationText = fields.education.map((edu) => `${edu.degree} — ${edu.school} (${edu.duration})`).join("\n");
+
+  return [
+    fields.name,
+    fields.headline,
+    "\nExperience:",
+    experienceText,
+    "\nEducation:",
+    educationText,
+    "\nSkills:",
+    fields.skills.join(", "),
+  ].join("\n");
+}

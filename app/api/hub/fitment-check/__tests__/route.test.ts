@@ -19,6 +19,10 @@ vi.mock("@/lib/intervuebox/client", async () => {
   const actual = await vi.importActual<typeof import("@/lib/intervuebox/client")>("@/lib/intervuebox/client");
   return { IntervueBoxError: actual.IntervueBoxError };
 });
+const extractJdTextMock = vi.fn().mockResolvedValue("Sales and partnerships resume text.");
+vi.mock("@/lib/jdFileText", () => ({
+  extractJdText: extractJdTextMock,
+}));
 vi.mock("@/lib/intervuebox/reports", () => ({
   getResumeMatchReport: vi.fn().mockResolvedValue({
     status: "READY",
@@ -67,6 +71,7 @@ describe("POST /api/hub/fitment-check", () => {
     insertSelectMock.mockClear();
     insertSelectSingleMock.mockClear();
     insertSelectSingleMock.mockResolvedValue({ data: { id: "lead-1" }, error: null });
+    extractJdTextMock.mockReset().mockResolvedValue("Sales and partnerships resume text.");
     const { addApplicant } = await import("@/lib/intervuebox/applicants");
     vi.mocked(addApplicant).mockReset().mockResolvedValue({ ibAppliedJobId: "APJ_123" });
     vi.resetModules();
@@ -96,6 +101,35 @@ describe("POST /api/hub/fitment-check", () => {
         resume_match_status: "READY",
       })
     );
+  });
+
+  it("passes the CV's extracted text to createJob so skill selection can be grounded in it", async () => {
+    extractJdTextMock.mockResolvedValue("Strategic Alliance Manager. Built AWS partnership.");
+    const { createJob } = await import("@/lib/intervuebox/jobs");
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm(),
+    });
+    await POST(request);
+
+    const callInput = vi.mocked(createJob).mock.calls.at(-1)![0];
+    expect(callInput.resumeText).toBe("Strategic Alliance Manager. Built AWS partnership.");
+  });
+
+  it("still succeeds with no resumeText when the CV can't be parsed for text", async () => {
+    extractJdTextMock.mockRejectedValue(new Error("Couldn't extract any text from that file."));
+    const { createJob } = await import("@/lib/intervuebox/jobs");
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm(),
+    });
+    const response = await POST(request);
+
+    expect(response.status).toBe(200);
+    const callInput = vi.mocked(createJob).mock.calls.at(-1)![0];
+    expect(callInput.resumeText).toBeUndefined();
   });
 
   it("returns 400 when candidateLevel is missing", async () => {

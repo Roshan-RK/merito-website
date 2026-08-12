@@ -29,6 +29,18 @@ describe("buildResumeHtml", () => {
   });
 });
 
+describe("buildResumeText", () => {
+  it("includes candidate name, experience, education, and skills as plain text", async () => {
+    const { buildResumeText } = await import("../syntheticResume");
+    const text = buildResumeText(FIELDS);
+    expect(text).toContain("Jane Doe");
+    expect(text).toContain("Backend Engineer — Acme <Corp>");
+    expect(text).toContain("Built APIs");
+    expect(text).toContain("MIT");
+    expect(text).toContain("Node.js, PostgreSQL");
+  });
+});
+
 describe("buildSyntheticResumePdf", () => {
   it("renders the built HTML via renderHtmlToPdf", async () => {
     const { buildSyntheticResumePdf } = await import("../syntheticResume");
