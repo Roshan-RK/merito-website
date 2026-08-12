@@ -446,7 +446,7 @@ export function RecruiterPreviewCard({
       ),
     });
   }
-  if (sections.has("interview") && data.interview) {
+  if (!isJdView && sections.has("interview") && data.interview) {
     secondaryMetrics.push({
       key: "interview",
       node: (
@@ -782,7 +782,7 @@ export function RecruiterPreviewCard({
         </DetailSection>
       )}
 
-      {activeSection === "interview" && sections.has("interview") && data.interview && (
+      {!isJdView && activeSection === "interview" && sections.has("interview") && data.interview && (
         <DetailSection
           index="03"
           label="AI interview"
