@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import logoPath from "../assets/logo.png";
 import type { LookupResponse } from "../../../shared/recruiter-preview/types";
 
@@ -41,6 +41,45 @@ function Header() {
   );
 }
 
+const SCORING_MESSAGES = [
+  "Reading their experience…",
+  "Comparing skills against your JD…",
+  "Weighing relevant projects…",
+  "Scoring overall fit…",
+  "Almost there…",
+];
+const SCORING_MESSAGE_INTERVAL_MS = 6_000;
+
+function ScoringStatus() {
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIndex((i) => (i + 1) % SCORING_MESSAGES.length);
+    }, SCORING_MESSAGE_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, []);
+  return <p style={{ margin: 0 }}>{SCORING_MESSAGES[index]}</p>;
+}
+
+function Spinner() {
+  return (
+    <>
+      <style>{`@keyframes merito-prospect-spin { to { transform: rotate(360deg); } }`}</style>
+      <div
+        style={{
+          width: 16,
+          height: 16,
+          borderRadius: "50%",
+          border: "2px solid #E6E1ED",
+          borderTopColor: "#4B4894",
+          animation: "merito-prospect-spin 0.8s linear infinite",
+          flexShrink: 0,
+        }}
+      />
+    </>
+  );
+}
+
 export function ProspectOverlay({
   state,
   onScore,
@@ -73,7 +112,10 @@ export function ProspectOverlay({
     return (
       <div style={CARD_STYLE}>
         <Header />
-        <p>Starting…</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Spinner />
+          <p style={{ margin: 0 }}>Starting…</p>
+        </div>
       </div>
     );
   }
@@ -81,7 +123,11 @@ export function ProspectOverlay({
     return (
       <div style={CARD_STYLE}>
         <Header />
-        <p>Scoring against your JD — can take up to ~2 minutes.</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <Spinner />
+          <ScoringStatus />
+        </div>
+        <p style={{ color: "#6C6779", margin: "0 0 8px" }}>Can take up to ~2 minutes.</p>
         <p style={{ color: "#6C6779" }}>
           Feel free to keep browsing. Come back to this profile and we&apos;ll show the result — it won&apos;t re-run or spend another check.
         </p>
