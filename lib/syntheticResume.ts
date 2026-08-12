@@ -17,6 +17,17 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+// IntervueBox's own resume-parsing step extracts a candidate email from the
+// resume text (separately from whatever email the applicant API call
+// carries) and hard-fails linking with "Email is required" once parsing
+// finishes if the resume has none -- live-confirmed 2026-08-12, only
+// surfaces after the async retry gives parsing enough time to complete.
+// This is a placeholder, not a real contact channel; it just needs to be
+// present so IntervueBox's parser has something to extract.
+function placeholderEmail(): string {
+  return `prospect-${crypto.randomUUID()}@leads.merito.ai`;
+}
+
 export function buildResumeHtml(fields: ScrapedCandidateFields): string {
   const experienceHtml = fields.experience
     .map(
@@ -45,7 +56,8 @@ export function buildResumeHtml(fields: ScrapedCandidateFields): string {
 <html>
 <body style="font-family: Arial, sans-serif; padding: 32px; color: #111;">
   <h1 style="margin: 0 0 4px;">${escapeHtml(fields.name)}</h1>
-  <p style="margin: 0 0 20px; color: #555;">${escapeHtml(fields.headline)}</p>
+  <p style="margin: 0 0 4px; color: #555;">${escapeHtml(fields.headline)}</p>
+  <p style="margin: 0 0 20px; color: #555;">${escapeHtml(placeholderEmail())}</p>
   <h2 style="font-size: 16px; border-bottom: 1px solid #ccc; padding-bottom: 4px;">Experience</h2>
   ${experienceHtml}
   <h2 style="font-size: 16px; border-bottom: 1px solid #ccc; padding-bottom: 4px;">Education</h2>
