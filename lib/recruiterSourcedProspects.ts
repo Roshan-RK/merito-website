@@ -1,7 +1,7 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { createJob } from "@/lib/intervuebox/jobs";
 import { uploadResume } from "@/lib/intervuebox/resumes";
-import { addApplicant } from "@/lib/intervuebox/applicants";
+import { addApplicant, listApplicantsForJob, isDuplicateApplicantError } from "@/lib/intervuebox/applicants";
 import { getResumeMatchReport, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import { IntervueBoxError } from "@/lib/intervuebox/client";
 import type { CandidateLevel } from "@/lib/intervuebox/agents";
@@ -68,6 +68,21 @@ function isJobInactiveError(err: unknown): boolean {
   return err instanceof IntervueBoxError && /inactive or closed/i.test(err.message);
 }
 
+// IntervueBox can report "still being parsed" on addApplicant and then finish
+// linking the applicant asynchronously anyway, before our retry lands -- the
+// retry then hits this duplicate error instead of success. Live-confirmed
+// 2026-08-12 hitting on the very first attempt (same race documented for the
+// fitment-check route's addApplicantWithRetry).
+async function recoverAppliedJobId(jobId: string): Promise<string | undefined> {
+  try {
+    const { applicants } = await listApplicantsForJob(jobId);
+    return applicants[0]?.applicantId;
+  } catch (err) {
+    console.error("Failed to recover applicantId after duplicate-applicant error", { jobId, error: err });
+    return undefined;
+  }
+}
+
 async function tryAddApplicant(params: {
   jobId: string;
   resumeId: string;
@@ -86,6 +101,10 @@ async function tryAddApplicant(params: {
   } catch (err) {
     if (isResumeStillParsingError(err) || isJobInactiveError(err)) {
       return { pending: true };
+    }
+    if (isDuplicateApplicantError(err)) {
+      const recoveredId = await recoverAppliedJobId(params.jobId);
+      if (recoveredId) return { ibAppliedJobId: recoveredId };
     }
     console.error("addApplicant failed for prospect", err);
     return { failed: true };

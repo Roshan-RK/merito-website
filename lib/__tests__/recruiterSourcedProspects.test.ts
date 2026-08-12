@@ -2,7 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@/lib/intervuebox/jobs", () => ({ createJob: vi.fn().mockResolvedValue({ ibJobId: "JOB_1" }) }));
 vi.mock("@/lib/intervuebox/resumes", () => ({ uploadResume: vi.fn().mockResolvedValue({ ibResumeId: "RES_1" }) }));
-vi.mock("@/lib/intervuebox/applicants", () => ({ addApplicant: vi.fn() }));
+vi.mock("@/lib/intervuebox/applicants", () => ({
+  addApplicant: vi.fn(),
+  listApplicantsForJob: vi.fn(),
+  isDuplicateApplicantError: (err: unknown) =>
+    err instanceof Error && /already applied|already been created for this (resume|job)/i.test(err.message),
+}));
 vi.mock("@/lib/intervuebox/reports", () => ({ getResumeMatchReport: vi.fn() }));
 vi.mock("@/lib/syntheticResume", () => ({ buildSyntheticResumePdf: vi.fn().mockResolvedValue(Buffer.from("pdf")) }));
 vi.mock("@/lib/recruiterIdentity", () => ({ isRecruiterEmailVerified: vi.fn() }));
@@ -58,6 +63,11 @@ async function stillParsingError() {
   return new IntervueBoxError({ code: "unknown_error", status: 400, message: "Resume is still being parsed and has no linked candidate yet." });
 }
 
+async function duplicateApplicantError() {
+  const { IntervueBoxError } = await import("@/lib/intervuebox/client");
+  return new IntervueBoxError({ code: "unknown_error", status: 400, message: "Candidate already applied for this job" });
+}
+
 beforeEach(async () => {
   vi.resetModules();
   insertSelectSingleMock.mockClear().mockResolvedValue({ data: { id: "prospect-1" }, error: null });
@@ -69,8 +79,9 @@ beforeEach(async () => {
   vi.mocked(isRecruiterEmailVerified).mockReset().mockResolvedValue(true);
   const { getResumeMatchReport } = await import("@/lib/intervuebox/reports");
   vi.mocked(getResumeMatchReport).mockReset();
-  const { addApplicant } = await import("@/lib/intervuebox/applicants");
+  const { addApplicant, listApplicantsForJob } = await import("@/lib/intervuebox/applicants");
   vi.mocked(addApplicant).mockReset();
+  vi.mocked(listApplicantsForJob).mockReset();
   const { createJob } = await import("@/lib/intervuebox/jobs");
   vi.mocked(createJob).mockClear();
 });
@@ -132,6 +143,22 @@ describe("startScoringProspect", () => {
 
     expect(result.status).toBe("failed");
     expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+  });
+
+  it("recovers the applicantId and returns pending when IntervueBox reports a duplicate applicant", async () => {
+    const { addApplicant, listApplicantsForJob } = await import("@/lib/intervuebox/applicants");
+    vi.mocked(addApplicant).mockRejectedValue(await duplicateApplicantError());
+    vi.mocked(listApplicantsForJob).mockResolvedValue({
+      total: 1,
+      page: 1,
+      limit: 10,
+      applicants: [{ applicantId: "APJ_RECOVERED", candidateId: "CAND_1", candidateName: "Jane", candidateEmail: "x@example.com", resumeMatchScore: null }],
+    });
+    const { startScoringProspect } = await importModule();
+    const result = await startScoringProspect(INPUT);
+
+    expect(result.status).toBe("pending");
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ status: "pending", ib_applied_job_id: "APJ_RECOVERED" }));
   });
 });
 
