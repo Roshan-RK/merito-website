@@ -1,10 +1,14 @@
 import { intervueBoxFetch } from "./client";
 import { durationForLevel, type CandidateLevel } from "./agents";
+import { extractSkillsWithLLM, extractJobDetailsWithLLM } from "@/lib/claude/extractSkills";
+import { logNewSkillsForReview } from "./learnedSkills";
 
 export type CreateJobInput = {
   title: string;
   jobDescription: string;
   candidateLevel: CandidateLevel;
+  resumeText?: string;
+  skills?: string[];
 };
 
 type CreateJobResponse = {
@@ -28,24 +32,42 @@ export function inferExperienceFromJD(jobDescription: string): string {
 // passed at job creation (confirmed by their team, 2026-07-30) -- an empty
 // `skills` array means an empty skill report. Spans both technical and
 // non-technical roles since Merito's candidates aren't just engineers.
-// Not exhaustive by design -- a fixed keyword list can't be, so this is a
-// best-effort match against common terms, not a claim of completeness.
+// This is only the FALLBACK path now (createJob tries extractSkillsWithLLM
+// first) -- no fixed list can cover "every job in the world", so this just
+// needs to be good enough for degraded mode, not exhaustive. Expanded
+// 2026-08-01 with terms grounded in a real 11-JD sample spanning D2C
+// marketing, design/video/AI tools, IT hardware sales, DevOps, civil/MEP
+// engineering, and business analysis -- not guessed.
 const SKILL_KEYWORDS = [
   "JavaScript", "TypeScript", "Python", "Java", "React", "Next.js", "Node.js",
   "SQL", "AWS", "Docker", "Kubernetes", "Go", "Rust", "C++", "C#", ".NET",
   "Angular", "Vue", "GraphQL", "REST API", "HTML", "CSS", "Git", "CI/CD",
   "Machine Learning", "Data Analysis", "Excel", "Power BI", "Tableau", "Salesforce",
+  "MongoDB", "DevSecOps", "Disaster Recovery", "High Availability Architecture",
+  "Networking", "Cloud Architecture",
   "Product Management", "Stakeholder Management", "Roadmap Planning", "Agile",
   "Scrum", "Project Management", "Market Research", "Pricing Strategy",
   "Go-To-Market", "A/B Testing", "User Research",
   "Sales", "Negotiation", "CRM", "Lead Generation", "Digital Marketing",
   "SEO", "Content Marketing", "Social Media Marketing",
+  "Meta Ads", "Google Ads", "Shopify", "WooCommerce", "GA4", "ROAS",
+  "Conversion Rate Optimization", "Lifecycle Marketing", "E-commerce",
+  "Figma", "Adobe XD", "Sketch", "Photoshop", "Illustrator", "InDesign",
+  "Adobe Premiere Pro", "After Effects", "CapCut", "DaVinci Resolve",
+  "UI/UX Design", "Motion Graphics", "ChatGPT", "Midjourney",
+  "Dell", "HPE", "Cisco", "VMware", "Nutanix", "Palo Alto Networks", "Fortinet",
+  "Data Center Infrastructure", "Firewalls",
+  "AutoCAD", "HVAC", "MEP", "Structural Engineering", "Technical Drawing",
+  "Site Safety",
+  "ERP", "SAP", "Inventory Management", "Warehouse Management", "Logistics",
+  "Business Analysis",
   "Recruitment", "Talent Acquisition", "Onboarding", "Performance Management",
   "Employee Engagement", "HR Policies", "Payroll",
   "Communication", "Leadership", "Problem Solving", "Teamwork",
   "Time Management", "Critical Thinking", "Adaptability",
   "Financial Modeling", "Budgeting", "Forecasting", "Supply Chain",
-  "Operations Management", "Vendor Management",
+  "Operations Management", "Vendor Management", "IT Governance",
+  "Digital Transformation",
 ] as const;
 
 // IntervueBox can only analyze a fixed number of skills per interview slot
@@ -58,19 +80,60 @@ export function maxSkillsForLevel(level: CandidateLevel): number {
   return MAX_SKILLS_BY_DURATION[durationForLevel(level)];
 }
 
+// Ranked by first-mention position in the JD, not keyword-list order --
+// recruiters put must-have skills in a dedicated skills/requirements block
+// near the top (after the About/intro boilerplate), while generic terms
+// (communication, leadership) repeat throughout the prose. Sorting by
+// position surfaces the deliberate, structural skills list instead of
+// whatever happened to match first in SKILL_KEYWORDS.
 export function inferSkillsFromJD(jobDescription: string, max: number): string[] {
-  const found: string[] = [];
+  const matches: { skill: string; index: number }[] = [];
   for (const skill of SKILL_KEYWORDS) {
     const pattern = new RegExp(`\\b${skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
-    if (pattern.test(jobDescription)) {
-      found.push(skill);
-      if (found.length >= max) break;
-    }
+    const match = pattern.exec(jobDescription);
+    if (match) matches.push({ skill, index: match.index });
   }
-  return found;
+  matches.sort((a, b) => a.index - b.index);
+  return matches.slice(0, max).map((m) => m.skill);
+}
+
+// LLM extraction is primary (catches domain-specific tools no fixed list
+// covers); keyword match is the fallback so a slow/failed/refused API call
+// never blocks job creation. An empty LLM result is treated as a failure
+// too, not "this JD truly has zero skills" -- IntervueBox's skill report
+// depends on this list not being empty. Single call, no verification
+// round-trip -- fitment-check's own requirement is least-possible-time.
+async function resolveSkills(jobTitle: string, jobDescription: string, candidateLevel: CandidateLevel, resumeText?: string): Promise<string[]> {
+  const max = maxSkillsForLevel(candidateLevel);
+  try {
+    const skills = await extractSkillsWithLLM(jobDescription, max, resumeText);
+    if (skills.length === 0) throw new Error("LLM returned no skills");
+    logNewSkillsForReview(skills, SKILL_KEYWORDS, jobTitle);
+    return skills;
+  } catch {
+    return inferSkillsFromJD(jobDescription, max);
+  }
+}
+
+export async function resolveJobDetails(
+  jobTitleFallback: string,
+  jobDescription: string,
+  candidateLevel: CandidateLevel,
+  resumeText?: string
+): Promise<{ skills: string[]; title: string }> {
+  const max = maxSkillsForLevel(candidateLevel);
+  try {
+    const { skills, title } = await extractJobDetailsWithLLM(jobDescription, max, resumeText, jobTitleFallback);
+    if (skills.length === 0) throw new Error("LLM returned no skills");
+    logNewSkillsForReview(skills, SKILL_KEYWORDS, jobTitleFallback);
+    return { skills, title };
+  } catch {
+    return { skills: inferSkillsFromJD(jobDescription, max), title: jobTitleFallback };
+  }
 }
 
 export async function createJob(input: CreateJobInput): Promise<{ ibJobId: string }> {
+  const skills = input.skills ?? (await resolveSkills(input.title, input.jobDescription, input.candidateLevel, input.resumeText));
   const response = await intervueBoxFetch<CreateJobResponse>("/public/jobs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -83,7 +146,7 @@ export async function createJob(input: CreateJobInput): Promise<{ ibJobId: strin
       department: "General",
       openings: 1,
       jobDescription: input.jobDescription,
-      skills: inferSkillsFromJD(input.jobDescription, maxSkillsForLevel(input.candidateLevel)),
+      skills,
       education: [],
       experience: inferExperienceFromJD(input.jobDescription),
       status: "ACTIVE",
