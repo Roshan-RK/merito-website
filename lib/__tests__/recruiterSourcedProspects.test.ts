@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-vi.mock("@/lib/intervuebox/jobs", () => ({ createJob: vi.fn().mockResolvedValue({ ibJobId: "JOB_1" }) }));
+const resolveJobDetailsMock = vi.fn();
+vi.mock("@/lib/intervuebox/jobs", () => ({
+  createJob: vi.fn().mockResolvedValue({ ibJobId: "JOB_1" }),
+  resolveJobDetails: resolveJobDetailsMock,
+}));
 vi.mock("@/lib/intervuebox/resumes", () => ({ uploadResume: vi.fn().mockResolvedValue({ ibResumeId: "RES_1" }) }));
 vi.mock("@/lib/intervuebox/applicants", () => ({
   addApplicant: vi.fn(),
@@ -9,7 +13,10 @@ vi.mock("@/lib/intervuebox/applicants", () => ({
     err instanceof Error && /already applied|already been created for this (resume|job)/i.test(err.message),
 }));
 vi.mock("@/lib/intervuebox/reports", () => ({ getResumeMatchReport: vi.fn() }));
-vi.mock("@/lib/syntheticResume", () => ({ buildSyntheticResumePdf: vi.fn().mockResolvedValue(Buffer.from("pdf")) }));
+vi.mock("@/lib/syntheticResume", () => ({
+  buildSyntheticResumePdf: vi.fn().mockResolvedValue(Buffer.from("pdf")),
+  buildResumeText: vi.fn().mockReturnValue("Jane Doe\nEngineer"),
+}));
 vi.mock("@/lib/recruiterIdentity", () => ({ isRecruiterEmailVerified: vi.fn() }));
 vi.mock("@/lib/intervuebox/client", async () => {
   const actual = await vi.importActual<typeof import("@/lib/intervuebox/client")>("@/lib/intervuebox/client");
@@ -84,6 +91,7 @@ beforeEach(async () => {
   vi.mocked(listApplicantsForJob).mockReset();
   const { createJob } = await import("@/lib/intervuebox/jobs");
   vi.mocked(createJob).mockClear();
+  resolveJobDetailsMock.mockReset().mockResolvedValue({ skills: [], title: "First line of the JD" });
 });
 afterEach(() => vi.resetModules());
 
@@ -112,6 +120,31 @@ describe("startScoringProspect", () => {
     if (result.status === "ready") expect(result.report.overallScore).toBe(82);
     const { createJob } = await import("@/lib/intervuebox/jobs");
     expect(vi.mocked(createJob)).not.toHaveBeenCalled();
+  });
+
+  it("passes the scraped candidate fields as resumeText to createJob for skill grounding", async () => {
+    const { addApplicant } = await import("@/lib/intervuebox/applicants");
+    vi.mocked(addApplicant).mockResolvedValue({ ibAppliedJobId: "APJ_1" });
+    const { startScoringProspect } = await importModule();
+    await startScoringProspect(INPUT);
+
+    const { createJob } = await import("@/lib/intervuebox/jobs");
+    expect(vi.mocked(createJob)).toHaveBeenCalledWith(
+      expect.objectContaining({ resumeText: "Jane Doe\nEngineer" })
+    );
+  });
+
+  it("uses the LLM-derived title from resolveJobDetails instead of the first-line heuristic", async () => {
+    resolveJobDetailsMock.mockResolvedValue({ skills: ["Node.js"], title: "Backend Engineer" });
+    const { addApplicant } = await import("@/lib/intervuebox/applicants");
+    vi.mocked(addApplicant).mockResolvedValue({ ibAppliedJobId: "APJ_1" });
+    const { startScoringProspect } = await importModule();
+    await startScoringProspect(INPUT);
+
+    const { createJob } = await import("@/lib/intervuebox/jobs");
+    expect(vi.mocked(createJob)).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Backend Engineer", skills: ["Node.js"] })
+    );
   });
 
   it("returns pending with the applicant already linked when addApplicant succeeds immediately", async () => {

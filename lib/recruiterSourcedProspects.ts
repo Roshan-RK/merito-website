@@ -1,11 +1,11 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { createJob } from "@/lib/intervuebox/jobs";
+import { createJob, resolveJobDetails } from "@/lib/intervuebox/jobs";
 import { uploadResume } from "@/lib/intervuebox/resumes";
 import { addApplicant, listApplicantsForJob, isDuplicateApplicantError } from "@/lib/intervuebox/applicants";
 import { getResumeMatchReport, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import { IntervueBoxError } from "@/lib/intervuebox/client";
 import type { CandidateLevel } from "@/lib/intervuebox/agents";
-import { buildSyntheticResumePdf, type ScrapedCandidateFields } from "@/lib/syntheticResume";
+import { buildSyntheticResumePdf, buildResumeText, type ScrapedCandidateFields } from "@/lib/syntheticResume";
 import { isRecruiterEmailVerified } from "@/lib/recruiterIdentity";
 import { hashJd } from "@/lib/recruiterJdRescore";
 
@@ -146,10 +146,14 @@ export async function startScoringProspect(input: ScoreProspectInput): Promise<S
     return { status: "cap_exceeded" };
   }
 
+  const resumeText = buildResumeText(input.candidateFields);
+  const { skills, title } = await resolveJobDetails(deriveJobTitle(input.jdText), input.jdText, input.candidateLevel, resumeText);
   const { ibJobId } = await createJob({
-    title: deriveJobTitle(input.jdText),
+    title,
     jobDescription: input.jdText,
     candidateLevel: input.candidateLevel,
+    resumeText,
+    skills,
   });
 
   const pdfBuffer = await buildSyntheticResumePdf(input.candidateFields);
