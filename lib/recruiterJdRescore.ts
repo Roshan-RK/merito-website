@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { createJob } from "@/lib/intervuebox/jobs";
+import { createJob, resolveJobDetails } from "@/lib/intervuebox/jobs";
 import { addApplicant } from "@/lib/intervuebox/applicants";
 import { getResumeMatchReport, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import type { CandidateLevel } from "@/lib/intervuebox/agents";
@@ -22,6 +22,7 @@ export type CandidateForRescore = {
   email: string;
   phone: string;
   candidateLevel: CandidateLevel;
+  resumeText?: string;
 };
 
 export async function getCachedRescore(userId: string, jdHash: string): Promise<ResumeMatchReportReady | null> {
@@ -54,10 +55,13 @@ export async function runRescore(
 ): Promise<ResumeMatchReportReady> {
   const admin = getSupabaseServerClient();
 
+  const { skills, title } = await resolveJobDetails(deriveJobTitle(jdText), jdText, candidate.candidateLevel, candidate.resumeText);
   const { ibJobId } = await createJob({
-    title: deriveJobTitle(jdText),
+    title,
     jobDescription: jdText,
     candidateLevel: candidate.candidateLevel,
+    resumeText: candidate.resumeText,
+    skills,
   });
   const { ibAppliedJobId } = await addApplicant({
     jobId: ibJobId,

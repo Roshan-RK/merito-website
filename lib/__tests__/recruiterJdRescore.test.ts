@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+const resolveJobDetailsMock = vi.fn();
 vi.mock("@/lib/intervuebox/jobs", () => ({
   createJob: vi.fn().mockResolvedValue({ ibJobId: "JOB_1" }),
+  resolveJobDetails: resolveJobDetailsMock,
 }));
 vi.mock("@/lib/intervuebox/applicants", () => ({
   addApplicant: vi.fn().mockResolvedValue({ ibAppliedJobId: "APJ_1" }),
@@ -83,6 +85,7 @@ describe("runRescore", () => {
     vi.stubEnv("RESCORE_POLL_INTERVAL_MS", "1");
     vi.stubEnv("RESCORE_MAX_WAIT_MS", "50");
     upsertMock.mockClear();
+    resolveJobDetailsMock.mockReset().mockResolvedValue({ skills: [], title: "First line of the JD" });
     const { getResumeMatchReport } = await import("@/lib/intervuebox/reports");
     vi.mocked(getResumeMatchReport).mockReset();
   });
@@ -119,6 +122,49 @@ describe("runRescore", () => {
     expect(upsertMock).toHaveBeenCalledWith(
       expect.objectContaining({ user_id: "user-1", jd_hash: "hash-abc", status: "ready" }),
       expect.objectContaining({ onConflict: "user_id,jd_hash" })
+    );
+  });
+
+  it("passes the candidate's stored resumeText to createJob for skill grounding", async () => {
+    const { getResumeMatchReport } = await import("@/lib/intervuebox/reports");
+    vi.mocked(getResumeMatchReport).mockResolvedValue({
+      status: "READY",
+      overallScore: 91,
+      rank: null,
+      categories: [],
+      summary: "Great fit",
+      strongPoints: [],
+      weakPoints: [],
+    });
+
+    const { runRescore } = await importModule();
+    await runRescore({ ...CANDIDATE, resumeText: "Built AWS partnerships. Sales background." }, "A JD about leadership", "hash-abc");
+
+    const { createJob } = await import("@/lib/intervuebox/jobs");
+    expect(vi.mocked(createJob)).toHaveBeenCalledWith(
+      expect.objectContaining({ resumeText: "Built AWS partnerships. Sales background." })
+    );
+  });
+
+  it("uses the LLM-derived title from resolveJobDetails instead of the first-line heuristic", async () => {
+    resolveJobDetailsMock.mockResolvedValue({ skills: ["Partner Management"], title: "Strategic Alliance Manager" });
+    const { getResumeMatchReport } = await import("@/lib/intervuebox/reports");
+    vi.mocked(getResumeMatchReport).mockResolvedValue({
+      status: "READY",
+      overallScore: 91,
+      rank: null,
+      categories: [],
+      summary: "Great fit",
+      strongPoints: [],
+      weakPoints: [],
+    });
+
+    const { runRescore } = await importModule();
+    await runRescore(CANDIDATE, "Some JD text nobody titled clearly", "hash-abc");
+
+    const { createJob } = await import("@/lib/intervuebox/jobs");
+    expect(vi.mocked(createJob)).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Strategic Alliance Manager", skills: ["Partner Management"] })
     );
   });
 
