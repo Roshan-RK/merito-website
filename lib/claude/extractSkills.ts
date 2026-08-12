@@ -25,10 +25,12 @@ const LLM_RESUME_CHAR_LIMIT = 6000;
 //    headroom (the old 1024) over what the schema can produce; a tighter
 //    ceiling caps worst-case generation time directly.
 const LLM_MAX_OUTPUT_TOKENS = 600;
-// Only bumped modestly (6000ms -> 8000ms) because levers 1-3 above already
-// remove most of the regression; this is margin on top of a smaller prompt,
-// not a substitute for shrinking it.
-const LLM_TIMEOUT_MS = 8000;
+// Live-measured 2026-08-12 against the real API at worst-case prompt size
+// (JD at LLM_JD_CHAR_LIMIT, resume at LLM_RESUME_CHAR_LIMIT): 3 runs came
+// back at 2057ms/2153ms/7318ms -- that one outlier left only ~680ms of
+// margin under the 8000ms first considered, so raised further for real
+// headroom instead of trusting the smaller-prompt levers alone.
+const LLM_TIMEOUT_MS = 12000;
 
 const SkillsSchema = z.object({
   skills: z

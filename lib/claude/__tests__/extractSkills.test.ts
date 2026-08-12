@@ -42,7 +42,7 @@ describe("extractSkillsWithLLM", () => {
     await expect(extractSkillsWithLLM("Some JD text", 5)).rejects.toThrow("timeout");
   });
 
-  it("uses the Haiku model with an 8s timeout and a 600-token output ceiling", async () => {
+  it("uses the Haiku model with a 12s timeout and a 600-token output ceiling", async () => {
     parseMock.mockResolvedValue({ parsed_output: { recruiterNotes: "", skills: [] } });
     const { extractSkillsWithLLM } = await import("../extractSkills");
 
@@ -50,7 +50,7 @@ describe("extractSkillsWithLLM", () => {
 
     expect(parseMock).toHaveBeenCalledWith(
       expect.objectContaining({ model: "claude-haiku-4-5", max_tokens: 600 }),
-      expect.objectContaining({ timeout: 8000 })
+      expect.objectContaining({ timeout: 12000 })
     );
   });
 
@@ -154,7 +154,7 @@ describe("extractJobDetailsWithLLM", () => {
     expect(prompt).toContain("Senior Product Manager");
   });
 
-  it("uses the Haiku model with the same 8s timeout and 600-token output ceiling", async () => {
+  it("uses the Haiku model with the same 12s timeout and 600-token output ceiling", async () => {
     parseMock.mockResolvedValue({ parsed_output: { title: "X", skills: [] } });
     const { extractJobDetailsWithLLM } = await import("../extractSkills");
 
@@ -162,7 +162,7 @@ describe("extractJobDetailsWithLLM", () => {
 
     expect(parseMock).toHaveBeenCalledWith(
       expect.objectContaining({ model: "claude-haiku-4-5", max_tokens: 600 }),
-      expect.objectContaining({ timeout: 8000 })
+      expect.objectContaining({ timeout: 12000 })
     );
   });
 });
