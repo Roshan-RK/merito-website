@@ -62,7 +62,7 @@ export function buildResumeHtml(fields: ScrapedCandidateFields): string {
 <body style="font-family: Arial, sans-serif; padding: 32px; color: #111;">
   <h1 style="margin: 0 0 4px;">${escapeHtml(fields.name)}</h1>
   <p style="margin: 0 0 4px; color: #555;">${escapeHtml(fields.headline)}</p>
-  <p style="margin: 0 0 20px; color: #555;">${escapeHtml(placeholderEmail())}</p>
+  <p style="margin: 0 0 20px; color: #555;">Email: ${escapeHtml(placeholderEmail())} | Phone: Not specified</p>
   <h2 style="font-size: 16px; border-bottom: 1px solid #ccc; padding-bottom: 4px;">Experience</h2>
   ${experienceHtml}
   <h2 style="font-size: 16px; border-bottom: 1px solid #ccc; padding-bottom: 4px;">Education</h2>
