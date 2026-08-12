@@ -11,6 +11,9 @@ vi.mock("@/lib/intervuebox/resumes", () => ({
 }));
 vi.mock("@/lib/intervuebox/applicants", () => ({
   addApplicant: vi.fn().mockResolvedValue({ ibAppliedJobId: "APJ_123" }),
+  listApplicantsForJob: vi.fn(),
+  isDuplicateApplicantError: (err: unknown) =>
+    err instanceof Error && /already applied|already been created for this (resume|job)/i.test(err.message),
 }));
 vi.mock("@/lib/intervuebox/client", async () => {
   const actual = await vi.importActual<typeof import("@/lib/intervuebox/client")>("@/lib/intervuebox/client");

@@ -3,17 +3,13 @@ import { createJob } from "@/lib/intervuebox/jobs";
 import { uploadResume } from "@/lib/intervuebox/resumes";
 import { addApplicant } from "@/lib/intervuebox/applicants";
 import { getResumeMatchReport, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
+import { IntervueBoxError } from "@/lib/intervuebox/client";
 import type { CandidateLevel } from "@/lib/intervuebox/agents";
 import { buildSyntheticResumePdf, type ScrapedCandidateFields } from "@/lib/syntheticResume";
 import { isRecruiterEmailVerified } from "@/lib/recruiterIdentity";
 import { hashJd } from "@/lib/recruiterJdRescore";
 
 export const MONTHLY_PROSPECT_CAP = 10;
-const POLL_INTERVAL_MS = Number(process.env.RESCORE_POLL_INTERVAL_MS) || 5_000;
-// Must stay comfortably under the score-prospect route's maxDuration
-// (60s) -- the deadline here only bounds the polling loop, not job/
-// applicant creation or response serialization time around it.
-const MAX_WAIT_MS = Number(process.env.RESCORE_MAX_WAIT_MS) || 50_000;
 
 export type ScoreProspectInput = {
   recruiterEmail: string;
@@ -23,10 +19,22 @@ export type ScoreProspectInput = {
   jdText: string;
 };
 
-export type ScoreProspectResult =
+// Scoring a prospect is a two-phase, poll-driven flow rather than one long
+// request: IntervueBox's resume-parse (~40-50s observed) plus report
+// generation on top of that can't reliably fit inside a single Vercel
+// function invocation's time budget. startScoringProspect kicks the
+// IntervueBox chain off and returns immediately; the extension polls
+// getProspectScoreStatus (cheap, single-shot per call) until it's ready.
+export type StartScoringResult =
   | { status: "verification_required" }
   | { status: "cap_exceeded" }
-  | { status: "ready"; prospectId: string; report: ResumeMatchReportReady }
+  | { status: "pending"; prospectId: string }
+  | { status: "ready"; prospectId: string; report: ResumeMatchReportReady; jdText: string }
+  | { status: "failed" };
+
+export type ProspectScoreStatusResult =
+  | { status: "pending" }
+  | { status: "ready"; prospectId: string; report: ResumeMatchReportReady; jdText: string }
   | { status: "failed" };
 
 export async function getMonthlyProspectCount(recruiterEmail: string): Promise<number> {
@@ -52,7 +60,39 @@ function deriveJobTitle(jdText: string): string {
   return firstLine ? firstLine.slice(0, 80) : "Role";
 }
 
-export async function scoreProspect(input: ScoreProspectInput): Promise<ScoreProspectResult> {
+function isResumeStillParsingError(err: unknown): boolean {
+  return err instanceof IntervueBoxError && /still being parsed/i.test(err.message);
+}
+
+function isJobInactiveError(err: unknown): boolean {
+  return err instanceof IntervueBoxError && /inactive or closed/i.test(err.message);
+}
+
+async function tryAddApplicant(params: {
+  jobId: string;
+  resumeId: string;
+  candidateName: string;
+}): Promise<{ ibAppliedJobId: string } | { pending: true } | { failed: true }> {
+  const placeholderEmail = `prospect-${crypto.randomUUID()}@leads.merito.ai`;
+  try {
+    const { ibAppliedJobId } = await addApplicant({
+      jobId: params.jobId,
+      resumeId: params.resumeId,
+      name: params.candidateName,
+      email: placeholderEmail,
+      phoneNumber: "Not specified",
+    });
+    return { ibAppliedJobId };
+  } catch (err) {
+    if (isResumeStillParsingError(err) || isJobInactiveError(err)) {
+      return { pending: true };
+    }
+    console.error("addApplicant failed for prospect", err);
+    return { failed: true };
+  }
+}
+
+export async function startScoringProspect(input: ScoreProspectInput): Promise<StartScoringResult> {
   const email = input.recruiterEmail.toLowerCase();
 
   if (!(await isRecruiterEmailVerified(email))) {
@@ -76,6 +116,7 @@ export async function scoreProspect(input: ScoreProspectInput): Promise<ScorePro
       status: "ready",
       prospectId: existing.id as string,
       report: existing.resume_match_raw as ResumeMatchReportReady,
+      jdText: input.jdText,
     };
   }
 
@@ -94,60 +135,106 @@ export async function scoreProspect(input: ScoreProspectInput): Promise<ScorePro
   const pdfFile = new File([new Uint8Array(pdfBuffer)], "resume.pdf", { type: "application/pdf" });
   const { ibResumeId } = await uploadResume(pdfFile, { jobId: ibJobId });
 
-  const placeholderEmail = `prospect-${crypto.randomUUID()}@leads.merito.ai`;
-  const { ibAppliedJobId } = await addApplicant({
+  // Best-effort immediate attempt -- IntervueBox sometimes parses fast
+  // enough that this succeeds inline, saving the extension a poll round
+  // trip. If not, getProspectScoreStatus retries on the next poll.
+  const applicantResult = await tryAddApplicant({
     jobId: ibJobId,
     resumeId: ibResumeId,
-    name: input.candidateFields.name || "Candidate",
-    email: placeholderEmail,
-    phoneNumber: "Not specified",
+    candidateName: input.candidateFields.name || "Candidate",
   });
 
-  let report = await getResumeMatchReport(ibAppliedJobId);
-  const deadline = Date.now() + MAX_WAIT_MS;
-  while (report.status === "PENDING" && Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-    report = await getResumeMatchReport(ibAppliedJobId);
-  }
+  const baseRow = {
+    recruiter_email: email,
+    linkedin_url: input.linkedinUrl,
+    candidate_name: input.candidateFields.name || null,
+    candidate_level: input.candidateLevel,
+    jd_text: input.jdText,
+    jd_hash: jdHash,
+    ib_job_id: ibJobId,
+    ib_resume_id: ibResumeId,
+  };
 
-  if (report.status !== "READY") {
-    await admin.from("recruiter_sourced_prospects").insert({
-      recruiter_email: email,
-      linkedin_url: input.linkedinUrl,
-      candidate_name: input.candidateFields.name || null,
-      candidate_level: input.candidateLevel,
-      jd_text: input.jdText,
-      jd_hash: jdHash,
-      ib_job_id: ibJobId,
-      ib_resume_id: ibResumeId,
-      ib_applied_job_id: ibAppliedJobId,
-      status: "failed",
-    });
+  if ("failed" in applicantResult) {
+    await admin.from("recruiter_sourced_prospects").insert({ ...baseRow, status: "failed" });
     return { status: "failed" };
   }
 
-  const { status: _status, ...reportReady } = report;
   const { data: inserted, error } = await admin
     .from("recruiter_sourced_prospects")
     .insert({
-      recruiter_email: email,
-      linkedin_url: input.linkedinUrl,
-      candidate_name: input.candidateFields.name || null,
-      candidate_level: input.candidateLevel,
-      jd_text: input.jdText,
-      jd_hash: jdHash,
-      ib_job_id: ibJobId,
-      ib_resume_id: ibResumeId,
-      ib_applied_job_id: ibAppliedJobId,
-      resume_match_raw: reportReady,
-      status: "ready",
+      ...baseRow,
+      ib_applied_job_id: "ibAppliedJobId" in applicantResult ? applicantResult.ibAppliedJobId : null,
+      status: "pending",
     })
     .select("id")
     .single();
 
   if (error || !inserted) {
-    throw new Error(`Failed to save scored prospect: ${error?.message}`);
+    throw new Error(`Failed to save prospect: ${error?.message}`);
   }
 
-  return { status: "ready", prospectId: inserted.id as string, report: reportReady as ResumeMatchReportReady };
+  return { status: "pending", prospectId: inserted.id as string };
+}
+
+export async function getProspectScoreStatus(prospectId: string): Promise<ProspectScoreStatusResult> {
+  const admin = getSupabaseServerClient();
+  const { data: row, error: fetchError } = await admin
+    .from("recruiter_sourced_prospects")
+    .select("status, ib_job_id, ib_resume_id, ib_applied_job_id, candidate_name, resume_match_raw, jd_text")
+    .eq("id", prospectId)
+    .maybeSingle();
+
+  if (fetchError || !row) {
+    return { status: "failed" };
+  }
+
+  const jdText = row.jd_text as string;
+
+  if (row.status === "ready") {
+    return { status: "ready", prospectId, report: row.resume_match_raw as ResumeMatchReportReady, jdText };
+  }
+  if (row.status === "failed") {
+    return { status: "failed" };
+  }
+
+  let ibAppliedJobId = row.ib_applied_job_id as string | null;
+
+  if (!ibAppliedJobId) {
+    const applicantResult = await tryAddApplicant({
+      jobId: row.ib_job_id as string,
+      resumeId: row.ib_resume_id as string,
+      candidateName: (row.candidate_name as string | null) || "Candidate",
+    });
+    if ("failed" in applicantResult) {
+      await admin.from("recruiter_sourced_prospects").update({ status: "failed" }).eq("id", prospectId);
+      return { status: "failed" };
+    }
+    if ("pending" in applicantResult) {
+      return { status: "pending" };
+    }
+    ibAppliedJobId = applicantResult.ibAppliedJobId;
+    await admin.from("recruiter_sourced_prospects").update({ ib_applied_job_id: ibAppliedJobId }).eq("id", prospectId);
+  }
+
+  const report = await getResumeMatchReport(ibAppliedJobId).catch((err) => {
+    console.error("getResumeMatchReport failed for prospect, treating as pending", err);
+    return { status: "PENDING" as const };
+  });
+
+  if (report.status !== "READY") {
+    return { status: "pending" };
+  }
+
+  const { status: _status, ...reportReady } = report;
+  const { error: updateError } = await admin
+    .from("recruiter_sourced_prospects")
+    .update({ resume_match_raw: reportReady, status: "ready" })
+    .eq("id", prospectId);
+
+  if (updateError) {
+    console.error("Failed to persist ready prospect score", updateError);
+  }
+
+  return { status: "ready", prospectId, report: reportReady as ResumeMatchReportReady, jdText };
 }

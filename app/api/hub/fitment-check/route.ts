@@ -4,7 +4,7 @@ import { verifyRecaptchaToken } from "@/lib/recaptcha";
 import { createRateLimiter } from "@/lib/rateLimit";
 import { createJob } from "@/lib/intervuebox/jobs";
 import { uploadResume } from "@/lib/intervuebox/resumes";
-import { addApplicant, listApplicantsForJob, type AddApplicantInput } from "@/lib/intervuebox/applicants";
+import { addApplicant, listApplicantsForJob, isDuplicateApplicantError, type AddApplicantInput } from "@/lib/intervuebox/applicants";
 import { getResumeMatchReport, scoreOutOfTen } from "@/lib/intervuebox/reports";
 import { IntervueBoxError } from "@/lib/intervuebox/client";
 import { getSupabaseServerClient } from "@/lib/supabase";
@@ -48,18 +48,6 @@ function isResumeStillParsingError(err: unknown): boolean {
 
 function isJobInactiveError(err: unknown): boolean {
   return err instanceof IntervueBoxError && /inactive or closed/i.test(err.message);
-}
-
-// IntervueBox can report "still being parsed" on addApplicant and then finish
-// linking the applicant asynchronously anyway, before our retry lands — the
-// retry then hits this duplicate error instead of success. addApplicantWithRetry
-// recovers the real appliedJobId when this fires (see recoverAppliedJobId below);
-// this stays as the final fallback for a genuine resubmission (or if recovery
-// itself fails) — surfaces the friendly duplicate response rather than a
-// dead-end "Something went wrong". Checked by message, not status — this can
-// arrive as a plain 400 as well as 409.
-function isDuplicateApplicantError(err: unknown): boolean {
-  return err instanceof IntervueBoxError && /already applied|already been created for this (resume|job)/i.test(err.message);
 }
 
 // Recovers the applicantId after a duplicate-applicant error using the
@@ -354,7 +342,10 @@ export async function POST(request: Request) {
       jd_text: jdForScoring,
       jd_source: jdSource,
       score: report.status === "READY" ? scoreOutOfTen(report.overallScore) : 0,
-      verdict: report.status === "READY" ? report.summary : "",
+      // IntervueBox can return a null summary on an otherwise-READY report
+      // (live-confirmed) -- verdict is NOT NULL, so a bare pass-through
+      // 500s the whole save even though the score itself is valid.
+      verdict: report.status === "READY" ? report.summary || "No summary available." : "",
       ib_job_id: ibJobId,
       ib_resume_id: ibResumeId,
       ib_applied_job_id: ibAppliedJobId,
@@ -376,6 +367,7 @@ export async function POST(request: Request) {
     .single();
 
   if (insertError || !inserted) {
+    console.error("fitment_leads insert failed", insertError);
     return Response.json({ error: "Something went wrong saving your result." }, { status: 500 });
   }
 

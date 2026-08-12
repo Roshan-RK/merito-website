@@ -1,4 +1,4 @@
-import { intervueBoxFetch } from "./client";
+import { intervueBoxFetch, IntervueBoxError } from "./client";
 
 export type AddApplicantInput = {
   jobId: string;
@@ -66,4 +66,11 @@ type ListApplicantsForJobResponse = {
 
 export async function listApplicantsForJob(jobId: string): Promise<ListApplicantsForJobResponse> {
   return intervueBoxFetch<ListApplicantsForJobResponse>(`/public/jobs/${jobId}/applicants`);
+}
+
+// Shared with recruiterSourcedProspects.ts's own retry wrapper — a pure
+// predicate with no internal module calls, safe to share without breaking
+// either caller's mocking of addApplicant/listApplicantsForJob.
+export function isDuplicateApplicantError(err: unknown): boolean {
+  return err instanceof IntervueBoxError && /already applied|already been created for this (resume|job)/i.test(err.message);
 }

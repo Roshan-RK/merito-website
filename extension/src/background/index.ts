@@ -1,6 +1,6 @@
 import { lookupCandidate } from "../lib/lookupApi";
 import { rescoreCandidate } from "../lib/rescoreApi";
-import { scoreProspect } from "../lib/scoreProspectApi";
+import { scoreProspect, getProspectScoreStatus } from "../lib/scoreProspectApi";
 import { requestVerificationEmail, checkVerificationStatus } from "../lib/verifyEmailApi";
 import { shortlistProspect } from "../lib/shortlistApi";
 import { requestContactDetails } from "../lib/requestContactDetailsApi";
@@ -21,6 +21,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message?.type === "SCORE_PROSPECT" && typeof message.input === "object") {
     scoreProspect(message.input).then(sendResponse);
+    return true;
+  }
+  if (message?.type === "CHECK_PROSPECT_STATUS" && typeof message.prospectId === "string") {
+    getProspectScoreStatus(message.prospectId).then(sendResponse);
     return true;
   }
   if (

@@ -72,42 +72,10 @@ async function runProspectFlow(linkedinUrl: string) {
   );
 }
 
-async function scoreProspectNow(
-  linkedinUrl: string,
-  jdText: string,
-  recruiterEmail: string,
-  candidateLevel: "entry" | "mid" | "senior"
-) {
-  mountRoot().render(<ProspectOverlay state={{ status: "loading" }} onScore={() => {}} onShortlist={() => {}} />);
+const PROSPECT_POLL_INTERVAL_MS = 5_000;
+const PROSPECT_POLL_MAX_ATTEMPTS = 36; // ~3 minutes at 5s intervals
 
-  const candidateFields = scrapeProfile();
-  console.log("[Merito] scraped candidate fields:", candidateFields);
-  const retry = () => scoreProspectNow(linkedinUrl, jdText, recruiterEmail, candidateLevel);
-  const result = (await chrome.runtime.sendMessage({
-    type: "SCORE_PROSPECT",
-    input: { recruiterEmail, linkedinUrl, jdText, candidateLevel, candidateFields },
-  })) as { status: string; data?: ScoreProspectResponse };
-
-  if (linkedinUrl !== currentUrl) return;
-
-  if (result.status === "verification_required") {
-    mountRoot().render(<ProspectOverlay state={{ status: "verification_required" }} onScore={retry} onShortlist={() => {}} />);
-    return;
-  }
-  if (result.status === "cap_exceeded") {
-    mountRoot().render(<ProspectOverlay state={{ status: "cap_exceeded" }} onScore={() => {}} onShortlist={() => {}} />);
-    return;
-  }
-  if (result.status !== "ready" || !result.data) {
-    mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={retry} onShortlist={() => {}} />);
-    return;
-  }
-
-  const { prospectId, fitment } = result.data;
-  if (!fitment) {
-    mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={() => runProspectFlow(linkedinUrl)} onShortlist={() => {}} />);
-    return;
-  }
+function renderProspectReady(fitment: NonNullable<ScoreProspectResponse["fitment"]>, prospectId: string) {
   mountRoot().render(
     <ProspectOverlay
       state={{ status: "ready", fitment, prospectId }}
@@ -127,17 +95,106 @@ async function scoreProspectNow(
   );
 }
 
+async function pollProspectStatus(linkedinUrl: string, prospectId: string, retry: () => void, attempt = 1) {
+  if (linkedinUrl !== currentUrl) return; // navigated away — scoring keeps running server-side, cache picks it up on return
+
+  let result: { status: string; data?: ScoreProspectResponse };
+  try {
+    result = (await chrome.runtime.sendMessage({ type: "CHECK_PROSPECT_STATUS", prospectId })) as {
+      status: string;
+      data?: ScoreProspectResponse;
+    };
+  } catch {
+    if (linkedinUrl !== currentUrl) return;
+    mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={retry} onShortlist={() => {}} />);
+    return;
+  }
+
+  if (linkedinUrl !== currentUrl) return;
+
+  if (result.status === "ready" && result.data?.fitment) {
+    renderProspectReady(result.data.fitment, result.data.prospectId);
+    return;
+  }
+  if (result.status !== "pending") {
+    mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={retry} onShortlist={() => {}} />);
+    return;
+  }
+  if (attempt >= PROSPECT_POLL_MAX_ATTEMPTS) {
+    mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={retry} onShortlist={() => {}} />);
+    return;
+  }
+
+  setTimeout(() => pollProspectStatus(linkedinUrl, prospectId, retry, attempt + 1), PROSPECT_POLL_INTERVAL_MS);
+}
+
+async function scoreProspectNow(
+  linkedinUrl: string,
+  jdText: string,
+  recruiterEmail: string,
+  candidateLevel: "entry" | "mid" | "senior"
+) {
+  mountRoot().render(<ProspectOverlay state={{ status: "loading" }} onScore={() => {}} onShortlist={() => {}} />);
+
+  const candidateFields = scrapeProfile();
+  console.log("[Merito] scraped candidate fields:", candidateFields);
+  const retry = () => scoreProspectNow(linkedinUrl, jdText, recruiterEmail, candidateLevel);
+
+  let result: { status: string; data?: ScoreProspectResponse; prospectId?: string };
+  try {
+    result = (await chrome.runtime.sendMessage({
+      type: "SCORE_PROSPECT",
+      input: { recruiterEmail, linkedinUrl, jdText, candidateLevel, candidateFields },
+    })) as { status: string; data?: ScoreProspectResponse; prospectId?: string };
+  } catch {
+    // Extension was reloaded/updated while this tab stayed open — the old
+    // content script's runtime connection is dead. Only a page refresh fixes it.
+    if (linkedinUrl !== currentUrl) return;
+    mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={retry} onShortlist={() => {}} />);
+    return;
+  }
+
+  if (linkedinUrl !== currentUrl) return;
+
+  if (result.status === "verification_required") {
+    mountRoot().render(<ProspectOverlay state={{ status: "verification_required" }} onScore={retry} onShortlist={() => {}} />);
+    return;
+  }
+  if (result.status === "cap_exceeded") {
+    mountRoot().render(<ProspectOverlay state={{ status: "cap_exceeded" }} onScore={() => {}} onShortlist={() => {}} />);
+    return;
+  }
+  if (result.status === "ready" && result.data?.fitment) {
+    renderProspectReady(result.data.fitment, result.data.prospectId);
+    return;
+  }
+  if (result.status === "pending" && result.prospectId) {
+    mountRoot().render(<ProspectOverlay state={{ status: "scoring" }} onScore={() => {}} onShortlist={() => {}} />);
+    pollProspectStatus(linkedinUrl, result.prospectId, retry);
+    return;
+  }
+
+  mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={retry} onShortlist={() => {}} />);
+}
+
 async function runRescoreIfJdSet(linkedinUrl: string) {
   const stored = await chrome.storage.local.get([JD_STORAGE_KEY]);
   const jdText = stored[JD_STORAGE_KEY] as string | undefined;
   if (!jdText || !currentLookup) return;
 
   renderOverlay(currentLookup, { status: "loading" });
-  const result = (await chrome.runtime.sendMessage({
-    type: "RESCORE_CANDIDATE",
-    linkedinUrl,
-    jdText,
-  })) as RescoreResponse | null;
+  let result: RescoreResponse | null;
+  try {
+    result = (await chrome.runtime.sendMessage({
+      type: "RESCORE_CANDIDATE",
+      linkedinUrl,
+      jdText,
+    })) as RescoreResponse | null;
+  } catch {
+    if (!currentLookup || linkedinUrl !== currentUrl) return;
+    renderOverlay(currentLookup, { status: "idle" });
+    return;
+  }
 
   if (!currentLookup || linkedinUrl !== currentUrl) return;
   if (result?.fitment) {
@@ -155,10 +212,23 @@ async function handleUrlChange() {
 
   if (!LINKEDIN_URL_PATTERN.test(normalized)) return;
 
-  const result = (await chrome.runtime.sendMessage({
-    type: "LOOKUP_CANDIDATE",
-    linkedinUrl: normalized,
-  })) as LookupResponse | null;
+  let result: LookupResponse | null;
+  try {
+    result = (await chrome.runtime.sendMessage({
+      type: "LOOKUP_CANDIDATE",
+      linkedinUrl: normalized,
+    })) as LookupResponse | null;
+  } catch {
+    // Stale/reloaded extension context, or a transient network failure —
+    // surface it instead of leaving the page with no overlay at all.
+    if (normalized !== currentUrl) return;
+    const retry = () => {
+      currentUrl = ""; // handleUrlChange no-ops if normalized === currentUrl, so clear it to force a re-fetch
+      handleUrlChange();
+    };
+    mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={retry} onShortlist={() => {}} />);
+    return;
+  }
 
   if (normalized !== currentUrl) return;
 
@@ -173,8 +243,16 @@ async function handleUrlChange() {
 }
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && JD_STORAGE_KEY in changes && currentLookup) {
+  if (area !== "local" || !(JD_STORAGE_KEY in changes)) return;
+  if (currentLookup) {
     runRescoreIfJdSet(currentUrl);
+    return;
+  }
+  // Prospect (non-Merito) overlay isn't tied to currentLookup — reset it back
+  // to the "check this candidate" prompt instead of leaving it stuck showing
+  // a result (or error) scored against the JD that was just replaced.
+  if (LINKEDIN_URL_PATTERN.test(currentUrl)) {
+    runProspectFlow(currentUrl);
   }
 });
 

@@ -9,6 +9,7 @@ export type ProspectState =
   | { status: "needs_setup" }
   | { status: "prompt" }
   | { status: "loading" }
+  | { status: "scoring" }
   | { status: "verification_required" }
   | { status: "cap_exceeded" }
   | { status: "error" }
@@ -72,7 +73,18 @@ export function ProspectOverlay({
     return (
       <div style={CARD_STYLE}>
         <Header />
-        <p>Scoring against your JD…</p>
+        <p>Starting…</p>
+      </div>
+    );
+  }
+  if (state.status === "scoring") {
+    return (
+      <div style={CARD_STYLE}>
+        <Header />
+        <p>Scoring against your JD — can take up to ~2 minutes.</p>
+        <p style={{ color: "#6C6779" }}>
+          Feel free to keep browsing. Come back to this profile and we&apos;ll show the result — it won&apos;t re-run or spend another check.
+        </p>
       </div>
     );
   }

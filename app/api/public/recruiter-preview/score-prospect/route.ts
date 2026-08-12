@@ -1,15 +1,15 @@
 import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "@/lib/linkedinUrl";
 import { buildLookupFitment } from "@/lib/recruiterPreview";
-import { scoreProspect } from "@/lib/recruiterSourcedProspects";
+import { startScoringProspect } from "@/lib/recruiterSourcedProspects";
 import type { CandidateLevel } from "@/lib/intervuebox/agents";
 import type { ScrapedCandidateFields } from "@/lib/syntheticResume";
 
 export const runtime = "nodejs";
-// scoreProspect polls for up to RESCORE_MAX_WAIT_MS (default 90s) waiting
-// on IntervueBox -- same latent Vercel-default-timeout issue as the
-// rescore route (see comment there). 60s is the ceiling supported on
-// every Vercel plan tier.
-export const maxDuration = 60;
+// startScoringProspect only kicks the IntervueBox chain off (createJob +
+// uploadResume + one addApplicant attempt) and returns "pending" -- the
+// extension polls the status route for the actual result, so this no
+// longer needs a long budget the way the old single-request flow did.
+export const maxDuration = 30;
 
 const MAX_JD_CHARS = 20000;
 const VALID_LEVELS: CandidateLevel[] = ["entry", "mid", "senior"];
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   }
   const jdText = body.jdText.trim().slice(0, MAX_JD_CHARS);
 
-  const result = await scoreProspect({
+  const result = await startScoringProspect({
     recruiterEmail: body.recruiterEmail.trim(),
     linkedinUrl: normalized,
     jdText,
@@ -93,9 +93,13 @@ export async function POST(request: Request) {
   if (result.status === "failed") {
     return Response.json({ error: "Something went wrong." }, { status: 502 });
   }
+  if (result.status === "pending") {
+    return Response.json({ status: "pending", prospectId: result.prospectId });
+  }
 
   return Response.json({
+    status: "ready",
     prospectId: result.prospectId,
-    fitment: buildLookupFitment(result.report, deriveRoleLabel(jdText)),
+    fitment: buildLookupFitment(result.report, deriveRoleLabel(result.jdText)),
   });
 }
