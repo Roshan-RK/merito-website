@@ -5,8 +5,18 @@ export default defineManifest({
   name: "Merito Recruiter Preview",
   version: "0.1.0",
   description: "See a candidate's verified Merito Hub report while viewing their LinkedIn profile.",
+  icons: {
+    16: "src/assets/icon-16.png",
+    48: "src/assets/icon-48.png",
+    128: "src/assets/icon-128.png",
+  },
   action: {
     default_popup: "src/popup/index.html",
+    default_icon: {
+      16: "src/assets/icon-16.png",
+      48: "src/assets/icon-48.png",
+      128: "src/assets/icon-128.png",
+    },
   },
   content_scripts: [
     {
