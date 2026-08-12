@@ -78,3 +78,44 @@ export async function extractSkillsWithLLM(jobDescription: string, max: number, 
   const skills = response.parsed_output?.skills ?? [];
   return skills.slice(0, max);
 }
+
+const JobDetailsSchema = z.object({
+  title: z
+    .string()
+    .describe(
+      "A concise, accurate job title for this role, grounded strictly in the JD text. If the JD doesn't clearly state one, return the given fallback title unchanged -- never invent one."
+    ),
+  skills: z
+    .array(z.string())
+    .describe(
+      "Final skill list after self-critique, ordered by importance per the JD's own emphasis (role title and mandatory/must-have sections first, generic soft skills last). Each entry must be a short, standard skill keyword (1-4 words, e.g. 'Partner Management', 'AWS', 'Stakeholder Management') -- even when the skill is inferred from context rather than a literal word in the text, never a paraphrased sentence or the raw phrase from the source text."
+    ),
+});
+
+const JOB_DETAILS_PROMPT_TEMPLATE = (jobDescription: string, max: number, resumeText: string | undefined, fallbackTitle: string) => `You are an experienced technical recruiter screening candidates for this role. Read the job description below and identify the skills that actually determine whether a candidate is a strong fit -- not generic buzzwords, and not skills you're inferring without support from the text.
+
+${buildContextBlock(jobDescription, resumeText)}
+Also identify a concise, accurate job title for this role, based strictly on the JD text above. If the JD doesn't clearly state one, return this fallback title unchanged: "${fallbackTitle}".
+
+Think like a recruiter: what would you actually screen candidates on for this specific role? Silently self-critique your first instinct -- drop anything too generic or unsupported by the text -- then output only your final answer. Return at most ${max} skills, ordered by how much the JD itself emphasizes them (role title and mandatory/must-have sections first, generic soft skills last). Output each skill as a short, standard keyword (1-4 words) -- if you infer a skill from context rather than seeing it spelled out, still name it as a clean keyword, not the sentence you inferred it from.`;
+
+export async function extractJobDetailsWithLLM(
+  jobDescription: string,
+  max: number,
+  resumeText: string | undefined,
+  fallbackTitle: string
+): Promise<{ skills: string[]; title: string }> {
+  const response = await client.messages.parse(
+    {
+      model: "claude-haiku-4-5",
+      max_tokens: LLM_MAX_OUTPUT_TOKENS,
+      messages: [{ role: "user", content: JOB_DETAILS_PROMPT_TEMPLATE(jobDescription, max, resumeText, fallbackTitle) }],
+      output_config: { format: zodOutputFormat(JobDetailsSchema) },
+    },
+    { timeout: LLM_TIMEOUT_MS }
+  );
+
+  const skills = response.parsed_output?.skills ?? [];
+  const title = response.parsed_output?.title?.trim() || fallbackTitle;
+  return { skills: skills.slice(0, max), title };
+}

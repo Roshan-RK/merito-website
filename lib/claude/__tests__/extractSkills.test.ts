@@ -109,3 +109,60 @@ describe("extractSkillsWithLLM", () => {
     expect(prompt).not.toContain("Candidate's resume:");
   });
 });
+
+describe("extractJobDetailsWithLLM", () => {
+  beforeEach(() => {
+    parseMock.mockReset();
+  });
+
+  it("returns the LLM's title and skills together", async () => {
+    parseMock.mockResolvedValue({
+      parsed_output: { title: "Strategic Alliance Manager", skills: ["Partner Management", "GTM Strategy"] },
+    });
+    const { extractJobDetailsWithLLM } = await import("../extractSkills");
+
+    const result = await extractJobDetailsWithLLM("Some JD text", 5, undefined, "Fallback Title");
+
+    expect(result).toEqual({ title: "Strategic Alliance Manager", skills: ["Partner Management", "GTM Strategy"] });
+  });
+
+  it("falls back to the given fallback title when the LLM omits one", async () => {
+    parseMock.mockResolvedValue({ parsed_output: { title: "", skills: ["Sales"] } });
+    const { extractJobDetailsWithLLM } = await import("../extractSkills");
+
+    const result = await extractJobDetailsWithLLM("Some JD text", 5, undefined, "Fallback Title");
+
+    expect(result.title).toBe("Fallback Title");
+  });
+
+  it("falls back to the given fallback title when parsed_output is missing", async () => {
+    parseMock.mockResolvedValue({ parsed_output: null });
+    const { extractJobDetailsWithLLM } = await import("../extractSkills");
+
+    const result = await extractJobDetailsWithLLM("Some JD text", 5, undefined, "Fallback Title");
+
+    expect(result).toEqual({ title: "Fallback Title", skills: [] });
+  });
+
+  it("includes the fallback title in the prompt so the model can echo it back", async () => {
+    parseMock.mockResolvedValue({ parsed_output: { title: "X", skills: [] } });
+    const { extractJobDetailsWithLLM } = await import("../extractSkills");
+
+    await extractJobDetailsWithLLM("Some JD text", 5, undefined, "Senior Product Manager");
+
+    const prompt = parseMock.mock.calls[0][0].messages[0].content;
+    expect(prompt).toContain("Senior Product Manager");
+  });
+
+  it("uses the Haiku model with the same 8s timeout and 600-token output ceiling", async () => {
+    parseMock.mockResolvedValue({ parsed_output: { title: "X", skills: [] } });
+    const { extractJobDetailsWithLLM } = await import("../extractSkills");
+
+    await extractJobDetailsWithLLM("Some JD text", 5, undefined, "X");
+
+    expect(parseMock).toHaveBeenCalledWith(
+      expect.objectContaining({ model: "claude-haiku-4-5", max_tokens: 600 }),
+      expect.objectContaining({ timeout: 8000 })
+    );
+  });
+});
