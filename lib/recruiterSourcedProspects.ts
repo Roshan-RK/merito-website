@@ -88,7 +88,9 @@ async function tryAddApplicant(params: {
   resumeId: string;
   candidateName: string;
 }): Promise<{ ibAppliedJobId: string } | { pending: true } | { failed: true }> {
-  const placeholderEmail = `prospect-${crypto.randomUUID()}@leads.merito.ai`;
+  // TEMPORARY: fixed to a real monitored inbox for testing -- see the same
+  // note on placeholderEmail in lib/syntheticResume.ts.
+  const placeholderEmail = "roshan@merito.in";
   try {
     const { ibAppliedJobId } = await addApplicant({
       jobId: params.jobId,

@@ -24,8 +24,13 @@ function escapeHtml(value: string): string {
 // surfaces after the async retry gives parsing enough time to complete.
 // This is a placeholder, not a real contact channel; it just needs to be
 // present so IntervueBox's parser has something to extract.
+//
+// TEMPORARY: fixed to a real monitored inbox for testing whether IntervueBox
+// merges candidate identity by email (confirmed live 2026-08-12: it does
+// not -- two prospects on the same email got distinct candidateIds). Swap
+// back to a random per-prospect address once confirmed end-to-end.
 function placeholderEmail(): string {
-  return `prospect-${crypto.randomUUID()}@leads.merito.ai`;
+  return "roshan@merito.in";
 }
 
 export function buildResumeHtml(fields: ScrapedCandidateFields): string {
