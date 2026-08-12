@@ -30,12 +30,12 @@ describe("requestRecruiterEmailVerification", () => {
     sendMock.mockClear();
   });
 
-  it("stores a token and sends the verification email", async () => {
+  it("stores a token, company name, and sends the verification email", async () => {
     const { requestRecruiterEmailVerification } = await importModule();
-    await requestRecruiterEmailVerification("Recruiter@Example.com");
+    await requestRecruiterEmailVerification("Recruiter@Example.com", "Acme Inc");
 
     expect(upsertMock).toHaveBeenCalledWith(
-      expect.objectContaining({ email: "recruiter@example.com" }),
+      expect.objectContaining({ email: "recruiter@example.com", company_name: "Acme Inc" }),
       expect.objectContaining({ onConflict: "email" })
     );
     expect(sendMock).toHaveBeenCalledWith("Recruiter@Example.com", expect.any(String));

@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid key." }, { status: 401 });
   }
 
-  let body: { email?: unknown };
+  let body: { email?: unknown; company?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -23,12 +23,16 @@ export async function POST(request: Request) {
   if (typeof body.email !== "string" || !EMAIL_PATTERN.test(body.email.trim())) {
     return Response.json({ error: "Not found." }, { status: 404 });
   }
+  if (typeof body.company !== "string" || !body.company.trim()) {
+    return Response.json({ error: "Not found." }, { status: 404 });
+  }
   const email = body.email.trim();
+  const company = body.company.trim();
 
   if (!verifyRateLimit(email.toLowerCase())) {
     return Response.json({ error: "Too many requests." }, { status: 429 });
   }
 
-  await requestRecruiterEmailVerification(email);
+  await requestRecruiterEmailVerification(email, company);
   return Response.json({ sent: true });
 }

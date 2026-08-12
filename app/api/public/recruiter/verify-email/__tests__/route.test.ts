@@ -31,24 +31,30 @@ describe("POST /api/public/recruiter/verify-email", () => {
 
   it("returns 404 on an invalid email", async () => {
     const { POST } = await importRoute();
-    const response = await POST(request({ email: "not-an-email" }));
+    const response = await POST(request({ email: "not-an-email", company: "Acme" }));
+    expect(response.status).toBe(404);
+  });
+
+  it("returns 404 when company is missing", async () => {
+    const { POST } = await importRoute();
+    const response = await POST(request({ email: "a@example.com" }));
     expect(response.status).toBe(404);
   });
 
   it("sends the verification email and returns sent:true", async () => {
     const { POST } = await importRoute();
-    const response = await POST(request({ email: "a@example.com" }));
+    const response = await POST(request({ email: "a@example.com", company: "Acme" }));
     const body = await response.json();
     expect(response.status).toBe(200);
     expect(body).toEqual({ sent: true });
-    expect(requestMock).toHaveBeenCalledWith("a@example.com");
+    expect(requestMock).toHaveBeenCalledWith("a@example.com", "Acme");
   });
 
   it("returns 429 after exceeding the per-email rate limit", async () => {
     const { POST } = await importRoute();
     let lastStatus = 200;
     for (let i = 0; i < 4; i++) {
-      const response = await POST(request({ email: "rate-limited@example.com" }));
+      const response = await POST(request({ email: "rate-limited@example.com", company: "Acme" }));
       lastStatus = response.status;
     }
     expect(lastStatus).toBe(429);

@@ -5,7 +5,7 @@ import { sendRecruiterVerificationEmail } from "@/lib/recruiterEmails";
 const TOKEN_BYTES = 32;
 const VERIFICATION_VALIDITY_MINUTES = 30;
 
-export async function requestRecruiterEmailVerification(email: string): Promise<void> {
+export async function requestRecruiterEmailVerification(email: string, companyName: string): Promise<void> {
   const normalized = email.trim().toLowerCase();
   const admin = getSupabaseServerClient();
   const token = randomBytes(TOKEN_BYTES).toString("hex");
@@ -13,6 +13,7 @@ export async function requestRecruiterEmailVerification(email: string): Promise<
   const { error } = await admin.from("recruiter_identities").upsert(
     {
       email: normalized,
+      company_name: companyName.trim(),
       verification_token: token,
       verification_sent_at: new Date().toISOString(),
     },
