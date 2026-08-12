@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CandidateLevel, LookupResponse } from "./types";
 
 export type JdRescoreStatus = "idle" | "loading" | "ready";
@@ -359,6 +359,7 @@ export function RecruiterPreviewCard({
   jdRescoreStatus,
   onSetJdText,
   onExtractJdFile,
+  rescoreFitment,
 }: {
   data: LookupResponse;
   activeSection: SectionKey;
@@ -369,8 +370,10 @@ export function RecruiterPreviewCard({
   jdRescoreStatus?: JdRescoreStatus;
   onSetJdText?: (jdText: string) => Promise<void>;
   onExtractJdFile?: (file: File) => Promise<{ jdText: string } | { error: string } | null>;
+  rescoreFitment?: LookupResponse["fitment"] | null;
 }) {
   const sections = new Set(data.sections);
+  const [activeFitmentView, setActiveFitmentView] = useState<"own" | "jd">("own");
   const [revealedEmail, setRevealedEmail] = useState<string | null>(null);
   const [contactState, setContactState] = useState<"idle" | "revealing" | "error">("idle");
   const [jdFormOpen, setJdFormOpen] = useState(false);
@@ -378,6 +381,10 @@ export function RecruiterPreviewCard({
   const [jdExtracting, setJdExtracting] = useState(false);
   const [jdExtractError, setJdExtractError] = useState<string | null>(null);
   const jdFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (rescoreFitment) setActiveFitmentView("jd");
+  }, [rescoreFitment]);
 
   async function handleSaveJd() {
     if (!onSetJdText || !jdDraft.trim()) return;
@@ -419,6 +426,9 @@ export function RecruiterPreviewCard({
       setContactState("error");
     }
   }
+
+  const isJdView = activeFitmentView === "jd" && !!rescoreFitment;
+  const displayedFitment = isJdView ? rescoreFitment! : data.fitment;
 
   const secondaryMetrics: { key: SectionKey; node: React.ReactNode }[] = [];
   if (sections.has("personality") && data.personality?.traits?.length) {
@@ -465,7 +475,7 @@ export function RecruiterPreviewCard({
     });
   }
 
-  const fitmentBand = data.fitment ? getBand(data.fitment.report.overallScore) : null;
+  const fitmentBand = displayedFitment ? getBand(displayedFitment.report.overallScore) : null;
 
   return (
     <div
@@ -652,7 +662,32 @@ export function RecruiterPreviewCard({
         </div>
       )}
 
-      {sections.has("fitment") && data.fitment && fitmentBand && (
+      {rescoreFitment && (
+        <div style={{ display: "flex", gap: 6, padding: "14px 16px 0" }}>
+          {(["jd", "own"] as const).map((view) => (
+            <button
+              key={view}
+              onClick={() => setActiveFitmentView(view)}
+              style={{
+                flex: 1,
+                background: activeFitmentView === view ? "#4B4894" : "none",
+                color: activeFitmentView === view ? "#fff" : "#6C6779",
+                border: activeFitmentView === view ? "none" : "1px solid #E6E1ED",
+                borderRadius: 999,
+                padding: "6px 10px",
+                fontSize: 11,
+                fontFamily: SANS,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {view === "jd" ? "Your JD" : "Candidate's report"}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {(sections.has("fitment") || isJdView) && displayedFitment && fitmentBand && (
         <button
           onClick={() => onSelectSection("fitment")}
           style={{
@@ -672,10 +707,10 @@ export function RecruiterPreviewCard({
             <Ring
               size={64}
               stroke={6}
-              score={data.fitment.report.overallScore}
+              score={displayedFitment.report.overallScore}
               color={fitmentBand.color}
               track="rgba(0,0,0,0.08)"
-              centerLabel={`${Math.round(data.fitment.report.overallScore)}%`}
+              centerLabel={`${Math.round(displayedFitment.report.overallScore)}%`}
             />
             <div>
               <div
@@ -693,7 +728,7 @@ export function RecruiterPreviewCard({
               </div>
               <div style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 17, color: fitmentBand.color }}>{fitmentBand.label}</div>
               <div style={{ fontSize: 10.5, color: "#6C6779", marginTop: 3, fontFamily: SANS }}>
-                Matched against: {data.fitment.matchedAgainstRoleTitle}
+                Matched against: {displayedFitment.matchedAgainstRoleTitle}
               </div>
             </div>
           </div>
@@ -708,16 +743,16 @@ export function RecruiterPreviewCard({
         </div>
       )}
 
-      {activeSection === "fitment" && sections.has("fitment") && data.fitment && (
+      {activeSection === "fitment" && (sections.has("fitment") || isJdView) && displayedFitment && (
         <DetailSection
           index="01"
           label="Fitment"
           pillText={fitmentBand!.label}
           pillColor={fitmentBand!.color}
           pillBg={fitmentBand!.track}
-          sourceLine={`Matched against: ${data.fitment.matchedAgainstRoleTitle}`}
+          sourceLine={`Matched against: ${displayedFitment.matchedAgainstRoleTitle}`}
         >
-          {data.fitment.report.categories.map((c) => (
+          {displayedFitment.report.categories.map((c) => (
             <CategoryRow key={c.key} label={c.label} score={c.score} comment={c.comment} />
           ))}
         </DetailSection>

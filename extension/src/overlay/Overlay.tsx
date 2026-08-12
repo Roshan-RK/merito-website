@@ -92,15 +92,6 @@ export function Overlay({
     return <Badge onClick={() => setExpanded(true)} />;
   }
 
-  const mergedData: LookupResponse =
-    rescore.status === "ready"
-      ? {
-          ...data,
-          fitment: rescore.fitment,
-          sections: data.sections.includes("fitment") ? data.sections : [...data.sections, "fitment"],
-        }
-      : data;
-
   return (
     <div
       ref={cardRef}
@@ -116,7 +107,7 @@ export function Overlay({
     >
       <RescoreBanner state={rescore} />
       <RecruiterPreviewCard
-        data={mergedData}
+        data={data}
         activeSection={activeSection}
         onSelectSection={selectSection}
         logoUrl={logoUrl}
@@ -125,6 +116,7 @@ export function Overlay({
         jdRescoreStatus={rescore.status}
         onSetJdText={onSetJdText}
         onExtractJdFile={onExtractJdFile}
+        rescoreFitment={rescore.status === "ready" ? rescore.fitment : null}
       />
     </div>
   );
