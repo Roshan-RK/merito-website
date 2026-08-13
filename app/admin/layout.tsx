@@ -1,39 +1,22 @@
-import Link from "next/link";
 import { requireAdmin } from "@/lib/adminAuth";
+import AdminSidebar from "@/app/admin/_components/AdminSidebar";
+import { ToastProvider } from "@/app/admin/_components/Toast";
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await requireAdmin();
+  const user = await requireAdmin();
 
   return (
-    <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
-      <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.6rem", marginBottom: 12 }}>
-        Merito Admin
-      </h1>
-      <nav className="flex" style={{ gap: 16, marginBottom: 24 }}>
-        <Link href="/admin" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
-          Funnel overview
-        </Link>
-        <Link href="/admin/candidates" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
-          Candidates
-        </Link>
-        <Link href="/admin/payments" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
-          Payments
-        </Link>
-        <Link href="/admin/counselling" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
-          Counselling
-        </Link>
-        <Link href="/admin/extension" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
-          Extension
-        </Link>
-        <Link href="/admin/learned-skills" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
-          Learned Skills
-        </Link>
-      </nav>
-      {children}
-    </main>
+    <ToastProvider>
+      <div style={{ display: "flex", minHeight: "100vh", background: "#f9fafd" }}>
+        <AdminSidebar adminEmail={user.email ?? ""} />
+        <main style={{ flex: 1, minWidth: 0, padding: "40px 32px" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto" }}>{children}</div>
+        </main>
+      </div>
+    </ToastProvider>
   );
 }
