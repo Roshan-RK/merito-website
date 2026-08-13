@@ -326,6 +326,20 @@ describe("markRazorpayRefunded", () => {
     expect(updateMock).not.toHaveBeenCalled();
   });
 
+  it("flips an interview transaction to refunded (closes the free-interview double-dip)", async () => {
+    txnMaybeSingleMock.mockResolvedValue({
+      data: { status: "success", product: "interview", user_id: "user-1", lead_id: null },
+      error: null,
+    });
+    const { markRazorpayRefunded } = await import("../finalize");
+
+    const result = await markRazorpayRefunded("order_1");
+
+    expect(result).toEqual({ ok: true, alreadyProcessed: false });
+    expect(updateMock).toHaveBeenCalledWith({ status: "refunded" });
+    expect(deleteMock).not.toHaveBeenCalled();
+  });
+
   it("does not revoke a transaction that was never actually successful", async () => {
     txnMaybeSingleMock.mockResolvedValue({
       data: { status: "initiated", product: "report", user_id: "user-1", lead_id: "lead-1" },

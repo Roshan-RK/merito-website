@@ -110,13 +110,15 @@ export async function markRazorpayRefunded(orderId: string): Promise<MarkRefunde
     return { ok: false, reason: "unknown_order" };
   }
 
-  if (txn.status !== "success" || txn.product !== "report" || !txn.lead_id) {
+  if (txn.status !== "success") {
     return { ok: true, alreadyProcessed: true };
   }
 
-  const roleTitle = await getRoleTitleForLead(supabase, txn.lead_id);
-  if (roleTitle) {
-    await supabase.from("report_unlocks").delete().eq("user_id", txn.user_id).eq("role_title", roleTitle);
+  if (txn.product === "report" && txn.lead_id) {
+    const roleTitle = await getRoleTitleForLead(supabase, txn.lead_id);
+    if (roleTitle) {
+      await supabase.from("report_unlocks").delete().eq("user_id", txn.user_id).eq("role_title", roleTitle);
+    }
   }
   await supabase.from("razorpay_transactions").update({ status: "refunded" }).eq("order_id", orderId);
   return { ok: true, alreadyProcessed: false };
