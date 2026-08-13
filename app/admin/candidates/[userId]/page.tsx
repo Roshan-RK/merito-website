@@ -14,6 +14,8 @@ import EvaluatorNotes from "@/app/hub/account/EvaluatorNotes";
 import PersonalityReport from "@/app/hub/account/personality/PersonalityReport";
 import RefereeSummary from "./RefereeSummary";
 import ShareLinkRevokeToggle from "./ShareLinkRevokeToggle";
+import { Table, TableHeadRow, TableRow, TableCell, TableEmptyRow } from "@/app/admin/_components/Table";
+import Badge from "@/app/admin/_components/Badge";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -174,56 +176,28 @@ export default async function AdminCandidateDetailPage({
           </p>
         )}
 
-        {candidate.recruiterPreview.shareLinks.length > 0 ? (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid #eee" }}>
-                {["Role", "Status", "Views", "Last viewed", "Created", ""].map((label) => (
-                  <th
-                    key={label}
-                    className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]"
-                    style={{ padding: "10px 0", fontSize: 11, letterSpacing: "0.04em", textAlign: "left" }}
-                  >
-                    {label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {candidate.recruiterPreview.shareLinks.map((link) => (
-                <tr key={link.token} style={{ borderBottom: "1px solid #eee" }}>
-                  <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-                    {link.roleTitle}
-                  </td>
-                  <td style={{ padding: "10px 0", fontSize: 13 }}>
-                    <span
-                      className="font-[family-name:var(--font-poppins)] font-semibold uppercase"
-                      style={{ color: link.revoked ? "#9c9c9c" : "#16803c", fontSize: 11.5 }}
-                    >
-                      {link.revoked ? "Revoked" : "Active"}
-                    </span>
-                  </td>
-                  <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-                    {link.viewCount}
-                  </td>
-                  <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-                    {formatDate(link.lastViewedAt)}
-                  </td>
-                  <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-                    {formatDate(link.createdAt)}
-                  </td>
-                  <td style={{ padding: "10px 0", fontSize: 14 }}>
-                    <ShareLinkRevokeToggle token={link.token} revoked={link.revoked} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={emptyNote}>
-            No share links created yet.
-          </p>
-        )}
+        <Table>
+          <TableHeadRow columns={["Role", "Status", "Views", "Last viewed", "Created", ""]} />
+          <tbody>
+            {candidate.recruiterPreview.shareLinks.map((link) => (
+              <TableRow key={link.token}>
+                <TableCell>{link.roleTitle}</TableCell>
+                <TableCell>
+                  <Badge variant={link.revoked ? "neutral" : "success"}>{link.revoked ? "Revoked" : "Active"}</Badge>
+                </TableCell>
+                <TableCell>{link.viewCount}</TableCell>
+                <TableCell>{formatDate(link.lastViewedAt)}</TableCell>
+                <TableCell>{formatDate(link.createdAt)}</TableCell>
+                <TableCell>
+                  <ShareLinkRevokeToggle token={link.token} revoked={link.revoked} />
+                </TableCell>
+              </TableRow>
+            ))}
+            {candidate.recruiterPreview.shareLinks.length === 0 && (
+              <TableEmptyRow colSpan={6} message="No share links created yet." />
+            )}
+          </tbody>
+        </Table>
       </section>
     </div>
   );
