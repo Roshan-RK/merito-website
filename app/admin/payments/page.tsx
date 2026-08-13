@@ -1,10 +1,12 @@
 import { listTransactions, listUnpaidUnlocks, type TransactionStatus } from "@/lib/adminPayments";
+import { Table, TableHeadRow, TableRow, TableCell, TableEmptyRow } from "@/app/admin/_components/Table";
+import Badge, { type BadgeVariant } from "@/app/admin/_components/Badge";
 
-const STATUS_COLOR: Record<TransactionStatus, string> = {
-  initiated: "#9c9c9c",
-  success: "#16803c",
-  failed: "#ed1a24",
-  refunded: "#c77700",
+const STATUS_VARIANT: Record<TransactionStatus, BadgeVariant> = {
+  initiated: "neutral",
+  success: "success",
+  failed: "danger",
+  refunded: "warning",
 };
 
 const PRODUCT_LABEL: Record<string, string> = {
@@ -35,97 +37,49 @@ export default async function AdminPaymentsPage() {
 
   return (
     <div>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 40 }}>
-        <thead>
-          <tr style={{ borderBottom: "1px solid #eee" }}>
-            {["Candidate", "Product", "Level", "Amount", "Status", "Date"].map((label) => (
-              <th
-                key={label}
-                className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]"
-                style={{ padding: "10px 0", fontSize: 11, letterSpacing: "0.04em", textAlign: "left" }}
-              >
-                {label}
-              </th>
+      <div style={{ marginBottom: 40 }}>
+        <Table>
+          <TableHeadRow columns={["Candidate", "Product", "Level", "Amount", "Status", "Date"]} />
+          <tbody>
+            {transactions.map((t) => (
+              <TableRow key={t.orderId}>
+                <TableCell>{t.email}</TableCell>
+                <TableCell>
+                  {PRODUCT_LABEL[t.product] ?? t.product}
+                  {t.roleTitle && <span className="text-[#9c9c9c]"> · {t.roleTitle}</span>}
+                </TableCell>
+                <TableCell>{t.level}</TableCell>
+                <TableCell>{formatAmount(t.amountPaise)}</TableCell>
+                <TableCell>
+                  <Badge variant={STATUS_VARIANT[t.status]}>{t.status}</Badge>
+                </TableCell>
+                <TableCell>{formatDate(t.createdAt)}</TableCell>
+              </TableRow>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {transactions.map((t) => (
-            <tr key={t.orderId} style={{ borderBottom: "1px solid #eee" }}>
-              <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-                {t.email}
-              </td>
-              <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-                {PRODUCT_LABEL[t.product] ?? t.product}
-                {t.roleTitle && <span className="text-[#9c9c9c]"> · {t.roleTitle}</span>}
-              </td>
-              <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-                {t.level}
-              </td>
-              <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-                {formatAmount(t.amountPaise)}
-              </td>
-              <td style={{ padding: "10px 0", fontSize: 13 }}>
-                <span className="font-[family-name:var(--font-poppins)] font-semibold uppercase" style={{ color: STATUS_COLOR[t.status], fontSize: 11.5 }}>
-                  {t.status}
-                </span>
-              </td>
-              <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-                {formatDate(t.createdAt)}
-              </td>
-            </tr>
-          ))}
-          {transactions.length === 0 && (
-            <tr>
-              <td colSpan={6} className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ padding: "24px 0", fontSize: 14, textAlign: "center" }}>
-                No payments yet.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+            {transactions.length === 0 && <TableEmptyRow colSpan={6} message="No payments yet." />}
+          </tbody>
+        </Table>
+      </div>
 
       <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.1rem", margin: "0 0 14px" }}>
         Unlocked without payment
       </h2>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ borderBottom: "1px solid #eee" }}>
-            {["Candidate", "Unlock", "Date"].map((label) => (
-              <th
-                key={label}
-                className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]"
-                style={{ padding: "10px 0", fontSize: 11, letterSpacing: "0.04em", textAlign: "left" }}
-              >
-                {label}
-              </th>
-            ))}
-          </tr>
-        </thead>
+      <Table>
+        <TableHeadRow columns={["Candidate", "Unlock", "Date"]} />
         <tbody>
           {unpaidUnlocks.map((u, i) => (
-            <tr key={`${u.userId}-${u.kind}-${u.leadId ?? i}`} style={{ borderBottom: "1px solid #eee" }}>
-              <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-                {u.email}
-              </td>
-              <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
+            <TableRow key={`${u.userId}-${u.kind}-${u.leadId ?? i}`}>
+              <TableCell>{u.email}</TableCell>
+              <TableCell>
                 {UNPAID_KIND_LABEL[u.kind]}
                 {u.roleTitle && <span className="text-[#9c9c9c]"> · {u.roleTitle}</span>}
-              </td>
-              <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-                {formatDate(u.unlockedAt)}
-              </td>
-            </tr>
+              </TableCell>
+              <TableCell>{formatDate(u.unlockedAt)}</TableCell>
+            </TableRow>
           ))}
-          {unpaidUnlocks.length === 0 && (
-            <tr>
-              <td colSpan={3} className="font-[family-name:var(--font-poppins)] text-[#16803c]" style={{ padding: "24px 0", fontSize: 14, textAlign: "center" }}>
-                None — good.
-              </td>
-            </tr>
-          )}
+          {unpaidUnlocks.length === 0 && <TableEmptyRow colSpan={3} message="None — good." tone="success" />}
         </tbody>
-      </table>
+      </Table>
     </div>
   );
 }
