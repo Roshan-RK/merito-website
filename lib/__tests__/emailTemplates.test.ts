@@ -180,3 +180,17 @@ describe("updateTemplate", () => {
     await expect(updateTemplate("recruiter_verification", { subject: "s", bodyText: "{{url}}", bodyHtml: "h" }, "admin@merito.in")).rejects.toThrow("db error");
   });
 });
+
+describe("renderTemplate", () => {
+  beforeEach(() => fromMock.mockReset());
+
+  it("fetches the template for the key and substitutes the given values", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({ data: { subject: "Hi {{name}}", body_text: "{{url}}", body_html: "<p>{{url}}</p>" }, error: null });
+    fromMock.mockImplementation(() => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }));
+
+    const { renderTemplate } = await import("../emailTemplates");
+    const result = await renderTemplate("recruiter_verification", { name: "Alex", url: "https://x.test" });
+
+    expect(result).toEqual({ subject: "Hi Alex", bodyText: "https://x.test", bodyHtml: "<p>https://x.test</p>" });
+  });
+});

@@ -175,3 +175,8 @@ export async function updateTemplate(key: TemplateKey, draft: TemplateDraft, adm
     newValue: draft,
   });
 }
+
+export async function renderTemplate(key: TemplateKey, values: Record<string, string>): Promise<RenderedEmail> {
+  const draft = await getTemplate(key);
+  return substitutePlaceholders(draft, values);
+}
