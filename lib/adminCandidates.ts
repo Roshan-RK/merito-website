@@ -281,3 +281,22 @@ export async function deleteCandidate(userId: string, adminEmail: string): Promi
     newValue: null,
   });
 }
+
+export async function generateCandidateMagicLink(email: string, adminEmail: string): Promise<string> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase.auth.admin.generateLink({ type: "magiclink", email });
+  if (error || !data) {
+    throw new Error(`Failed to generate magic link: ${error?.message ?? "unknown error"}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "candidate.magic_link_generated",
+    targetType: "candidate",
+    targetId: email,
+    priorValue: null,
+    newValue: { linkGenerated: true },
+  });
+
+  return data.properties.action_link;
+}

@@ -2,12 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const updateUserByIdMock = vi.fn();
 const deleteUserMock = vi.fn();
+const generateLinkMock = vi.fn();
 const fitmentLeadsSelectMock = vi.fn();
 const logAdminActionMock = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({
-    auth: { admin: { updateUserById: updateUserByIdMock, deleteUser: deleteUserMock } },
+    auth: { admin: { updateUserById: updateUserByIdMock, deleteUser: deleteUserMock, generateLink: generateLinkMock } },
     from: (table: string) => {
       if (table === "fitment_leads") return { select: fitmentLeadsSelectMock };
       throw new Error(`Unexpected table in test: ${table}`);
@@ -118,5 +119,43 @@ describe("deleteCandidate", () => {
       "Failed to delete candidate: user not found"
     );
     expect(logAdminActionMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("generateCandidateMagicLink", () => {
+  beforeEach(() => {
+    generateLinkMock.mockReset();
+    generateLinkMock.mockResolvedValue({
+      data: { properties: { action_link: "https://example.com/magic?token=abc123" } },
+      error: null,
+    });
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+  });
+
+  it("generates a magic link and logs that a link was generated (not the link itself)", async () => {
+    const { generateCandidateMagicLink } = await import("../adminCandidates");
+
+    const link = await generateCandidateMagicLink("candidate@example.com", "rushi.humbe@gmail.com");
+
+    expect(link).toBe("https://example.com/magic?token=abc123");
+    expect(generateLinkMock).toHaveBeenCalledWith({ type: "magiclink", email: "candidate@example.com" });
+    expect(logAdminActionMock).toHaveBeenCalledWith({
+      adminEmail: "rushi.humbe@gmail.com",
+      action: "candidate.magic_link_generated",
+      targetType: "candidate",
+      targetId: "candidate@example.com",
+      priorValue: null,
+      newValue: { linkGenerated: true },
+    });
+  });
+
+  it("throws when the Admin API call fails", async () => {
+    generateLinkMock.mockResolvedValue({ data: null, error: { message: "invalid email" } });
+    const { generateCandidateMagicLink } = await import("../adminCandidates");
+
+    await expect(generateCandidateMagicLink("bad@example.com", "rushi.humbe@gmail.com")).rejects.toThrow(
+      "Failed to generate magic link: invalid email"
+    );
   });
 });
