@@ -1,4 +1,5 @@
 import { listTransactions, listUnpaidUnlocks, type TransactionStatus } from "@/lib/adminPayments";
+import ReconcileForm from "./ReconcileForm";
 
 const STATUS_COLOR: Record<TransactionStatus, string> = {
   initiated: "#9c9c9c",
@@ -91,7 +92,7 @@ export default async function AdminPaymentsPage() {
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ borderBottom: "1px solid #eee" }}>
-            {["Candidate", "Unlock", "Date"].map((label) => (
+            {["Candidate", "Unlock", "Date", ""].map((label) => (
               <th
                 key={label}
                 className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]"
@@ -115,11 +116,14 @@ export default async function AdminPaymentsPage() {
               <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
                 {formatDate(u.unlockedAt)}
               </td>
+              <td style={{ padding: "10px 0" }}>
+                <ReconcileForm userId={u.userId} leadId={u.leadId} product={u.kind} />
+              </td>
             </tr>
           ))}
           {unpaidUnlocks.length === 0 && (
             <tr>
-              <td colSpan={3} className="font-[family-name:var(--font-poppins)] text-[#16803c]" style={{ padding: "24px 0", fontSize: 14, textAlign: "center" }}>
+              <td colSpan={4} className="font-[family-name:var(--font-poppins)] text-[#16803c]" style={{ padding: "24px 0", fontSize: 14, textAlign: "center" }}>
                 None — good.
               </td>
             </tr>

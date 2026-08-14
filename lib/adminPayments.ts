@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { logAdminAction } from "@/lib/adminAuditLog";
 
 export type TransactionStatus = "initiated" | "success" | "failed" | "refunded";
 
@@ -122,4 +124,54 @@ export async function listUnpaidUnlocks(): Promise<UnpaidUnlockRow[]> {
   });
 
   return unpaid.map((u) => ({ ...u, email: emailByUser.get(u.userId) ?? "—" }));
+}
+
+export async function recordManualReconciliation(
+  params: { userId: string; leadId: string | null; product: string; amountPaise: number },
+  adminEmail: string
+): Promise<void> {
+  const supabase = getSupabaseServerClient();
+
+  let level: string | null = null;
+  if (params.leadId) {
+    const { data } = await supabase.from("fitment_leads").select("candidate_level").eq("id", params.leadId).maybeSingle();
+    level = data?.candidate_level ?? null;
+  }
+  if (!level) {
+    const { data } = await supabase
+      .from("fitment_leads")
+      .select("candidate_level")
+      .eq("user_id", params.userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    level = data?.candidate_level ?? null;
+  }
+  if (!level) {
+    throw new Error("Could not determine candidate level for this reconciliation.");
+  }
+
+  const orderId = `manual_${randomUUID()}`;
+  const { error } = await supabase.from("razorpay_transactions").insert({
+    order_id: orderId,
+    user_id: params.userId,
+    product: params.product,
+    level,
+    lead_id: params.leadId,
+    amount_paise: params.amountPaise,
+    status: "success",
+    consumed_at: new Date().toISOString(),
+  });
+  if (error) {
+    throw new Error(`Failed to record manual reconciliation: ${error.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "payment.manual_reconciliation",
+    targetType: "candidate",
+    targetId: params.userId,
+    priorValue: null,
+    newValue: { orderId, product: params.product, amountPaise: params.amountPaise, leadId: params.leadId },
+  });
 }
