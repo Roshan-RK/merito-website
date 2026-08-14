@@ -1,6 +1,6 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { getReferenceCheckStatus, computeReferenceReport, type ReferenceReport, type RefereeRow } from "@/lib/referenceChecks";
-import { getCandidateResumeDetails, type CandidateResumeDetails, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
+import { getCandidateResumeDetails, getResumeMatchReport, scoreOutOfTen, type CandidateResumeDetails, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import type { Scores, Validity } from "@/lib/personality";
 import { logAdminAction } from "@/lib/adminAuditLog";
@@ -324,5 +324,54 @@ export async function mergeCandidateAccounts(keepUserId: string, mergeUserId: st
     targetId: keepUserId,
     priorValue: { mergedFrom: mergeUserId },
     newValue: { rowsMoved },
+  });
+}
+
+export async function retryResumeMatch(leadId: string, adminEmail: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+
+  const { data: lead } = await supabase
+    .from("fitment_leads")
+    .select("user_id, ib_applied_job_id, resume_match_status")
+    .eq("id", leadId)
+    .maybeSingle();
+
+  if (!lead || !lead.ib_applied_job_id) {
+    throw new Error("Lead not found or has no linked IntervueBox application.");
+  }
+
+  const report = await getResumeMatchReport(lead.ib_applied_job_id);
+  if (report.status !== "READY") {
+    throw new Error("IntervueBox still hasn't produced a result for this candidate.");
+  }
+
+  const { error } = await supabase
+    .from("fitment_leads")
+    .update({
+      resume_match_status: report.status,
+      resume_match_score: report.overallScore,
+      resume_match_raw: {
+        overallScore: report.overallScore,
+        rank: report.rank,
+        categories: report.categories,
+        summary: report.summary,
+        strongPoints: report.strongPoints,
+        weakPoints: report.weakPoints,
+      },
+      score: scoreOutOfTen(report.overallScore),
+      verdict: report.summary || "No summary available.",
+    })
+    .eq("id", leadId);
+  if (error) {
+    throw new Error(`Failed to update lead with retried resume match: ${error.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "candidate.retry_resume_match",
+    targetType: "candidate",
+    targetId: lead.user_id ?? leadId,
+    priorValue: { status: "PENDING" },
+    newValue: { status: report.status },
   });
 }

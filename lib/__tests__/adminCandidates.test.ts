@@ -4,6 +4,7 @@ const updateUserByIdMock = vi.fn();
 const deleteUserMock = vi.fn();
 const generateLinkMock = vi.fn();
 const fitmentLeadsSelectMock = vi.fn();
+const fitmentLeadsUpdateMock = vi.fn();
 const rpcMock = vi.fn();
 const logAdminActionMock = vi.fn();
 
@@ -11,11 +12,17 @@ vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({
     auth: { admin: { updateUserById: updateUserByIdMock, deleteUser: deleteUserMock, generateLink: generateLinkMock } },
     from: (table: string) => {
-      if (table === "fitment_leads") return { select: fitmentLeadsSelectMock };
+      if (table === "fitment_leads") return { select: fitmentLeadsSelectMock, update: fitmentLeadsUpdateMock };
       throw new Error(`Unexpected table in test: ${table}`);
     },
     rpc: rpcMock,
   }),
+}));
+
+const getResumeMatchReportMock = vi.fn();
+vi.mock("@/lib/intervuebox/reports", () => ({
+  getResumeMatchReport: getResumeMatchReportMock,
+  scoreOutOfTen: (n: number) => Math.round((n / 100) * 10 * 10) / 10,
 }));
 
 vi.mock("@/lib/adminAuditLog", () => ({
@@ -215,5 +222,58 @@ describe("mergeCandidateAccounts", () => {
     );
     expect(updateUserByIdMock).not.toHaveBeenCalled();
     expect(logAdminActionMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("retryResumeMatch", () => {
+  const leadSelectMaybeSingle = vi.fn();
+  const leadUpdateEq = vi.fn();
+
+  beforeEach(() => {
+    getResumeMatchReportMock.mockReset();
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+    leadSelectMaybeSingle.mockReset();
+    leadUpdateEq.mockReset();
+    leadUpdateEq.mockResolvedValue({ error: null });
+    fitmentLeadsSelectMock.mockReturnValue({ eq: () => ({ maybeSingle: leadSelectMaybeSingle }) });
+    fitmentLeadsUpdateMock.mockReturnValue({ eq: leadUpdateEq });
+  });
+
+  it("updates the lead when IntervueBox now has a READY result", async () => {
+    leadSelectMaybeSingle.mockResolvedValue({
+      data: { user_id: "user-1", ib_applied_job_id: "applied-1", resume_match_status: "PENDING" },
+      error: null,
+    });
+    getResumeMatchReportMock.mockResolvedValue({
+      status: "READY",
+      overallScore: 82,
+      rank: "Strong Fit",
+      categories: [],
+      summary: "Great fit",
+      strongPoints: [],
+      weakPoints: [],
+    });
+
+    const { retryResumeMatch } = await import("../adminCandidates");
+    await retryResumeMatch("lead-1", "rushi.humbe@gmail.com");
+
+    expect(leadUpdateEq).toHaveBeenCalledWith("id", "lead-1");
+    expect(logAdminActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "candidate.retry_resume_match", targetId: "user-1" })
+    );
+  });
+
+  it("throws when IntervueBox still hasn't produced a result", async () => {
+    leadSelectMaybeSingle.mockResolvedValue({
+      data: { user_id: "user-1", ib_applied_job_id: "applied-1", resume_match_status: "PENDING" },
+      error: null,
+    });
+    getResumeMatchReportMock.mockResolvedValue({ status: "PENDING" });
+
+    const { retryResumeMatch } = await import("../adminCandidates");
+    await expect(retryResumeMatch("lead-1", "rushi.humbe@gmail.com")).rejects.toThrow(
+      "IntervueBox still hasn't produced a result for this candidate."
+    );
   });
 });

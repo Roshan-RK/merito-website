@@ -16,6 +16,7 @@ import RefereeSummary from "./RefereeSummary";
 import ShareLinkRevokeToggle from "./ShareLinkRevokeToggle";
 import InterviewRecoveryActions from "./InterviewRecoveryActions";
 import AccountActions from "./AccountActions";
+import ResumeMatchRetry from "./ResumeMatchRetry";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -83,9 +84,12 @@ export default async function AdminCandidateDetailPage({
               </div>
             </div>
           ) : (
-            <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={emptyNote}>
-              Fitment report not ready yet.
-            </p>
+            <div style={{ marginBottom: 20 }}>
+              <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={emptyNote}>
+                Fitment report not ready yet.
+              </p>
+              <ResumeMatchRetry leadId={lead.id} />
+            </div>
           )}
 
           {lead.interviewReport ? (
