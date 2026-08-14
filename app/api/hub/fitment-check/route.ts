@@ -9,6 +9,7 @@ import { addApplicant, listApplicantsForJob, isDuplicateApplicantError, type Add
 import { getResumeMatchReport, scoreOutOfTen } from "@/lib/intervuebox/reports";
 import { IntervueBoxError } from "@/lib/intervuebox/client";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { recordPipelineFailure } from "@/lib/pipelineFailures";
 
 export const runtime = "nodejs";
 
@@ -336,6 +337,15 @@ export async function POST(request: Request) {
         },
         { status: 409 }
       );
+    }
+    if (ibJobId) {
+      await recordPipelineFailure({
+        kind: "orphaned_ib_job",
+        userId: null,
+        leadId: null,
+        orderId: null,
+        detail: { email, roleTitle: role, ibJobId, ibResumeId, error: err instanceof Error ? err.message : String(err) },
+      });
     }
     return Response.json({ error: "Something went wrong — please try again." }, { status: 502 });
   }

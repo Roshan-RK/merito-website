@@ -19,6 +19,8 @@ vi.mock("@/lib/intervuebox/client", async () => {
   const actual = await vi.importActual<typeof import("@/lib/intervuebox/client")>("@/lib/intervuebox/client");
   return { IntervueBoxError: actual.IntervueBoxError };
 });
+const recordPipelineFailureMock = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/lib/pipelineFailures", () => ({ recordPipelineFailure: recordPipelineFailureMock }));
 const extractJdTextMock = vi.fn().mockResolvedValue("Sales and partnerships resume text.");
 vi.mock("@/lib/jdFileText", () => ({
   extractJdText: extractJdTextMock,
@@ -253,6 +255,9 @@ describe("POST /api/hub/fitment-check", () => {
     });
     const response = await POST(request);
     expect(response.status).toBe(502);
+    expect(recordPipelineFailureMock).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "orphaned_ib_job", detail: expect.objectContaining({ ibJobId: "JOB_123" }) })
+    );
   });
 
   it("returns 409 with a duplicate flag if IntervueBox reports a conflict", async () => {
