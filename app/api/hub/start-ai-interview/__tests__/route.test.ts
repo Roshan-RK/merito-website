@@ -58,6 +58,9 @@ vi.mock("@/lib/supabase", () => ({
   }),
 }));
 
+const recordPipelineFailureMock = vi.fn();
+vi.mock("@/lib/pipelineFailures", () => ({ recordPipelineFailure: recordPipelineFailureMock }));
+
 const getApplicantMock = vi.fn();
 vi.mock("@/lib/intervuebox/applicants", () => ({ getApplicant: getApplicantMock }));
 const createInterviewAgentMock = vi.fn();
@@ -93,6 +96,8 @@ describe("POST /api/hub/start-ai-interview", () => {
     creditMaybeSingleMock.mockResolvedValue({ data: { order_id: "order_credit_1" }, error: null });
     consumeUpdateEqMock.mockClear();
     consumeUpdateEqMock.mockResolvedValue({ error: null });
+    recordPipelineFailureMock.mockReset();
+    recordPipelineFailureMock.mockResolvedValue(undefined);
     delete process.env.RAZORPAY_BYPASS;
   });
 
@@ -266,6 +271,9 @@ describe("POST /api/hub/start-ai-interview", () => {
 
     expect(response.status).toBe(500);
     expect(adminReselectMaybeSingleMock).not.toHaveBeenCalled();
+    expect(recordPipelineFailureMock).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "interview_invite_after_payment", userId: "user-1" })
+    );
   });
 
   it("rejects with 402 when not bypassed and there is no unconsumed successful interview transaction", async () => {

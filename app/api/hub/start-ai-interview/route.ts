@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { getApplicant } from "@/lib/intervuebox/applicants";
 import { createInterviewAgent, type CandidateLevel } from "@/lib/intervuebox/agents";
 import { sendInterviewInvitation } from "@/lib/intervuebox/invitations";
+import { recordPipelineFailure } from "@/lib/pipelineFailures";
 
 export const runtime = "nodejs";
 
@@ -79,6 +80,7 @@ export async function POST(request: Request) {
     );
   }
 
+  let consumedOrderId: string | null = null;
   if (!isRazorpayBypassed()) {
     const { data: credit } = await admin
       .from("razorpay_transactions")
@@ -98,6 +100,7 @@ export async function POST(request: Request) {
       );
     }
 
+    consumedOrderId = credit.order_id;
     await admin
       .from("razorpay_transactions")
       .update({ consumed_at: new Date().toISOString() })
@@ -183,6 +186,13 @@ export async function POST(request: Request) {
       ib_agent_id: ibAgentId,
       ib_candidate_id: candidateId,
       error: insertError,
+    });
+    await recordPipelineFailure({
+      kind: "interview_invite_after_payment",
+      userId: user.id,
+      leadId: null,
+      orderId: consumedOrderId,
+      detail: { roleTitle, ibJobId, ibAgentId, ibCandidateId: candidateId, error: insertError.message },
     });
     return Response.json(
       { error: "Invitation sent, but we couldn't save the status — please refresh." },
