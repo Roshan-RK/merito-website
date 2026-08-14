@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { renderTemplate } from "@/lib/emailTemplates";
 
 function getResendClient(): Resend {
   const apiKey = process.env.RESEND_API_KEY;
@@ -23,13 +24,13 @@ function confirmUrl(token: string): string {
 
 export async function sendRecruiterVerificationEmail(to: string, token: string): Promise<void> {
   const resend = getResendClient();
-  const url = confirmUrl(token);
+  const rendered = await renderTemplate("recruiter_verification", { url: confirmUrl(token) });
 
   await resend.emails.send({
     from: getFromEmail(),
     to: [to],
-    subject: "Confirm your email to use Merito's recruiter scoring tool",
-    text: `Click to confirm your email and start scoring candidates:\n${url}\n\nThis link expires in 30 minutes.`,
-    html: `<p>Click to confirm your email and start scoring candidates:</p><p><a href="${url}">${url}</a></p><p>This link expires in 30 minutes.</p>`,
+    subject: rendered.subject,
+    text: rendered.bodyText,
+    html: rendered.bodyHtml,
   });
 }
