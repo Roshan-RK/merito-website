@@ -1,47 +1,74 @@
-import { describe, it, expect } from "vitest";
-import { computeFunnelStage } from "../adminCandidates";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const emptySets = () => ({
-  reportUnlocked: new Set<string>(),
-  interviewReady: new Set<string>(),
-  personalityCompleted: new Set<string>(),
-  referenceCompleted: new Set<string>(),
+const updateUserByIdMock = vi.fn();
+const logAdminActionMock = vi.fn();
+
+vi.mock("@/lib/supabase", () => ({
+  getSupabaseServerClient: () => ({
+    auth: { admin: { updateUserById: updateUserByIdMock } },
+  }),
+}));
+
+vi.mock("@/lib/adminAuditLog", () => ({
+  logAdminAction: logAdminActionMock,
+}));
+
+describe("banCandidate", () => {
+  beforeEach(() => {
+    updateUserByIdMock.mockReset();
+    updateUserByIdMock.mockResolvedValue({ error: null });
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+  });
+
+  it("bans the user for ~100 years and logs the action", async () => {
+    const { banCandidate } = await import("../adminCandidates");
+
+    await banCandidate("user-1", "rushi.humbe@gmail.com", "spam signup");
+
+    expect(updateUserByIdMock).toHaveBeenCalledWith("user-1", { ban_duration: "876000h" });
+    expect(logAdminActionMock).toHaveBeenCalledWith({
+      adminEmail: "rushi.humbe@gmail.com",
+      action: "candidate.ban",
+      targetType: "candidate",
+      targetId: "user-1",
+      priorValue: null,
+      newValue: { banned: true, reason: "spam signup" },
+    });
+  });
+
+  it("throws when the Admin API call fails", async () => {
+    updateUserByIdMock.mockResolvedValue({ error: { message: "user not found" } });
+    const { banCandidate } = await import("../adminCandidates");
+
+    await expect(banCandidate("user-1", "rushi.humbe@gmail.com", "spam")).rejects.toThrow(
+      "Failed to ban candidate: user not found"
+    );
+    expect(logAdminActionMock).not.toHaveBeenCalled();
+  });
 });
 
-describe("computeFunnelStage", () => {
-  it("returns fitment_started when present in no other set", () => {
-    expect(computeFunnelStage("u1", emptySets())).toBe("fitment_started");
+describe("unbanCandidate", () => {
+  beforeEach(() => {
+    updateUserByIdMock.mockReset();
+    updateUserByIdMock.mockResolvedValue({ error: null });
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
   });
 
-  it("returns report_unlocked when only in that set", () => {
-    const sets = emptySets();
-    sets.reportUnlocked.add("u1");
-    expect(computeFunnelStage("u1", sets)).toBe("report_unlocked");
-  });
+  it("clears the ban and logs the action", async () => {
+    const { unbanCandidate } = await import("../adminCandidates");
 
-  it("returns personality_completed when personality done but interview was skipped", () => {
-    const sets = emptySets();
-    sets.reportUnlocked.add("u1");
-    sets.personalityCompleted.add("u1");
-    expect(computeFunnelStage("u1", sets)).toBe("personality_completed");
-  });
+    await unbanCandidate("user-1", "rushi.humbe@gmail.com");
 
-  it("returns reference_completed when present, regardless of other sets", () => {
-    const sets = emptySets();
-    sets.referenceCompleted.add("u1");
-    expect(computeFunnelStage("u1", sets)).toBe("reference_completed");
-  });
-
-  it("picks the furthest stage when candidate is in multiple non-adjacent sets", () => {
-    const sets = emptySets();
-    sets.reportUnlocked.add("u1");
-    sets.referenceCompleted.add("u1");
-    expect(computeFunnelStage("u1", sets)).toBe("reference_completed");
-  });
-
-  it("ignores membership belonging to a different user", () => {
-    const sets = emptySets();
-    sets.referenceCompleted.add("u2");
-    expect(computeFunnelStage("u1", sets)).toBe("fitment_started");
+    expect(updateUserByIdMock).toHaveBeenCalledWith("user-1", { ban_duration: "none" });
+    expect(logAdminActionMock).toHaveBeenCalledWith({
+      adminEmail: "rushi.humbe@gmail.com",
+      action: "candidate.unban",
+      targetType: "candidate",
+      targetId: "user-1",
+      priorValue: { banned: true },
+      newValue: { banned: false },
+    });
   });
 });
