@@ -4,6 +4,11 @@ import { extractPlaceholders, substitutePlaceholders, TEMPLATE_PLACEHOLDERS, TEM
 const fromMock = vi.fn();
 vi.mock("@/lib/supabase", () => ({ getSupabaseServerClient: () => ({ from: fromMock }) }));
 
+const { logAdminActionMock } = vi.hoisted(() => ({
+  logAdminActionMock: vi.fn(),
+}));
+vi.mock("@/lib/adminAuditLog", () => ({ logAdminAction: logAdminActionMock }));
+
 describe("listTemplates", () => {
   beforeEach(() => fromMock.mockReset());
 
@@ -129,5 +134,49 @@ describe("TEMPLATE_PLACEHOLDERS", () => {
     for (const key of TEMPLATE_KEYS) {
       expect(TEMPLATE_PLACEHOLDERS[key].length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("findMissingPlaceholders", () => {
+  it("returns the required placeholders not present anywhere in the draft", async () => {
+    const { findMissingPlaceholders } = await import("../emailTemplates");
+    const missing = findMissingPlaceholders("referee_invite", { subject: "{{candidateName}}", bodyText: "{{refereeName}} {{url}}", bodyHtml: "h" });
+    expect(missing).toEqual(["validityDays"]);
+  });
+
+  it("returns an empty array when every required placeholder is present somewhere", async () => {
+    const { findMissingPlaceholders } = await import("../emailTemplates");
+    const missing = findMissingPlaceholders("recruiter_verification", { subject: "s", bodyText: "{{url}}", bodyHtml: "h" });
+    expect(missing).toEqual([]);
+  });
+});
+
+describe("updateTemplate", () => {
+  beforeEach(() => {
+    fromMock.mockReset();
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+  });
+
+  it("upserts the row and logs the admin action", async () => {
+    const upsertMock = vi.fn().mockResolvedValue({ error: null });
+    fromMock.mockImplementation(() => ({ upsert: upsertMock }));
+
+    const { updateTemplate } = await import("../emailTemplates");
+    await updateTemplate("recruiter_verification", { subject: "s", bodyText: "{{url}}", bodyHtml: "h" }, "admin@merito.in");
+
+    expect(upsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ key: "recruiter_verification", subject: "s", body_text: "{{url}}", body_html: "h", updated_by: "admin@merito.in" })
+    );
+    expect(logAdminActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ adminEmail: "admin@merito.in", action: "email_template.update", targetType: "email_template", targetId: "recruiter_verification" })
+    );
+  });
+
+  it("throws when the upsert fails", async () => {
+    fromMock.mockImplementation(() => ({ upsert: vi.fn().mockResolvedValue({ error: { message: "db error" } }) }));
+
+    const { updateTemplate } = await import("../emailTemplates");
+    await expect(updateTemplate("recruiter_verification", { subject: "s", bodyText: "{{url}}", bodyHtml: "h" }, "admin@merito.in")).rejects.toThrow("db error");
   });
 });

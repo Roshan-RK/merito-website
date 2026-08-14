@@ -55,6 +55,7 @@ export function substitutePlaceholders(template: TemplateDraft, values: Record<s
 }
 
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { logAdminAction } from "@/lib/adminAuditLog";
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, TemplateDraft> = {
   recruiter_verification: {
@@ -142,4 +143,35 @@ export async function getTemplate(key: TemplateKey): Promise<TemplateDraft> {
   const draft: TemplateDraft = { subject: data.subject, bodyText: data.body_text, bodyHtml: data.body_html };
   templateCache.set(key, { draft, expiresAt: Date.now() + CACHE_TTL_MS });
   return draft;
+}
+
+export function findMissingPlaceholders(key: TemplateKey, draft: TemplateDraft): string[] {
+  const present = new Set([...extractPlaceholders(draft.subject), ...extractPlaceholders(draft.bodyText), ...extractPlaceholders(draft.bodyHtml)]);
+  return TEMPLATE_PLACEHOLDERS[key].filter((name) => !present.has(name));
+}
+
+export async function updateTemplate(key: TemplateKey, draft: TemplateDraft, adminEmail: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase.from("email_templates").upsert({
+    key,
+    subject: draft.subject,
+    body_text: draft.bodyText,
+    body_html: draft.bodyHtml,
+    updated_at: new Date().toISOString(),
+    updated_by: adminEmail,
+  });
+
+  if (error) {
+    throw new Error(`Failed to save email template: ${error.message}`);
+  }
+
+  templateCache.delete(key);
+
+  await logAdminAction({
+    adminEmail,
+    action: "email_template.update",
+    targetType: "email_template",
+    targetId: key,
+    newValue: draft,
+  });
 }

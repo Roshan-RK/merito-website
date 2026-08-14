@@ -1,6 +1,6 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 
-export type AuditTargetType = "candidate" | "recruiter";
+export type AuditTargetType = "candidate" | "recruiter" | "email_template";
 
 export async function logAdminAction(params: {
   adminEmail: string;
