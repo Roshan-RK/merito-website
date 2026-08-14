@@ -1,6 +1,7 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { unlockReport } from "@/lib/reportUnlocks";
-import { unlockProduct } from "@/lib/productUnlocks";
+import { unlockProduct, revokeProduct } from "@/lib/productUnlocks";
+import { nextCounsellingState, updateCounsellingStatus, type CounsellingStatus } from "@/lib/adminCounselling";
 import type { RazorpayProduct } from "@/lib/razorpay/pricing";
 
 async function getRoleTitleForLead(
@@ -98,6 +99,32 @@ export type MarkRefundedResult =
   | { ok: true; alreadyProcessed: boolean }
   | { ok: false; reason: "unknown_order" };
 
+async function revokeReportForLead(
+  supabase: ReturnType<typeof getSupabaseServerClient>,
+  userId: string,
+  leadId: string | null
+): Promise<void> {
+  const roleTitle = await getRoleTitleForLead(supabase, leadId);
+  if (roleTitle) {
+    await supabase.from("report_unlocks").delete().eq("user_id", userId).eq("role_title", roleTitle);
+  }
+}
+
+async function revokeCounsellingForOrder(
+  supabase: ReturnType<typeof getSupabaseServerClient>,
+  orderId: string
+): Promise<void> {
+  const { data: request } = await supabase
+    .from("counselling_requests")
+    .select("id, status")
+    .eq("order_id", orderId)
+    .maybeSingle();
+  if (!request) return;
+  if (request.status !== "requested" && request.status !== "scheduled") return;
+  const patch = nextCounsellingState(request.status as CounsellingStatus, "cancelled", new Date().toISOString());
+  await updateCounsellingStatus(request.id, patch);
+}
+
 export async function markRazorpayRefunded(orderId: string): Promise<MarkRefundedResult> {
   const supabase = getSupabaseServerClient();
   const { data: txn, error } = await supabase
@@ -114,12 +141,22 @@ export async function markRazorpayRefunded(orderId: string): Promise<MarkRefunde
     return { ok: true, alreadyProcessed: true };
   }
 
-  if (txn.product === "report" && txn.lead_id) {
-    const roleTitle = await getRoleTitleForLead(supabase, txn.lead_id);
-    if (roleTitle) {
-      await supabase.from("report_unlocks").delete().eq("user_id", txn.user_id).eq("role_title", roleTitle);
-    }
+  if (txn.product === "report") {
+    await revokeReportForLead(supabase, txn.user_id, txn.lead_id);
+  } else if (txn.product === "personality") {
+    await revokeProduct(txn.user_id, "personality");
+  } else if (txn.product === "references") {
+    await revokeProduct(txn.user_id, "references");
+  } else if (txn.product === "bundle") {
+    await revokeReportForLead(supabase, txn.user_id, txn.lead_id);
+    await revokeProduct(txn.user_id, "personality");
+    await revokeProduct(txn.user_id, "references");
+  } else if (txn.product === "counselling") {
+    await revokeCounsellingForOrder(supabase, orderId);
   }
+  // "interview": no separate table for its grant -- the status flip below,
+  // which start-ai-interview checks via `status='success'`, is the entire revocation.
+
   await supabase.from("razorpay_transactions").update({ status: "refunded" }).eq("order_id", orderId);
   return { ok: true, alreadyProcessed: false };
 }

@@ -6,8 +6,17 @@ vi.mock("@/lib/reportUnlocks", () => ({
 }));
 
 const unlockProductMock = vi.fn();
+const revokeProductMock = vi.fn();
 vi.mock("@/lib/productUnlocks", () => ({
   unlockProduct: unlockProductMock,
+  revokeProduct: revokeProductMock,
+}));
+
+const nextCounsellingStateMock = vi.fn();
+const updateCounsellingStatusMock = vi.fn();
+vi.mock("@/lib/adminCounselling", () => ({
+  nextCounsellingState: nextCounsellingStateMock,
+  updateCounsellingStatus: updateCounsellingStatusMock,
 }));
 
 const txnSelectMock = vi.fn();
@@ -259,6 +268,7 @@ describe("markRazorpayRefunded", () => {
   const deleteEq2Mock = vi.fn();
   const deleteEq1Mock = vi.fn().mockReturnValue({ eq: deleteEq2Mock });
   const deleteMock = vi.fn().mockReturnValue({ eq: deleteEq1Mock });
+  const counsellingMaybeSingleMock = vi.fn();
 
   beforeEach(() => {
     fromMock.mockReset();
@@ -273,6 +283,12 @@ describe("markRazorpayRefunded", () => {
     deleteEq1Mock.mockClear();
     deleteEq2Mock.mockReset();
     deleteEq2Mock.mockResolvedValue({ error: null });
+    revokeProductMock.mockReset();
+    revokeProductMock.mockResolvedValue(undefined);
+    nextCounsellingStateMock.mockReset();
+    updateCounsellingStatusMock.mockReset();
+    updateCounsellingStatusMock.mockResolvedValue(undefined);
+    counsellingMaybeSingleMock.mockReset();
     fromMock.mockImplementation((table: string) => {
       if (table === "report_unlocks") return { delete: deleteMock };
       if (table === "fitment_leads") {
@@ -281,6 +297,9 @@ describe("markRazorpayRefunded", () => {
             eq: () => ({ maybeSingle: () => Promise.resolve({ data: { role_title: "Senior Product Manager" }, error: null }) }),
           }),
         };
+      }
+      if (table === "counselling_requests") {
+        return { select: () => ({ eq: () => ({ maybeSingle: counsellingMaybeSingleMock }) }) };
       }
       return { select: txnSelectMock, update: updateMock };
     });
@@ -351,5 +370,75 @@ describe("markRazorpayRefunded", () => {
 
     expect(result).toEqual({ ok: true, alreadyProcessed: true });
     expect(deleteMock).not.toHaveBeenCalled();
+  });
+
+  it("revokes personality access on refund", async () => {
+    txnMaybeSingleMock.mockResolvedValue({
+      data: { status: "success", product: "personality", user_id: "user-1", lead_id: null },
+      error: null,
+    });
+    const { markRazorpayRefunded } = await import("../finalize");
+
+    const result = await markRazorpayRefunded("order_1");
+
+    expect(revokeProductMock).toHaveBeenCalledWith("user-1", "personality");
+    expect(updateMock).toHaveBeenCalledWith({ status: "refunded" });
+    expect(result).toEqual({ ok: true, alreadyProcessed: false });
+  });
+
+  it("revokes references access on refund", async () => {
+    txnMaybeSingleMock.mockResolvedValue({
+      data: { status: "success", product: "references", user_id: "user-1", lead_id: null },
+      error: null,
+    });
+    const { markRazorpayRefunded } = await import("../finalize");
+
+    await markRazorpayRefunded("order_1");
+
+    expect(revokeProductMock).toHaveBeenCalledWith("user-1", "references");
+  });
+
+  it("revokes the report and both product grants on a bundle refund", async () => {
+    txnMaybeSingleMock.mockResolvedValue({
+      data: { status: "success", product: "bundle", user_id: "user-1", lead_id: "lead-1" },
+      error: null,
+    });
+    const { markRazorpayRefunded } = await import("../finalize");
+
+    await markRazorpayRefunded("order_1");
+
+    expect(deleteEq1Mock).toHaveBeenCalledWith("user_id", "user-1");
+    expect(deleteEq2Mock).toHaveBeenCalledWith("role_title", "Senior Product Manager");
+    expect(revokeProductMock).toHaveBeenCalledWith("user-1", "personality");
+    expect(revokeProductMock).toHaveBeenCalledWith("user-1", "references");
+  });
+
+  it("cancels an active counselling request on refund", async () => {
+    counsellingMaybeSingleMock.mockResolvedValue({ data: { id: "req-1", status: "requested" }, error: null });
+    nextCounsellingStateMock.mockReturnValue({ status: "cancelled" });
+    txnMaybeSingleMock.mockResolvedValue({
+      data: { status: "success", product: "counselling", user_id: "user-1", lead_id: null },
+      error: null,
+    });
+    const { markRazorpayRefunded } = await import("../finalize");
+
+    await markRazorpayRefunded("order_1");
+
+    expect(nextCounsellingStateMock).toHaveBeenCalledWith("requested", "cancelled", expect.any(String));
+    expect(updateCounsellingStatusMock).toHaveBeenCalledWith("req-1", { status: "cancelled" });
+  });
+
+  it("does not try to cancel an already-completed counselling session", async () => {
+    counsellingMaybeSingleMock.mockResolvedValue({ data: { id: "req-1", status: "completed" }, error: null });
+    txnMaybeSingleMock.mockResolvedValue({
+      data: { status: "success", product: "counselling", user_id: "user-1", lead_id: null },
+      error: null,
+    });
+    const { markRazorpayRefunded } = await import("../finalize");
+
+    await markRazorpayRefunded("order_1");
+
+    expect(nextCounsellingStateMock).not.toHaveBeenCalled();
+    expect(updateCounsellingStatusMock).not.toHaveBeenCalled();
   });
 });
