@@ -59,6 +59,44 @@ describe("createOrder", () => {
   });
 });
 
+describe("createRefund", () => {
+  it("posts to the Razorpay refund API with the payment id and amount", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "rfnd_1" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { createRefund } = await import("../client");
+    const result = await createRefund("pay_123", 29900);
+
+    expect(result).toEqual({ refundId: "rfnd_1" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.razorpay.com/v1/payments/pay_123/refund",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: `Basic ${Buffer.from("rzp_test_key:testsecret").toString("base64")}`,
+        }),
+      })
+    );
+    const sentBody = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(sentBody).toEqual({ amount: 29900 });
+  });
+
+  it("throws when the Razorpay API responds with a non-2xx status", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: async () => "bad request",
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { createRefund } = await import("../client");
+    await expect(createRefund("pay_123", 29900)).rejects.toThrow("Razorpay refund failed (400): bad request");
+  });
+});
+
 describe("verifyPaymentSignature", () => {
   it("accepts a signature built with HMAC-SHA256(orderId + '|' + paymentId, key_secret)", async () => {
     const { verifyPaymentSignature } = await import("../client");

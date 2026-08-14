@@ -45,6 +45,33 @@ export async function createOrder(params: CreateOrderParams): Promise<RazorpayOr
   return { orderId: data.id };
 }
 
+export type CreateRefundResult = {
+  refundId: string;
+};
+
+export async function createRefund(paymentId: string, amountPaise: number): Promise<CreateRefundResult> {
+  const keyId = requireEnv("RAZORPAY_KEY_ID");
+  const keySecret = requireEnv("RAZORPAY_KEY_SECRET");
+  const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+
+  const response = await fetch(`https://api.razorpay.com/v1/payments/${paymentId}/refund`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Basic ${auth}`,
+    },
+    body: JSON.stringify({ amount: amountPaise }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`Razorpay refund failed (${response.status}): ${body}`);
+  }
+
+  const data = (await response.json()) as { id: string };
+  return { refundId: data.id };
+}
+
 export type VerifyPaymentSignatureParams = {
   orderId: string;
   paymentId: string;
