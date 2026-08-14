@@ -4,6 +4,7 @@ const updateUserByIdMock = vi.fn();
 const deleteUserMock = vi.fn();
 const generateLinkMock = vi.fn();
 const fitmentLeadsSelectMock = vi.fn();
+const rpcMock = vi.fn();
 const logAdminActionMock = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
@@ -13,6 +14,7 @@ vi.mock("@/lib/supabase", () => ({
       if (table === "fitment_leads") return { select: fitmentLeadsSelectMock };
       throw new Error(`Unexpected table in test: ${table}`);
     },
+    rpc: rpcMock,
   }),
 }));
 
@@ -157,5 +159,61 @@ describe("generateCandidateMagicLink", () => {
     await expect(generateCandidateMagicLink("bad@example.com", "rushi.humbe@gmail.com")).rejects.toThrow(
       "Failed to generate magic link: invalid email"
     );
+  });
+});
+
+describe("mergeCandidateAccounts", () => {
+  beforeEach(() => {
+    rpcMock.mockReset();
+    rpcMock.mockResolvedValue({
+      data: { fitment_leads: 2, report_unlocks: 1, fitment_interviews: 1, personality_tests: 0, reference_checks: 1, report_share_links: 1, contact_detail_requests: 0, recruiter_preview_settings: 1 },
+      error: null,
+    });
+    updateUserByIdMock.mockReset();
+    updateUserByIdMock.mockResolvedValue({ error: null });
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+  });
+
+  it("runs the merge RPC, bans the merged-away account, and logs row counts", async () => {
+    const { mergeCandidateAccounts } = await import("../adminCandidates");
+
+    await mergeCandidateAccounts("user-keep", "user-merge", "rushi.humbe@gmail.com");
+
+    expect(rpcMock).toHaveBeenCalledWith("merge_candidate_accounts", {
+      keep_user_id: "user-keep",
+      merge_user_id: "user-merge",
+    });
+    expect(updateUserByIdMock).toHaveBeenCalledWith("user-merge", { ban_duration: "876000h" });
+    expect(logAdminActionMock).toHaveBeenCalledWith({
+      adminEmail: "rushi.humbe@gmail.com",
+      action: "candidate.merge",
+      targetType: "candidate",
+      targetId: "user-keep",
+      priorValue: { mergedFrom: "user-merge" },
+      newValue: {
+        rowsMoved: {
+          fitment_leads: 2,
+          report_unlocks: 1,
+          fitment_interviews: 1,
+          personality_tests: 0,
+          reference_checks: 1,
+          report_share_links: 1,
+          contact_detail_requests: 0,
+          recruiter_preview_settings: 1,
+        },
+      },
+    });
+  });
+
+  it("throws without banning or logging when the RPC fails", async () => {
+    rpcMock.mockResolvedValue({ data: null, error: { message: "db error" } });
+    const { mergeCandidateAccounts } = await import("../adminCandidates");
+
+    await expect(mergeCandidateAccounts("user-keep", "user-merge", "rushi.humbe@gmail.com")).rejects.toThrow(
+      "Failed to merge accounts: db error"
+    );
+    expect(updateUserByIdMock).not.toHaveBeenCalled();
+    expect(logAdminActionMock).not.toHaveBeenCalled();
   });
 });

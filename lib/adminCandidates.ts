@@ -300,3 +300,29 @@ export async function generateCandidateMagicLink(email: string, adminEmail: stri
 
   return data.properties.action_link;
 }
+
+export async function mergeCandidateAccounts(keepUserId: string, mergeUserId: string, adminEmail: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+
+  const { data: rowsMoved, error: rpcError } = await supabase.rpc("merge_candidate_accounts", {
+    keep_user_id: keepUserId,
+    merge_user_id: mergeUserId,
+  });
+  if (rpcError || !rowsMoved) {
+    throw new Error(`Failed to merge accounts: ${rpcError?.message ?? "unknown error"}`);
+  }
+
+  const { error: banError } = await supabase.auth.admin.updateUserById(mergeUserId, { ban_duration: BAN_DURATION_INDEFINITE });
+  if (banError) {
+    throw new Error(`Merged accounts but failed to ban the merged-away account: ${banError.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "candidate.merge",
+    targetType: "candidate",
+    targetId: keepUserId,
+    priorValue: { mergedFrom: mergeUserId },
+    newValue: { rowsMoved },
+  });
+}
