@@ -23,14 +23,18 @@ export type NotesSection = { heading: string; items: string[] };
 export type ParsedNotes = { sections: NotesSection[]; recommendation: string | null };
 
 // feedbackToInterviewer is markdown: `### Heading` sections each containing
-// `-` or numbered items, with an optional trailing `Recommendation:` line
-// outside any section. Returns null on anything that doesn't match -- same
+// `-` or numbered items. The recommendation itself arrives in two different
+// shapes depending on the interview (both live-confirmed) -- a trailing
+// `Recommendation: ...` line outside any section, or its own `#### Recommendation`
+// heading followed by a plain (non-bulleted) paragraph, sometimes spanning
+// multiple lines. Returns null on anything that doesn't match -- same
 // safe-fallback contract as parseRoadmap.
 export function parseEvaluatorNotes(raw: string): ParsedNotes | null {
   const lines = raw.split("\n");
   const sections: NotesSection[] = [];
   let current: NotesSection | null = null;
   let recommendation: string | null = null;
+  let inRecommendationHeading = false;
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
@@ -39,13 +43,26 @@ export function parseEvaluatorNotes(raw: string): ParsedNotes | null {
     const headingMatch = line.match(/^#{2,4}\s+(.+)/);
     if (headingMatch) {
       if (current) sections.push(current);
-      current = { heading: headingMatch[1].trim(), items: [] };
+      const heading = headingMatch[1].trim();
+      if (/^recommendation$/i.test(heading)) {
+        current = null;
+        inRecommendationHeading = true;
+      } else {
+        current = { heading, items: [] };
+        inRecommendationHeading = false;
+      }
       continue;
     }
 
     const recMatch = line.match(/^Recommendation:\s*(.+)/i);
     if (recMatch) {
       recommendation = recMatch[1].trim();
+      inRecommendationHeading = false;
+      continue;
+    }
+
+    if (inRecommendationHeading) {
+      recommendation = recommendation ? `${recommendation} ${line}` : line;
       continue;
     }
 
@@ -56,6 +73,6 @@ export function parseEvaluatorNotes(raw: string): ParsedNotes | null {
   }
   if (current) sections.push(current);
 
-  if (sections.length === 0) return null;
+  if (sections.length === 0 && !recommendation) return null;
   return { sections, recommendation };
 }

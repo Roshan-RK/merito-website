@@ -80,4 +80,37 @@ Recommendation: The candidate should not be considered for further rounds unless
     expect(result).not.toBeNull();
     expect(result!.recommendation).toBeNull();
   });
+
+  // Real production feedbackToInterviewer string, pulled 2026-08-14 from a
+  // live Sales Strategy & Sales Operations Lead interview. Unlike REAL_NOTES
+  // above, IntervueBox here sends "#### Recommendation" as its own heading
+  // followed by a plain (non-bulleted) paragraph, not a "Recommendation: ..."
+  // line outside any section -- the parser silently dropped the paragraph
+  // and rendered an empty "Recommendation" section instead.
+  const REAL_NOTES_HEADING_STYLE = `### Strengths
+- Extensive experience in sales strategy and operations spanning 20 years across leading organizations.
+- Robust expertise in managing regional strategies and focusing on key geographies, especially in Asia Pacific.
+
+### Weaknesses
+- Lack of hands-on experience with prominent CRM tools like Salesforce during prior roles.
+
+#### Training Recommendations
+- CRM tools (e.g., Salesforce) and their use in advanced sales and client relationship tracking.
+
+#### Recommendation
+The candidate demonstrates strong leadership and sales strategy capabilities but needs further training in modern tools and techniques. Recommended for further evaluation.`;
+
+  it("parses a '#### Recommendation' heading followed by a plain paragraph", () => {
+    const result = parseEvaluatorNotes(REAL_NOTES_HEADING_STYLE);
+    expect(result).not.toBeNull();
+    expect(result!.sections.map((s) => s.heading)).toEqual(["Strengths", "Weaknesses", "Training Recommendations"]);
+    expect(result!.recommendation).toBe(
+      "The candidate demonstrates strong leadership and sales strategy capabilities but needs further training in modern tools and techniques. Recommended for further evaluation."
+    );
+  });
+
+  it("joins multiple paragraph lines under a '#### Recommendation' heading", () => {
+    const result = parseEvaluatorNotes("### Strengths\n- Good.\n\n#### Recommendation\nFirst line.\nSecond line.");
+    expect(result!.recommendation).toBe("First line. Second line.");
+  });
 });
