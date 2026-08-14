@@ -14,6 +14,8 @@ import EvaluatorNotes from "@/app/hub/account/EvaluatorNotes";
 import PersonalityReport from "@/app/hub/account/personality/PersonalityReport";
 import RefereeSummary from "./RefereeSummary";
 import ShareLinkRevokeToggle from "./ShareLinkRevokeToggle";
+import InterviewRecoveryActions from "./InterviewRecoveryActions";
+import AccountActions from "./AccountActions";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -43,6 +45,13 @@ export default async function AdminCandidateDetailPage({
       <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 13, margin: "0 0 32px" }}>
         {candidate.email}
       </p>
+
+      <section style={{ marginBottom: 32 }}>
+        <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
+          Account
+        </h3>
+        <AccountActions userId={candidate.userId} email={candidate.email} />
+      </section>
 
       {candidate.leads.map((lead) => (
         <section key={lead.id} style={{ marginBottom: 40 }}>
@@ -104,6 +113,13 @@ export default async function AdminCandidateDetailPage({
               {lead.interviewReport.roadmap && <RoadmapTimeline roadmap={lead.interviewReport.roadmap} />}
               {lead.interviewReport.feedbackToInterviewer && <EvaluatorNotes notes={lead.interviewReport.feedbackToInterviewer} />}
               <AnswerTranscript answers={lead.interviewReport.answers} />
+            </div>
+          ) : lead.interviewRow ? (
+            <div style={{ marginBottom: 20 }}>
+              <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ ...emptyNote, marginBottom: 10 }}>
+                Interview not completed yet.
+              </p>
+              <InterviewRecoveryActions interviewId={lead.interviewRow.id} status={lead.interviewRow.status} />
             </div>
           ) : (
             <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={emptyNote}>
