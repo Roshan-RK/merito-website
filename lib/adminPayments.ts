@@ -208,3 +208,33 @@ export async function refundTransaction(orderId: string, reason: string, adminEm
     newValue: { status: "refunded", reason, orderId, amountPaise: txn.amount_paise },
   });
 }
+
+export async function voidStuckTransaction(orderId: string, adminEmail: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const { data: txn, error } = await supabase
+    .from("razorpay_transactions")
+    .select("order_id, user_id, status")
+    .eq("order_id", orderId)
+    .maybeSingle();
+
+  if (error || !txn) {
+    throw new Error("Transaction not found.");
+  }
+  if (txn.status !== "initiated") {
+    throw new Error(`Only initiated transactions can be voided (current status: ${txn.status}).`);
+  }
+
+  const { error: updateError } = await supabase.from("razorpay_transactions").update({ status: "failed" }).eq("order_id", orderId);
+  if (updateError) {
+    throw new Error(`Failed to void transaction: ${updateError.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "payment.void",
+    targetType: "candidate",
+    targetId: txn.user_id,
+    priorValue: { status: "initiated" },
+    newValue: { status: "failed", orderId },
+  });
+}

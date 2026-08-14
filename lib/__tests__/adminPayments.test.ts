@@ -207,3 +207,40 @@ describe("refundTransaction", () => {
     await expect(refundTransaction("order-x", "x", "admin@merito.in")).rejects.toThrow("not found");
   });
 });
+
+describe("voidStuckTransaction", () => {
+  beforeEach(() => {
+    fromMock.mockReset();
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+  });
+
+  it("voids an initiated transaction", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({ data: { order_id: "order-1", user_id: "user-1", status: "initiated" }, error: null });
+    const updateEq = vi.fn().mockResolvedValue({ error: null });
+    const updateMock = vi.fn(() => ({ eq: updateEq }));
+    fromMock.mockImplementation((table: string) => {
+      if (table === "razorpay_transactions") return { select: () => ({ eq: () => ({ maybeSingle }) }), update: updateMock };
+      throw new Error(`unexpected table ${table}`);
+    });
+
+    const { voidStuckTransaction } = await import("../adminPayments");
+    await voidStuckTransaction("order-1", "admin@merito.in");
+
+    expect(updateMock).toHaveBeenCalledWith({ status: "failed" });
+    expect(logAdminActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "payment.void", targetType: "candidate", targetId: "user-1" })
+    );
+  });
+
+  it("rejects voiding a successful transaction", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({ data: { order_id: "order-1", user_id: "user-1", status: "success" }, error: null });
+    const updateMock = vi.fn();
+    fromMock.mockImplementation(() => ({ select: () => ({ eq: () => ({ maybeSingle }) }), update: updateMock }));
+
+    const { voidStuckTransaction } = await import("../adminPayments");
+
+    await expect(voidStuckTransaction("order-1", "admin@merito.in")).rejects.toThrow("Only initiated transactions");
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+});
