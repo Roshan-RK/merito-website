@@ -9,6 +9,10 @@ const { logAdminActionMock } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/adminAuditLog", () => ({ logAdminAction: logAdminActionMock }));
 
+const sendMock = vi.fn();
+vi.mock("resend", () => ({ Resend: class { emails = { send: sendMock }; } }));
+const ORIGINAL_ENV = { ...process.env };
+
 describe("listTemplates", () => {
   beforeEach(() => fromMock.mockReset());
 
@@ -192,5 +196,42 @@ describe("renderTemplate", () => {
     const result = await renderTemplate("recruiter_verification", { name: "Alex", url: "https://x.test" });
 
     expect(result).toEqual({ subject: "Hi Alex", bodyText: "https://x.test", bodyHtml: "<p>https://x.test</p>" });
+  });
+});
+
+describe("sendTestEmail", () => {
+  beforeEach(() => {
+    sendMock.mockReset();
+    sendMock.mockResolvedValue({ data: { id: "email-1" }, error: null });
+    process.env = { ...ORIGINAL_ENV, RESEND_API_KEY: "re_test", CONTACT_FROM_EMAIL: "admin@merito.ai" };
+  });
+
+  it("sends the rendered draft with sample values to the admin's own email", async () => {
+    const { sendTestEmail } = await import("../emailTemplates");
+
+    await sendTestEmail("recruiter_verification", { subject: "Confirm: {{url}}", bodyText: "{{url}}", bodyHtml: "<p>{{url}}</p>" }, "admin@merito.in");
+
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    const call = sendMock.mock.calls[0][0];
+    expect(call.to).toEqual(["admin@merito.in"]);
+    expect(call.from).toBe("admin@merito.ai");
+    expect(call.subject).toContain("[TEST]");
+    expect(call.text).not.toContain("{{url}}");
+  });
+
+  it("leaves an unknown placeholder in the draft visible in the sent email", async () => {
+    const { sendTestEmail } = await import("../emailTemplates");
+
+    await sendTestEmail("recruiter_verification", { subject: "s", bodyText: "{{typo}}", bodyHtml: "h" }, "admin@merito.in");
+
+    const call = sendMock.mock.calls[0][0];
+    expect(call.text).toContain("{{typo}}");
+  });
+
+  it("propagates a Resend send failure", async () => {
+    sendMock.mockRejectedValue(new Error("resend down"));
+    const { sendTestEmail } = await import("../emailTemplates");
+
+    await expect(sendTestEmail("recruiter_verification", { subject: "s", bodyText: "t", bodyHtml: "h" }, "admin@merito.in")).rejects.toThrow("resend down");
   });
 });

@@ -56,6 +56,7 @@ export function substitutePlaceholders(template: TemplateDraft, values: Record<s
 
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { logAdminAction } from "@/lib/adminAuditLog";
+import { Resend } from "resend";
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, TemplateDraft> = {
   recruiter_verification: {
@@ -179,4 +180,42 @@ export async function updateTemplate(key: TemplateKey, draft: TemplateDraft, adm
 export async function renderTemplate(key: TemplateKey, values: Record<string, string>): Promise<RenderedEmail> {
   const draft = await getTemplate(key);
   return substitutePlaceholders(draft, values);
+}
+
+const SAMPLE_VALUES: Record<TemplateKey, Record<string, string>> = {
+  recruiter_verification: { url: "https://www.merito.in/api/public/recruiter/verify-email/confirm?token=sample-token" },
+  recruiter_viewed: { candidateName: "Alex Kumar", dashboardUrl: "https://www.merito.in/hub/account" },
+  payment_failed_alert: { orderId: "order_sample123", amountRupees: "299.00", candidateEmail: "candidate@example.com" },
+  referee_invite: { refereeName: "Jane Doe", candidateName: "Alex Kumar", url: "https://www.merito.in/hub/references/feedback/sample-token", validityDays: "14" },
+  referee_reminder: { refereeName: "Jane Doe", candidateName: "Alex Kumar", url: "https://www.merito.in/hub/references/feedback/sample-token" },
+  contact_form_submission: { fullName: "Jane Doe", email: "jane@example.com", phone: "9999999999", departments: "Sales", message: "Sample message.\nSecond line." },
+};
+
+function getResendClient(): Resend {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error("Email service is not configured (RESEND_API_KEY missing).");
+  }
+  return new Resend(apiKey);
+}
+
+function getFromEmail(): string {
+  const fromEmail = process.env.CONTACT_FROM_EMAIL;
+  if (!fromEmail) {
+    throw new Error("Email service is not configured (CONTACT_FROM_EMAIL missing).");
+  }
+  return fromEmail;
+}
+
+export async function sendTestEmail(key: TemplateKey, draft: TemplateDraft, adminEmail: string): Promise<void> {
+  const rendered = substitutePlaceholders(draft, SAMPLE_VALUES[key]);
+  const resend = getResendClient();
+
+  await resend.emails.send({
+    from: getFromEmail(),
+    to: [adminEmail],
+    subject: `[TEST] ${rendered.subject}`,
+    text: rendered.bodyText,
+    html: rendered.bodyHtml,
+  });
 }
