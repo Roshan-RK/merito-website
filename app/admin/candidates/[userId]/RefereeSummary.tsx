@@ -1,4 +1,8 @@
-import { REFERENCE_CATEGORIES, type RefereeRow, type RefereeRole } from "@/lib/referenceChecks";
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { REFERENCE_CATEGORIES, MAX_REMINDERS, type RefereeRow, type RefereeRole } from "@/lib/referenceChecks";
 
 const ROLE_LABEL: Record<RefereeRole, string> = {
   faculty: "Faculty",
@@ -19,6 +23,41 @@ const STATUS_LABEL: Record<RefereeRow["status"], string> = {
 };
 
 const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(REFERENCE_CATEGORIES.map((c) => [c.value, c.label]));
+
+function ResetRemindersButton({ refereeId, reminderCount }: { refereeId: string; reminderCount: number }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function reset() {
+    if (!window.confirm("Reset reminder count to 0 and re-admit this referee to the reminder sweep?")) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const response = await fetch(`/api/admin/referees/${refereeId}/reset-reminders`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) {
+        setMessage(data.error || "Something went wrong.");
+        return;
+      }
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+      <span style={{ fontSize: 11.5, color: reminderCount >= MAX_REMINDERS ? "#ed1a24" : "#9c9c9c" }}>
+        {reminderCount}/{MAX_REMINDERS} reminders sent
+      </span>
+      <button onClick={reset} disabled={busy} style={{ background: "transparent", color: "#4b4b4d", border: "1px solid #dcdcdc", fontSize: 11.5, padding: "3px 8px", borderRadius: 6, cursor: busy ? "default" : "pointer" }}>
+        {busy ? "…" : "Reset reminders"}
+      </button>
+      {message && <span style={{ fontSize: 11.5, color: "#4b4b4d" }}>{message}</span>}
+    </div>
+  );
+}
 
 export default function RefereeSummary({ referees }: { referees: RefereeRow[] }) {
   if (referees.length === 0) {
@@ -60,6 +99,7 @@ export default function RefereeSummary({ referees }: { referees: RefereeRow[] })
               &ldquo;{r.overall_feedback}&rdquo;
             </p>
           )}
+          {r.status === "pending" && <ResetRemindersButton refereeId={r.id} reminderCount={r.reminder_count} />}
         </div>
       ))}
     </div>

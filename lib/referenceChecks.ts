@@ -412,6 +412,14 @@ export async function getRefereeAndCandidateNames(
   return { refereeName: referee.name, candidateName };
 }
 
+export async function resetRefereeReminders(refereeId: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase.from("referees").update({ reminder_count: 0, last_reminded_at: null }).eq("id", refereeId);
+  if (error) {
+    throw new Error(`Failed to reset referee reminders: ${error.message}`);
+  }
+}
+
 export async function getReferenceCheckOwner(checkId: string): Promise<string | null> {
   const supabase = getSupabaseServerClient();
   const { data } = await supabase.from("reference_checks").select("user_id").eq("id", checkId).maybeSingle();
