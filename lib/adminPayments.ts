@@ -3,6 +3,9 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { logAdminAction } from "@/lib/adminAuditLog";
 import { createRefund } from "@/lib/razorpay/client";
 import { markRazorpayRefunded } from "@/lib/razorpay/finalize";
+import { unlockProduct, isProductUnlocked } from "@/lib/productUnlocks";
+import { completeReportUnlock } from "@/lib/completeReportUnlock";
+import type { RazorpayProduct, CandidateLevel } from "@/lib/razorpay/pricing";
 
 export type TransactionStatus = "initiated" | "success" | "failed" | "refunded";
 
@@ -236,5 +239,89 @@ export async function voidStuckTransaction(orderId: string, adminEmail: string):
     targetId: txn.user_id,
     priorValue: { status: "initiated" },
     newValue: { status: "failed", orderId },
+  });
+}
+
+export type ResolvedCandidate = { userId: string; leadId: string | null; roleTitle: string | null };
+
+export async function resolveCandidateByEmail(email: string): Promise<ResolvedCandidate | null> {
+  const supabase = getSupabaseServerClient();
+  const { data: lead } = await supabase
+    .from("fitment_leads")
+    .select("id, user_id, role_title")
+    .eq("email", email)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!lead) return null;
+  return { userId: lead.user_id, leadId: lead.id, roleTitle: lead.role_title };
+}
+
+export async function grantFreeAccess(
+  params: { email: string; product: RazorpayProduct; level: CandidateLevel; reason: string },
+  adminEmail: string
+): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const candidate = await resolveCandidateByEmail(params.email);
+
+  const needsLead = params.product === "report" || params.product === "bundle";
+  if (needsLead && !candidate) {
+    throw new Error(`Candidate has no fitment lead — can't grant ${params.product} without one.`);
+  }
+  if (!candidate) {
+    throw new Error("No candidate found for that email.");
+  }
+
+  const userId = candidate.userId;
+
+  if (params.product === "personality" || params.product === "references") {
+    if (await isProductUnlocked(userId, params.product)) {
+      throw new Error(`Candidate already has ${params.product} unlocked.`);
+    }
+  }
+
+  const consumedAt = params.product === "interview" ? null : new Date().toISOString();
+  const orderId = `comp_${randomUUID()}`;
+
+  const { error: insertError } = await supabase.from("razorpay_transactions").insert({
+    order_id: orderId,
+    user_id: userId,
+    product: params.product,
+    level: params.level,
+    lead_id: candidate.leadId,
+    amount_paise: 0,
+    status: "success",
+    consumed_at: consumedAt,
+  });
+  if (insertError) {
+    throw new Error(`Failed to record comp grant: ${insertError.message}`);
+  }
+
+  if (params.product === "report" || params.product === "bundle") {
+    const { data: leadRow } = await supabase
+      .from("fitment_leads")
+      .select("id, role_title, ib_applied_job_id, resume_match_status, resume_match_raw")
+      .eq("id", candidate.leadId)
+      .maybeSingle();
+    if (leadRow) {
+      await completeReportUnlock(userId, leadRow, params.product === "bundle" ? "bundle" : "report");
+    }
+  } else if (params.product === "personality") {
+    await unlockProduct(userId, "personality");
+  } else if (params.product === "references") {
+    await unlockProduct(userId, "references");
+  } else if (params.product === "counselling") {
+    await supabase.from("counselling_requests").insert({ user_id: userId, order_id: orderId });
+  }
+  // "interview": the $0 success/unconsumed row inserted above is itself the credit.
+
+  await logAdminAction({
+    adminEmail,
+    action: "payment.grant_free_access",
+    targetType: "candidate",
+    targetId: userId,
+    priorValue: null,
+    newValue: { product: params.product, level: params.level, reason: params.reason, orderId },
   });
 }
