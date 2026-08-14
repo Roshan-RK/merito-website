@@ -84,4 +84,12 @@ describe("isRecruiterEmailVerified", () => {
     expect(await isRecruiterEmailVerified("b@example.com")).toBe(false);
     expect(await isRecruiterEmailVerified("c@example.com")).toBe(false);
   });
+
+  it("returns false for a verified but banned recruiter", async () => {
+    maybeSingleMock.mockReset();
+    maybeSingleMock.mockResolvedValue({ data: { verified_at: "2026-08-01T00:00:00Z", banned_at: "2026-08-05T00:00:00Z" } });
+    const { isRecruiterEmailVerified } = await importModule();
+
+    expect(await isRecruiterEmailVerified("banned@company.com")).toBe(false);
+  });
 });
