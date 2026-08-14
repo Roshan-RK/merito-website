@@ -1,11 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const updateUserByIdMock = vi.fn();
+const deleteUserMock = vi.fn();
+const fitmentLeadsSelectMock = vi.fn();
 const logAdminActionMock = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({
-    auth: { admin: { updateUserById: updateUserByIdMock } },
+    auth: { admin: { updateUserById: updateUserByIdMock, deleteUser: deleteUserMock } },
+    from: (table: string) => {
+      if (table === "fitment_leads") return { select: fitmentLeadsSelectMock };
+      throw new Error(`Unexpected table in test: ${table}`);
+    },
   }),
 }));
 
@@ -70,5 +76,47 @@ describe("unbanCandidate", () => {
       priorValue: { banned: true },
       newValue: { banned: false },
     });
+  });
+});
+
+describe("deleteCandidate", () => {
+  beforeEach(() => {
+    deleteUserMock.mockReset();
+    deleteUserMock.mockResolvedValue({ error: null });
+    fitmentLeadsSelectMock.mockReset();
+    fitmentLeadsSelectMock.mockReturnValue({
+      eq: () =>
+        Promise.resolve({
+          data: [{ id: "lead-1", role_title: "Senior Product Manager", email: "candidate@example.com" }],
+        }),
+    });
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+  });
+
+  it("snapshots the lead rows, deletes the auth user, and logs the action", async () => {
+    const { deleteCandidate } = await import("../adminCandidates");
+
+    await deleteCandidate("user-1", "rushi.humbe@gmail.com");
+
+    expect(deleteUserMock).toHaveBeenCalledWith("user-1");
+    expect(logAdminActionMock).toHaveBeenCalledWith({
+      adminEmail: "rushi.humbe@gmail.com",
+      action: "candidate.delete",
+      targetType: "candidate",
+      targetId: "user-1",
+      priorValue: { leads: [{ id: "lead-1", role_title: "Senior Product Manager", email: "candidate@example.com" }] },
+      newValue: null,
+    });
+  });
+
+  it("throws when the Admin API delete fails", async () => {
+    deleteUserMock.mockResolvedValue({ error: { message: "user not found" } });
+    const { deleteCandidate } = await import("../adminCandidates");
+
+    await expect(deleteCandidate("user-1", "rushi.humbe@gmail.com")).rejects.toThrow(
+      "Failed to delete candidate: user not found"
+    );
+    expect(logAdminActionMock).not.toHaveBeenCalled();
   });
 });

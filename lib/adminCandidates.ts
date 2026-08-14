@@ -258,3 +258,26 @@ export async function unbanCandidate(userId: string, adminEmail: string): Promis
     newValue: { banned: false },
   });
 }
+
+export async function deleteCandidate(userId: string, adminEmail: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+
+  const { data: leadRows } = await supabase
+    .from("fitment_leads")
+    .select("id, role_title, email")
+    .eq("user_id", userId);
+
+  const { error } = await supabase.auth.admin.deleteUser(userId);
+  if (error) {
+    throw new Error(`Failed to delete candidate: ${error.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "candidate.delete",
+    targetType: "candidate",
+    targetId: userId,
+    priorValue: { leads: leadRows ?? [] },
+    newValue: null,
+  });
+}
