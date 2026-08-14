@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { findUnpaidUnlocks } from "../adminPayments";
 
-const { logAdminActionMock, fromMock } = vi.hoisted(() => ({
+const { logAdminActionMock, fromMock, createRefundMock, markRazorpayRefundedMock } = vi.hoisted(() => ({
   logAdminActionMock: vi.fn(),
   fromMock: vi.fn(),
+  createRefundMock: vi.fn(),
+  markRazorpayRefundedMock: vi.fn(),
 }));
 vi.mock("@/lib/adminAuditLog", () => ({ logAdminAction: logAdminActionMock }));
 vi.mock("@/lib/supabase", () => ({ getSupabaseServerClient: () => ({ from: fromMock }) }));
+vi.mock("@/lib/razorpay/client", () => ({ createRefund: createRefundMock }));
+vi.mock("@/lib/razorpay/finalize", () => ({ markRazorpayRefunded: markRazorpayRefundedMock }));
 
 describe("findUnpaidUnlocks", () => {
   it("flags a report unlock with no matching transaction", () => {
@@ -147,5 +151,59 @@ describe("recordManualReconciliation", () => {
     await recordManualReconciliation({ userId: "user-1", leadId: null, product: "personality", amountPaise: 19900 }, "rushi.humbe@gmail.com");
 
     expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ level: "senior", lead_id: null }));
+  });
+});
+
+describe("refundTransaction", () => {
+  beforeEach(() => {
+    fromMock.mockReset();
+    createRefundMock.mockReset();
+    createRefundMock.mockResolvedValue({ refundId: "rfnd_1" });
+    markRazorpayRefundedMock.mockReset();
+    markRazorpayRefundedMock.mockResolvedValue({ ok: true, alreadyProcessed: false });
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+  });
+
+  it("calls createRefund then markRazorpayRefunded and logs the action", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: { order_id: "order-1", payment_id: "pay_123", user_id: "user-1", status: "success", amount_paise: 29900 },
+      error: null,
+    });
+    fromMock.mockImplementation((table: string) => {
+      if (table === "razorpay_transactions") return { select: () => ({ eq: () => ({ maybeSingle }) }) };
+      throw new Error(`unexpected table ${table}`);
+    });
+
+    const { refundTransaction } = await import("../adminPayments");
+    await refundTransaction("order-1", "candidate requested", "admin@merito.in");
+
+    expect(createRefundMock).toHaveBeenCalledWith("pay_123", 29900);
+    expect(markRazorpayRefundedMock).toHaveBeenCalledWith("order-1");
+    expect(logAdminActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ adminEmail: "admin@merito.in", action: "payment.refund", targetType: "candidate", targetId: "user-1" })
+    );
+  });
+
+  it("rejects a transaction that is not in success status", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: { order_id: "order-1", payment_id: "pay_123", user_id: "user-1", status: "refunded", amount_paise: 29900 },
+      error: null,
+    });
+    fromMock.mockImplementation(() => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }));
+
+    const { refundTransaction } = await import("../adminPayments");
+
+    await expect(refundTransaction("order-1", "x", "admin@merito.in")).rejects.toThrow("not refundable");
+    expect(createRefundMock).not.toHaveBeenCalled();
+  });
+
+  it("throws for an unknown order", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    fromMock.mockImplementation(() => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }));
+
+    const { refundTransaction } = await import("../adminPayments");
+
+    await expect(refundTransaction("order-x", "x", "admin@merito.in")).rejects.toThrow("not found");
   });
 });

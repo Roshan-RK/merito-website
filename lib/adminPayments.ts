@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { logAdminAction } from "@/lib/adminAuditLog";
+import { createRefund } from "@/lib/razorpay/client";
+import { markRazorpayRefunded } from "@/lib/razorpay/finalize";
 
 export type TransactionStatus = "initiated" | "success" | "failed" | "refunded";
 
@@ -173,5 +175,36 @@ export async function recordManualReconciliation(
     targetId: params.userId,
     priorValue: null,
     newValue: { orderId, product: params.product, amountPaise: params.amountPaise, leadId: params.leadId },
+  });
+}
+
+export async function refundTransaction(orderId: string, reason: string, adminEmail: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const { data: txn, error } = await supabase
+    .from("razorpay_transactions")
+    .select("order_id, payment_id, user_id, status, amount_paise")
+    .eq("order_id", orderId)
+    .maybeSingle();
+
+  if (error || !txn) {
+    throw new Error("Transaction not found.");
+  }
+  if (txn.status !== "success") {
+    throw new Error(`Transaction is not refundable in its current state (${txn.status}).`);
+  }
+  if (!txn.payment_id) {
+    throw new Error("Transaction has no associated payment to refund.");
+  }
+
+  await createRefund(txn.payment_id, txn.amount_paise);
+  await markRazorpayRefunded(orderId);
+
+  await logAdminAction({
+    adminEmail,
+    action: "payment.refund",
+    targetType: "candidate",
+    targetId: txn.user_id,
+    priorValue: { status: "success" },
+    newValue: { status: "refunded", reason, orderId, amountPaise: txn.amount_paise },
   });
 }
