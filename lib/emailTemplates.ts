@@ -100,10 +100,14 @@ export type EmailTemplateRow = {
 
 export async function listTemplates(): Promise<EmailTemplateRow[]> {
   const supabase = getSupabaseServerClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("email_templates")
     .select("key, subject, body_text, body_html, updated_at, updated_by")
     .order("key");
+
+  if (error) {
+    throw new Error(`Failed to list email templates: ${error.message}`);
+  }
 
   return (data ?? []).map((row) => ({
     key: row.key as TemplateKey,
@@ -125,7 +129,11 @@ export async function getTemplate(key: TemplateKey): Promise<TemplateDraft> {
   }
 
   const supabase = getSupabaseServerClient();
-  const { data } = await supabase.from("email_templates").select("subject, body_text, body_html").eq("key", key).maybeSingle();
+  const { data, error } = await supabase.from("email_templates").select("subject, body_text, body_html").eq("key", key).maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to fetch email template ${key}: ${error.message}`);
+  }
 
   if (!data) {
     return DEFAULT_TEMPLATES[key];

@@ -21,6 +21,17 @@ describe("listTemplates", () => {
       { key: "recruiter_verification", subject: "s", bodyText: "t", bodyHtml: "h", updatedAt: "2026-08-14T00:00:00Z", updatedBy: "admin@merito.in" },
     ]);
   });
+
+  it("throws when Supabase returns an error", async () => {
+    const orderMock = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "db down" },
+    });
+    fromMock.mockImplementation(() => ({ select: () => ({ order: orderMock }) }));
+
+    const { listTemplates } = await import("../emailTemplates");
+    await expect(listTemplates()).rejects.toThrow("db down");
+  });
 });
 
 describe("getTemplate", () => {
@@ -58,6 +69,14 @@ describe("getTemplate", () => {
     await getTemplate("recruiter_verification");
 
     expect(fromMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws when Supabase returns an error", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: { message: "db down" } });
+    fromMock.mockImplementation(() => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }));
+
+    const { getTemplate } = await import("../emailTemplates");
+    await expect(getTemplate("recruiter_verification")).rejects.toThrow("db down");
   });
 });
 
