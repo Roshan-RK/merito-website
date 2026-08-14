@@ -1,14 +1,6 @@
 import { Resend } from "resend";
 import { getAbsoluteUrl } from "@/lib/site";
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+import { renderTemplate } from "@/lib/emailTemplates";
 
 function getResendClient(): Resend {
   const apiKey = process.env.RESEND_API_KEY;
@@ -28,14 +20,13 @@ function getFromEmail(): string {
 
 export async function sendRecruiterViewedEmail(to: string, candidateName: string): Promise<void> {
   const resend = getResendClient();
-  const safeName = escapeHtml(candidateName);
-  const dashboardUrl = getAbsoluteUrl("/hub/account");
+  const rendered = await renderTemplate("recruiter_viewed", { candidateName, dashboardUrl: getAbsoluteUrl("/hub/account") });
 
   await resend.emails.send({
     from: getFromEmail(),
     to: [to],
-    subject: "A recruiter checked out your profile",
-    text: `Hi ${candidateName},\n\nA recruiter checked out your Merito profile through our recruiter extension.\n\nSee your recruiter activity: ${dashboardUrl}`,
-    html: `<p>Hi ${safeName},</p><p>A recruiter checked out your Merito profile through our recruiter extension.</p><p><a href="${dashboardUrl}">See your recruiter activity</a></p>`,
+    subject: rendered.subject,
+    text: rendered.bodyText,
+    html: rendered.bodyHtml,
   });
 }
