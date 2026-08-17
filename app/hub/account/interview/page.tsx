@@ -1,27 +1,31 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import { ArrowLeft, Download, HelpCircle, Sparkles, ShieldCheck, ShieldAlert, Clock } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import { getCandidateResumeDetails } from "@/lib/intervuebox/reports";
 import InterviewScoreGauge from "./InterviewScoreGauge";
-import ParameterScoreTile from "./ParameterScoreTile";
-import CriteriaMatchCard from "./CriteriaMatchCard";
-import SkillReportTable from "./SkillReportTable";
-import RoadmapTimeline from "../RoadmapTimeline";
-import EvaluatorNotes, { InlineText } from "../EvaluatorNotes";
-import AnswerTranscript from "./AnswerTranscript";
-import { getCriteriaStatusColor } from "@/lib/criteriaStatus";
+import SkillDistribution from "./SkillDistribution";
+import InterviewTabs from "./InterviewTabs";
 
-// report.strengths/areasOfImprovement arrive as a single "- point\n- point"
-// string (IntervueBox's own format), not an array like the fitment report's
-// strongPoints/weakPoints — split so both report pages render bullet lists
-// the same way.
-function splitBullets(text: string): string[] {
-  return text
-    .split("\n")
-    .map((line) => line.replace(/^[-•]\s*/, "").trim())
-    .filter(Boolean);
+const EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40";
+
+function StatTile({ icon: Icon, value, label }: { icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>; value: string; label: string }) {
+  return (
+    <div className="flex items-center bg-white/[0.04]" style={{ gap: 10, borderRadius: 10, padding: "10px 12px" }}>
+      <div className="flex items-center justify-center bg-[#ed1a24]/15 shrink-0" style={{ width: 30, height: 30, borderRadius: 8 }}>
+        <Icon size={14} strokeWidth={2} className="text-[#ed1a24]" />
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <p className="font-[family-name:var(--font-gabarito)] font-bold text-white truncate" style={{ fontSize: 14, margin: 0 }}>
+          {value}
+        </p>
+        <p className="font-[family-name:var(--font-poppins)] font-semibold uppercase text-white/40 truncate" style={{ fontSize: 9.5, letterSpacing: "0.04em", margin: 0 }}>
+          {label}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export default async function InterviewReportPage({
@@ -98,214 +102,85 @@ export default async function InterviewReportPage({
     report.approxDurationMinutes != null ? `~${report.approxDurationMinutes} min` : null,
   ].filter((part): part is string => Boolean(part));
 
+  // Note on the mockup's "Tab changes" / "Camera checks" stat tiles and the
+  // "Practice conduct" tab's dress-code/body-language/environment fields:
+  // report_raw (InterviewReportReady) has no such discrete fields -- only a
+  // flagForSuspiciousActivity boolean, a freeform integrityCheck string, and
+  // a freeform videoReport narrative. This panel surfaces exactly those real
+  // fields (as "Integrity" here, and in the Practice conduct tab) instead of
+  // fabricating tab-change counts or per-trait camera scoring.
+  const skillsAssessedCount = Object.keys(report.skillReport ?? {}).length;
+
   return (
-    <main className="bg-[#fdf8fb]" style={{ minHeight: "60vh", padding: "48px 20px" }}>
-      <div className="mx-auto" style={{ maxWidth: 900 }}>
-        <div className="print:hidden">
+    <main>
+      <div className="mx-auto" style={{ maxWidth: 880, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <div className="print:hidden flex items-center justify-between flex-wrap" style={{ gap: 12 }}>
           <Link
             href="/hub/account"
-            className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-            style={{ fontSize: 13 }}
+            className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white/55 hover:text-white transition-colors"
+            style={{ gap: 6, fontSize: 13 }}
           >
-            ← Back to dashboard
+            <ArrowLeft size={14} strokeWidth={2} /> Back to dashboard
           </Link>
           <a
             href={`/api/hub/interview/export?role=${encodeURIComponent(interview.role_title)}`}
             download
-            className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-            style={{ fontSize: 13, marginLeft: 16 }}
+            className="flex items-center bg-white/[0.06] hover:bg-white/[0.1] transition-colors font-[family-name:var(--font-poppins)] font-semibold text-white"
+            style={{ gap: 6, fontSize: 12.5, borderRadius: 50, padding: "7px 14px", border: "1px solid rgba(255,255,255,0.08)" }}
           >
-            Download PDF
+            <Download size={13} strokeWidth={2} /> Download PDF
           </a>
         </div>
 
-        <div className="flex items-center justify-between flex-wrap" style={{ margin: "14px 0 4px", gap: 12 }}>
-          <div>
-            <div className="flex items-center flex-wrap" style={{ gap: 10 }}>
-              <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.8rem", margin: 0 }}>
-                {displayName}
-              </h1>
-              <span
-                className="bg-[#ed1a24] font-[family-name:var(--font-poppins)] font-semibold text-white"
-                style={{ fontSize: 11.5, borderRadius: 50, padding: "4px 12px" }}
-              >
-                {interview.role_title}
-              </span>
-            </div>
-            {report.interviewTitle && (
-              <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 12, margin: "4px 0 0" }}>
-                {report.interviewTitle}
-              </p>
-            )}
-            {infoBarParts.length > 0 && (
-              <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 13, margin: "8px 0 0" }}>
-                {infoBarParts.join(" · ")}
-              </p>
-            )}
+        <div>
+          <p className={EYEBROW} style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>
+            Mock AI interview
+          </p>
+          <div className="flex items-center flex-wrap" style={{ gap: 10 }}>
+            <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.7rem", margin: 0 }}>
+              {displayName}
+            </h1>
+            <span
+              className="bg-[#ed1a24] font-[family-name:var(--font-poppins)] font-semibold text-white"
+              style={{ fontSize: 11.5, borderRadius: 50, padding: "4px 12px" }}
+            >
+              {interview.role_title}
+            </span>
           </div>
-          <Image src="/logo.png" alt="Merito" width={100} height={28} style={{ height: 24, width: "auto" }} />
+          {report.interviewTitle && (
+            <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 12, margin: "6px 0 0" }}>
+              {report.interviewTitle}
+            </p>
+          )}
+          {infoBarParts.length > 0 && (
+            <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 12.5, margin: "6px 0 0" }}>
+              {infoBarParts.join(" · ")}
+            </p>
+          )}
         </div>
 
         <div
-          className="bg-white border border-black/[0.08]"
-          style={{
-            borderRadius: 14,
-            padding: 20,
-            margin: "20px 0 32px",
-            display: "grid",
-            gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr)",
-            gap: 24,
-            alignItems: "center",
-          }}
+          className="bg-[#141416] border border-white/[0.08] flex flex-col sm:flex-row items-start sm:items-center"
+          style={{ borderRadius: 14, padding: 20, gap: 20 }}
         >
-          <div>
-            <p
-              className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]"
-              style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 12px" }}
-            >
-              Parameters score
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
-              {Object.entries(report.skillMetrics ?? {}).map(([skill, score]) => (
-                <ParameterScoreTile key={skill} skill={skill} score={score} />
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center justify-center">
+          <div className="shrink-0" style={{ margin: "0 auto" }}>
             <InterviewScoreGauge score={report.overallScore} />
           </div>
-        </div>
-
-        <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, margin: "0 0 32px" }}>
-          <p
-            className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]"
-            style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}
-          >
-            AI overview
-          </p>
-          <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14.5, lineHeight: 1.7, margin: 0 }}>
-            {report.overallSummary}
-          </p>
-        </div>
-
-        {report.overallSkillScore != null && (
-          <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 12, margin: "0 0 20px" }}>
-            Overall skill score: <strong className="text-black">{Math.round(report.overallSkillScore)}%</strong>
-          </p>
-        )}
-
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14 }}>
-          {report.strengths && (
-            // Green tint matches the dashboard's own "Top strengths" card
-            // (design_handoff_merito_hub/dashboard/Merito HUB Dashboard.dc.html)
-            // rather than a plain white/bordered card.
-            <div className="bg-[#eefdf1]" style={{ borderRadius: 14, padding: "14px 16px" }}>
-              <p
-                className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#16803c]"
-                style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}
-              >
-                Strengths
-              </p>
-              {splitBullets(report.strengths).map((point, i) => (
-                <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: "0 0 8px" }}>
-                  ✓ <InlineText text={point} />
-                </p>
-              ))}
-            </div>
-          )}
-
-          {report.areasOfImprovement && (
-            // Red tint matches the dashboard's own "Gaps costing you
-            // shortlists" card in the same reference file.
-            <div className="bg-[#fdeced]" style={{ borderRadius: 14, padding: "14px 16px" }}>
-              <p
-                className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#ed1a24]"
-                style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}
-              >
-                Areas to improve
-              </p>
-              {splitBullets(report.areasOfImprovement).map((point, i) => (
-                <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: "0 0 8px" }}>
-                  ✗ <InlineText text={point} />
-                </p>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {Object.keys(report.skillReport).length > 0 && (
-          <SkillReportTable skillReport={report.skillReport} />
-        )}
-
-        {typeof report.skillMetrics?.criteriaMatch === "number" && (
-          <CriteriaMatchCard criteriaMatchScore={report.skillMetrics.criteriaMatch} criteriaEvaluationTable={report.criteriaEvaluationTable} />
-        )}
-
-        {report.criteriaEvaluationTable.length > 0 && (
-          <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, margin: "0 0 32px" }}>
-            <p
-              className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]"
-              style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 14px" }}
-            >
-              Skill-wise evaluation
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {report.criteriaEvaluationTable.map((entry, i) => (
-                <div key={i} style={{ borderTop: i > 0 ? "1px solid rgba(0,0,0,0.08)" : undefined, paddingTop: i > 0 ? 14 : 0 }}>
-                  <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
-                    <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.02rem", margin: 0 }}>
-                      {entry.criteria}
-                    </h3>
-                    <span
-                      className="font-[family-name:var(--font-poppins)] font-semibold uppercase"
-                      style={{ fontSize: 10.5, letterSpacing: "0.04em", color: getCriteriaStatusColor(entry.status) }}
-                    >
-                      {entry.status}
-                    </span>
-                  </div>
-                  <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 13, lineHeight: 1.6, margin: 0 }}>
-                    {entry.reason}
-                  </p>
-                </div>
-              ))}
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4" style={{ flex: 1, minWidth: 0, gap: 10, width: "100%" }}>
+            <StatTile icon={HelpCircle} value={String(report.answers.length)} label="Questions" />
+            <StatTile icon={Sparkles} value={String(skillsAssessedCount)} label="Skills assessed" />
+            <StatTile
+              icon={report.flagForSuspiciousActivity ? ShieldAlert : ShieldCheck}
+              value={report.flagForSuspiciousActivity ? "Flagged" : "All clear"}
+              label="Integrity"
+            />
+            <StatTile icon={Clock} value={report.approxDurationMinutes != null ? `${report.approxDurationMinutes}m` : "—"} label="Duration" />
           </div>
-        )}
-
-        {report.roadmap && <RoadmapTimeline roadmap={report.roadmap} />}
-
-        {report.feedbackToInterviewer && <EvaluatorNotes notes={report.feedbackToInterviewer} />}
-
-        <div
-          className={report.flagForSuspiciousActivity ? "bg-[#fdeced]" : "bg-[#eefdf1]"}
-          style={{ borderRadius: 14, padding: "14px 16px", margin: "0 0 32px" }}
-        >
-          <p
-            className="font-[family-name:var(--font-poppins)] font-bold uppercase"
-            style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 8px", color: report.flagForSuspiciousActivity ? "#ed1a24" : "#16803c" }}
-          >
-            Integrity assessment · {report.flagForSuspiciousActivity ? "Flagged" : "No issues"}
-          </p>
-          <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>
-            {report.integrityCheck ||
-              (report.flagForSuspiciousActivity
-                ? "Suspicious activity was flagged during this interview."
-                : "No suspicious activity flagged during this interview.")}
-          </p>
         </div>
 
-        {report.videoReport && (
-          <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, margin: "0 0 32px" }}>
-            <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>
-              Video &amp; delivery notes
-            </p>
-            <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13.5, lineHeight: 1.75, margin: 0, whiteSpace: "pre-wrap" }}>
-              {report.videoReport}
-            </p>
-          </div>
-        )}
+        {skillsAssessedCount > 0 && <SkillDistribution skillReport={report.skillReport} />}
 
-        <AnswerTranscript answers={report.answers} />
+        <InterviewTabs report={report} />
 
         {report.shareableReportLink && (
           <a
@@ -313,7 +188,7 @@ export default async function InterviewReportPage({
             target="_blank"
             rel="noreferrer"
             className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-            style={{ fontSize: 13, display: "inline-block", marginTop: 32 }}
+            style={{ fontSize: 13 }}
           >
             View full report on IntervueBox →
           </a>
