@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, Download } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { nameFromEmail, type Scores, type Validity } from "@/lib/personality";
 import PersonalityTestClient from "./PersonalityTestClient";
@@ -51,23 +52,23 @@ export default async function PersonalityTestPage({
   const candidateName = nameFromEmail(user.email ?? "");
 
   return (
-    <main className="bg-[#fdf8fb]" style={{ minHeight: "60vh", padding: "48px 20px" }}>
-      <div className="mx-auto" style={{ maxWidth: 820 }}>
-        <div className="print:hidden">
+    <main>
+      <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <div className="print:hidden flex items-center justify-between flex-wrap" style={{ gap: 12 }}>
           <Link
             href="/hub/account"
-            className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-            style={{ fontSize: 13, display: "inline-block", marginBottom: 16 }}
+            className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white/55 hover:text-white transition-colors"
+            style={{ gap: 6, fontSize: 13 }}
           >
-            ← Back to dashboard
+            <ArrowLeft size={14} strokeWidth={2} /> Back to dashboard
           </Link>
           <a
             href={`/api/hub/personality/export?role=${encodeURIComponent(roleTitle)}`}
             download
-            className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-            style={{ fontSize: 13, display: "inline-block", marginBottom: 16, marginLeft: 16 }}
+            className="flex items-center bg-white/[0.06] hover:bg-white/[0.1] transition-colors font-[family-name:var(--font-poppins)] font-semibold text-white"
+            style={{ gap: 6, fontSize: 12.5, borderRadius: 50, padding: "7px 14px", border: "1px solid rgba(255,255,255,0.08)" }}
           >
-            Download PDF
+            <Download size={13} strokeWidth={2} /> Download PDF
           </a>
         </div>
         <PersonalityTestClient roleTitle={roleTitle} candidateName={candidateName} initialResult={initialResult} />

@@ -1,5 +1,6 @@
 "use client";
 
+import { ShieldCheck } from "lucide-react";
 import {
   TRAITS,
   TRAIT_NAME,
@@ -12,16 +13,16 @@ import {
   type Validity,
 } from "@/lib/personality";
 
-function BandStrip({ band }: { band: number }) {
+// Single accent fill bar, matching the continuous-bar convention used across
+// the rest of the dashboard (e.g. ResumeMatchCategoryCard). Personality
+// traits aren't "good/bad" like a fitment score, so this stays one neutral
+// accent color rather than picking up the report panel's green/amber/red
+// verdict palette -- that palette is reserved below for the validity checks,
+// which really do have a pass/fail-style verdict.
+function ScoreBar({ pct }: { pct: number }) {
   return (
-    <div className="flex" style={{ gap: 6 }}>
-      {BANDS.map((_, i) => (
-        <div
-          key={i}
-          className={i === band ? "bg-[#ed1a24]" : "bg-[#f0e6ea]"}
-          style={{ flex: 1, height: 10, borderRadius: 4 }}
-        />
-      ))}
+    <div className="bg-white/[0.08] overflow-hidden" style={{ height: 8, borderRadius: 6 }}>
+      <div className="bg-[#ed1a24] h-full" style={{ borderRadius: 6, width: `${Math.min(100, Math.max(0, pct))}%` }} />
     </div>
   );
 }
@@ -75,17 +76,14 @@ export default function PersonalityReport({
 
   return (
     <div>
-      <div
-        className="bg-white border border-black/[0.08]"
-        style={{ borderRadius: 20, padding: 24, boxShadow: "0 18px 50px rgba(17,35,89,0.05)" }}
-      >
-        <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 11, letterSpacing: "0.08em", margin: "0 0 6px" }}>
+      <div className="bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 14, padding: 24 }}>
+        <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 11, letterSpacing: "0.08em", margin: "0 0 6px" }}>
           Personality Profile · Big Five (OCEAN)
         </p>
-        <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.6rem", margin: "0 0 4px" }}>
+        <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.6rem", margin: "0 0 4px" }}>
           {candidateName}
         </h1>
-        <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 13, margin: 0 }}>
+        <p className="font-[family-name:var(--font-poppins)] text-[#ed1a24]" style={{ fontSize: 13, margin: 0 }}>
           fit signal for {roleTitle}
         </p>
 
@@ -93,14 +91,14 @@ export default function PersonalityReport({
           {TRAITS.map((t) => (
             <div key={t}>
               <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
-                <span className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 13.5 }}>
+                <span className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13.5 }}>
                   {TRAIT_NAME[t]}
                 </span>
                 <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 12.5 }}>
                   {scores[t].pct}% · {BANDS[scores[t].band]}
                 </span>
               </div>
-              <BandStrip band={scores[t].band} />
+              <ScoreBar pct={scores[t].pct} />
             </div>
           ))}
         </div>
@@ -110,59 +108,53 @@ export default function PersonalityReport({
         const s = scores[t];
         const level = traitLevel(s.pct);
         return (
-          <div
-            key={t}
-            className="bg-white border border-black/[0.08]"
-            style={{ borderRadius: 20, padding: 24, marginTop: 16, boxShadow: "0 18px 50px rgba(17,35,89,0.05)" }}
-          >
+          <div key={t} className="bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 14, padding: 22, marginTop: 16 }}>
             <div className="flex items-start justify-between flex-wrap" style={{ gap: 12, marginBottom: 12 }}>
-              <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.2rem", margin: 0 }}>
+              <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.15rem", margin: 0 }}>
                 {TRAIT_NAME[t]}
               </h2>
               <span className="font-[family-name:var(--font-poppins)] font-bold text-[#ed1a24]" style={{ fontSize: "1.3rem" }}>
                 {s.pct}%
               </span>
             </div>
-            <BandStrip band={s.band} />
-            <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#ed1a24]" style={{ fontSize: 11, letterSpacing: "0.04em", margin: "16px 0 4px" }}>
+            <ScoreBar pct={s.pct} />
+            <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#ed1a24]" style={{ fontSize: 11, letterSpacing: "0.04em", margin: "18px 0 4px" }}>
               What it measures
             </p>
-            <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14, lineHeight: 1.65, margin: 0 }}>
+            <p className="font-[family-name:var(--font-poppins)] text-white/65" style={{ fontSize: 14, lineHeight: 1.65, margin: 0 }}>
               {TRAIT_MEANING[t]}
             </p>
-            <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#ed1a24]" style={{ fontSize: 11, letterSpacing: "0.04em", margin: "16px 0 4px" }}>
+            <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#ed1a24]" style={{ fontSize: 11, letterSpacing: "0.04em", margin: "18px 0 4px" }}>
               What {firstName}&apos;s score suggests at work
             </p>
-            <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14, lineHeight: 1.65, margin: 0 }}>
+            <p className="font-[family-name:var(--font-poppins)] text-white/65" style={{ fontSize: 14, lineHeight: 1.65, margin: 0 }}>
               {TRAIT_WORK_IMPLICATION[t][level](firstName)}
             </p>
           </div>
         );
       })}
 
-      <div
-        className="bg-white border border-black/[0.08]"
-        style={{ borderRadius: 20, padding: 24, marginTop: 16, boxShadow: "0 18px 50px rgba(17,35,89,0.05)" }}
-      >
-        <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.15rem", margin: "0 0 4px" }}>
-          Response quality &amp; validity checks
-        </h2>
-        <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 12.5, margin: "0 0 16px" }}>
+      <div className="bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 14, padding: 22, marginTop: 16 }}>
+        <div className="flex items-center" style={{ gap: 8, marginBottom: 4 }}>
+          <ShieldCheck size={16} strokeWidth={2} className="text-[#ed1a24]" />
+          <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.1rem", margin: 0 }}>
+            Response quality &amp; validity checks
+          </h2>
+        </div>
+        <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 12.5, margin: "0 0 18px" }}>
           Automated checks on how the questionnaire was answered — not part of the personality result itself.
         </p>
-        <div className="grid grid-cols-2" style={{ gap: 12 }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 12 }}>
           {validityCells.map((c) => (
-            <div key={c.label} className="bg-[#fdf8fb]" style={{ borderRadius: 12, padding: "12px 14px" }}>
-              <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, margin: "0 0 2px" }}>
+            <div key={c.label} className="bg-white/[0.04]" style={{ borderRadius: 12, padding: "14px 16px" }}>
+              <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 11.5, margin: "0 0 3px" }}>
                 {c.label}
               </p>
-              <p className="font-[family-name:var(--font-poppins)] font-bold text-black" style={{ fontSize: 15, margin: "0 0 2px" }}>
+              <p className="font-[family-name:var(--font-poppins)] font-bold text-white" style={{ fontSize: 15, margin: "0 0 3px" }}>
                 {c.value}
               </p>
-              <p className={c.ok ? "text-[#16803c]" : "text-[#c77700]"} style={{ fontSize: 12.5, fontWeight: 600, margin: 0 }}>
-                {c.verdict}
-              </p>
-              <p className="text-[#9c9c9c]" style={{ fontSize: 11, margin: "4px 0 0" }}>
+              <p style={{ color: c.ok ? "#3FCB8C" : "#BD7E12", fontSize: 12.5, fontWeight: 600, margin: 0 }}>{c.verdict}</p>
+              <p className="text-white/35" style={{ fontSize: 11, margin: "4px 0 0" }}>
                 {c.note}
               </p>
             </div>
@@ -170,10 +162,16 @@ export default function PersonalityReport({
         </div>
 
         <div
-          className={flags.length === 0 ? "bg-[#eefdf1]" : "bg-[#fdf4e3]"}
-          style={{ borderRadius: 12, padding: "12px 16px", marginTop: 16, fontSize: 13 }}
+          style={{
+            borderRadius: 12,
+            padding: "14px 16px",
+            marginTop: 18,
+            fontSize: 13,
+            background: flags.length === 0 ? "rgba(63,203,140,0.08)" : "rgba(189,126,18,0.08)",
+            border: `1px solid ${flags.length === 0 ? "rgba(63,203,140,0.25)" : "rgba(189,126,18,0.25)"}`,
+          }}
         >
-          <p className={flags.length === 0 ? "text-[#255e3f]" : "text-[#8a5a00]"} style={{ margin: 0, lineHeight: 1.6 }}>
+          <p style={{ color: flags.length === 0 ? "#3FCB8C" : "#BD7E12", margin: 0, lineHeight: 1.6 }}>
             {flags.length === 0
               ? "Validity checks passed — the response pattern looks honest and attentive, so the scores can be read at face value."
               : `Interpret with some caution — the response pattern shows signs of ${flags.join(", ")}. Treat the trait scores as indicative and confirm anything important in a structured interview.`}
@@ -184,7 +182,7 @@ export default function PersonalityReport({
       {onRetake && (
         <button
           onClick={onRetake}
-          className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+          className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24] hover:text-white transition-colors"
           style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, marginTop: 20 }}
         >
           Retake test
