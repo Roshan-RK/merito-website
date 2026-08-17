@@ -102,11 +102,19 @@ export type CandidateExperience = {
   summary: string;
 };
 
+export type CandidateProject = {
+  name: string;
+  description: string;
+  technologies: string[];
+  link: string;
+};
+
 export type CandidateResumeDetails = {
   skills: string[];
   education: CandidateEducation[];
   experience: CandidateExperience[];
   certifications: string[];
+  projects: CandidateProject[];
   phoneNumber: string | null;
   location: string | null;
   totalExperience: number | null;
@@ -123,6 +131,7 @@ type RawCandidateResumeResponse = {
     skills?: string[];
     education?: Array<{ Qualification: string; College: string; Location: string; Duration: string }>;
     experience?: Array<{ Position: string; Company: string; Years_of_experience: string; Summary: string }>;
+    projects?: Array<{ Name?: string; Description?: string; Technologies?: string[]; Link?: string }>;
     achievements?: { Certifications?: string[] };
     phoneNumber?: string;
     location?: string;
@@ -150,6 +159,12 @@ export async function getCandidateResumeDetails(appliedJobId: string): Promise<C
       summary: e.Summary,
     })),
     certifications: details.achievements?.Certifications ?? [],
+    projects: (details.projects ?? []).map((p) => ({
+      name: p.Name ?? "",
+      description: p.Description ?? "",
+      technologies: p.Technologies ?? [],
+      link: p.Link ?? "",
+    })),
     phoneNumber: details.phoneNumber ?? null,
     location: details.location ?? null,
     totalExperience: details.totalExperience ?? null,

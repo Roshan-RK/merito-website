@@ -77,6 +77,14 @@ describe("getCandidateResumeDetails", () => {
         skills: ["Employee Relations"],
         education: [],
         experience: [],
+        projects: [
+          {
+            Name: "Applicant Tracking Dashboard",
+            Description: "Built an internal dashboard for tracking applicants.",
+            Technologies: ["React", "Node.js"],
+            Link: "",
+          },
+        ],
         achievements: { Certifications: [] },
       },
     });
@@ -89,6 +97,14 @@ describe("getCandidateResumeDetails", () => {
       education: [],
       experience: [],
       certifications: [],
+      projects: [
+        {
+          name: "Applicant Tracking Dashboard",
+          description: "Built an internal dashboard for tracking applicants.",
+          technologies: ["React", "Node.js"],
+          link: "",
+        },
+      ],
       phoneNumber: "+919876543210",
       location: "India",
       totalExperience: 6,
@@ -107,6 +123,17 @@ describe("getCandidateResumeDetails", () => {
     expect(result.phoneNumber).toBeNull();
     expect(result.location).toBeNull();
     expect(result.totalExperience).toBeNull();
+  });
+
+  it("defaults projects to [] when the API omits it", async () => {
+    intervueBoxFetchMock.mockResolvedValue({
+      candidateDetails: { skills: [], education: [], experience: [] },
+    });
+    const { getCandidateResumeDetails } = await import("../reports");
+
+    const result = await getCandidateResumeDetails("AJ_123");
+
+    expect(result.projects).toEqual([]);
   });
 });
 

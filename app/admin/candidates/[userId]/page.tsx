@@ -139,13 +139,17 @@ export default async function AdminCandidateDetailPage({
             </p>
           )}
 
-          {lead.candidateDetails && (lead.candidateDetails.education.length > 0 || lead.candidateDetails.experience.length > 0) && (
-            <CandidateProfile
-              education={lead.candidateDetails.education}
-              experience={lead.candidateDetails.experience}
-              certifications={lead.candidateDetails.certifications}
-            />
-          )}
+          {lead.candidateDetails &&
+            (lead.candidateDetails.education.length > 0 ||
+              lead.candidateDetails.experience.length > 0 ||
+              lead.candidateDetails.projects.length > 0) && (
+              <CandidateProfile
+                education={lead.candidateDetails.education}
+                experience={lead.candidateDetails.experience}
+                certifications={lead.candidateDetails.certifications}
+                projects={lead.candidateDetails.projects}
+              />
+            )}
         </section>
       ))}
 

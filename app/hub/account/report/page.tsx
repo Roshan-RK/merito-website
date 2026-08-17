@@ -67,7 +67,13 @@ export default async function FullReportPage() {
   const weakest = sortedCategories[sortedCategories.length - 1];
   const weakestBand = weakest ? getMatchBandDark(weakest.score) : null;
 
-  const hasProfile = Boolean(candidateDetails && (candidateDetails.education.length > 0 || candidateDetails.experience.length > 0 || candidateDetails.certifications.length > 0));
+  const hasProfile = Boolean(
+    candidateDetails &&
+      (candidateDetails.education.length > 0 ||
+        candidateDetails.experience.length > 0 ||
+        candidateDetails.certifications.length > 0 ||
+        candidateDetails.projects.length > 0)
+  );
 
   const jumpLinks = [
     { id: "summary", label: "Summary" },
@@ -252,6 +258,7 @@ export default async function FullReportPage() {
               education={candidateDetails.education}
               experience={candidateDetails.experience}
               certifications={candidateDetails.certifications}
+              projects={candidateDetails.projects}
             />
           )}
         </div>

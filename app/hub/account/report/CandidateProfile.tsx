@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
-import { GraduationCap, Briefcase, Award, ChevronDown } from "lucide-react";
-import type { CandidateEducation, CandidateExperience } from "@/lib/intervuebox/reports";
+import { GraduationCap, Briefcase, Award, ChevronDown, FolderGit2, ExternalLink } from "lucide-react";
+import type { CandidateEducation, CandidateExperience, CandidateProject } from "@/lib/intervuebox/reports";
 
 // Native <details>/<summary> gives us expand/collapse for free — no client
 // component, no state, matches the mockup's accordion without adding any
@@ -39,12 +39,14 @@ export default function CandidateProfile({
   education,
   experience,
   certifications,
+  projects = [],
 }: {
   education: CandidateEducation[];
   experience: CandidateExperience[];
   certifications: string[];
+  projects?: CandidateProject[];
 }) {
-  if (education.length === 0 && experience.length === 0 && certifications.length === 0) return null;
+  if (education.length === 0 && experience.length === 0 && certifications.length === 0 && projects.length === 0) return null;
 
   return (
     <div>
@@ -87,6 +89,46 @@ export default function CandidateProfile({
                 <p className="font-[family-name:var(--font-poppins)] text-white" style={{ fontSize: 13, margin: 0 }}>
                   {c}
                 </p>
+              </div>
+            ))}
+          </AccordionSection>
+        )}
+        {projects.length > 0 && (
+          <AccordionSection icon={FolderGit2} title="Projects" count={projects.length}>
+            {projects.map((p, i) => (
+              <div key={i} className="bg-white/[0.04]" style={{ borderRadius: 10, padding: 12 }}>
+                <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13, margin: 0 }}>
+                  {p.name}
+                </p>
+                {p.description && (
+                  <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 12, margin: "3px 0 0", lineHeight: 1.5 }}>
+                    {p.description}
+                  </p>
+                )}
+                {p.technologies.length > 0 && (
+                  <div className="flex flex-wrap" style={{ gap: 6, marginTop: 8 }}>
+                    {p.technologies.map((tech) => (
+                      <span
+                        key={tech}
+                        className="bg-white/[0.06] border border-white/[0.08] font-[family-name:var(--font-poppins)] text-white/60"
+                        style={{ fontSize: 11, borderRadius: 50, padding: "3px 10px" }}
+                      >
+                        {tech}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {p.link && (
+                  <a
+                    href={p.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center text-[#E8798F] hover:text-white transition-colors font-[family-name:var(--font-poppins)]"
+                    style={{ gap: 4, fontSize: 12, marginTop: 8 }}
+                  >
+                    <ExternalLink size={12} strokeWidth={2} /> View project
+                  </a>
+                )}
               </div>
             ))}
           </AccordionSection>
