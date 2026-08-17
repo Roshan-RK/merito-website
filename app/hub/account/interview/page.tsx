@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Download, HelpCircle, Sparkles, ShieldCheck, ShieldAlert, Clock } from "lucide-react";
+import { ArrowLeft, Download, ListChecks, ChartColumn, ShieldCheck, ShieldAlert, Clock } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import { getCandidateResumeDetails } from "@/lib/intervuebox/reports";
@@ -167,8 +167,8 @@ export default async function InterviewReportPage({
             <InterviewScoreGauge score={report.overallScore} />
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4" style={{ flex: 1, minWidth: 0, gap: 10, width: "100%" }}>
-            <StatTile icon={HelpCircle} value={String(report.answers.length)} label="Questions" />
-            <StatTile icon={Sparkles} value={String(skillsAssessedCount)} label="Skills assessed" />
+            <StatTile icon={ListChecks} value={String(report.answers.length)} label="Questions" />
+            <StatTile icon={ChartColumn} value={String(skillsAssessedCount)} label="Skills assessed" />
             <StatTile
               icon={report.flagForSuspiciousActivity ? ShieldAlert : ShieldCheck}
               value={report.flagForSuspiciousActivity ? "Flagged" : "All clear"}

@@ -1,15 +1,18 @@
 import type { ComponentType } from "react";
-import { Sparkles, GraduationCap, Briefcase, MapPin, Building2, Target } from "lucide-react";
+import { Target, GraduationCap, Briefcase, MapPin, Building2, Crosshair } from "lucide-react";
 import type { ResumeMatchCategory, ResumeMatchCategoryKey } from "@/lib/intervuebox/reports";
 import { getMatchBandDark } from "./ResumeMatchGauge";
 
+// Icon-per-dimension mapping matches mockups/merito-dashboard-v34.html's tA
+// lookup exactly (Skills Match -> target, Role Relevance -> crosshair) --
+// verified live in the rendered mockup, not assumed from the label text.
 const CATEGORY_ICONS: Record<ResumeMatchCategoryKey, ComponentType<{ size?: number; strokeWidth?: number; className?: string }>> = {
-  skillsMatch: Sparkles,
+  skillsMatch: Target,
   educationMatch: GraduationCap,
   experienceMatch: Briefcase,
   locationMatch: MapPin,
   domainMatch: Building2,
-  roleRelevance: Target,
+  roleRelevance: Crosshair,
 };
 
 export default function ResumeMatchCategoryCard({ category }: { category: ResumeMatchCategory }) {
