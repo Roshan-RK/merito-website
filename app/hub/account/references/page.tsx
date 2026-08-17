@@ -4,6 +4,7 @@ import { ArrowLeft, Download } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { getReferenceCheckStatus, MIN_REFERENCES, REFERENCE_CATEGORIES } from "@/lib/referenceChecks";
 import ReferencesClient from "./ReferencesClient";
+import ExportPreviewButton from "../ExportPreviewButton";
 
 export default async function ReferencesPage() {
   const supabase = await createSupabaseServerClient();
@@ -29,14 +30,21 @@ export default async function ReferencesPage() {
             <ArrowLeft size={14} strokeWidth={2} /> Back to dashboard
           </Link>
           {status?.status === "completed" && (
-            <a
-              href="/api/hub/references/export"
-              download
-              className="flex items-center bg-white/[0.06] hover:bg-white/[0.1] transition-colors font-[family-name:var(--font-poppins)] font-semibold text-white"
-              style={{ gap: 6, fontSize: 12.5, borderRadius: 50, padding: "7px 14px", border: "1px solid rgba(255,255,255,0.08)" }}
-            >
-              <Download size={13} strokeWidth={2} /> Download PDF
-            </a>
+            <div className="flex items-center flex-wrap" style={{ gap: 8 }}>
+              <ExportPreviewButton
+                exportUrl="/api/hub/references/export"
+                downloadFilename="reference-check-report.pdf"
+                title="Reference check — export preview"
+              />
+              <a
+                href="/api/hub/references/export"
+                download
+                className="flex items-center bg-white/[0.06] hover:bg-white/[0.1] transition-colors font-[family-name:var(--font-poppins)] font-semibold text-white"
+                style={{ gap: 6, fontSize: 12.5, borderRadius: 50, padding: "7px 14px", border: "1px solid rgba(255,255,255,0.08)" }}
+              >
+                <Download size={13} strokeWidth={2} /> Download PDF
+              </a>
+            </div>
           )}
         </div>
         <div>

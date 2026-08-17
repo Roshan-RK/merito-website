@@ -8,6 +8,7 @@ import ResumeMatchCategoryCard from "./ResumeMatchCategoryCard";
 import ResumeMatchGauge, { getMatchBandDark } from "./ResumeMatchGauge";
 import CandidateStatsCard from "./CandidateStatsCard";
 import CandidateProfile from "./CandidateProfile";
+import ExportPreviewButton from "../ExportPreviewButton";
 
 const EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40";
 
@@ -93,14 +94,21 @@ export default async function FullReportPage() {
           >
             <ArrowLeft size={14} strokeWidth={2} /> Back to dashboard
           </Link>
-          <a
-            href="/api/hub/report/export"
-            download
-            className="flex items-center bg-white/[0.06] hover:bg-white/[0.1] transition-colors font-[family-name:var(--font-poppins)] font-semibold text-white"
-            style={{ gap: 6, fontSize: 12.5, borderRadius: 50, padding: "7px 14px", border: "1px solid rgba(255,255,255,0.08)" }}
-          >
-            <Download size={13} strokeWidth={2} /> Download PDF
-          </a>
+          <div className="flex items-center flex-wrap" style={{ gap: 8 }}>
+            <ExportPreviewButton
+              exportUrl="/api/hub/report/export"
+              downloadFilename="fitment-report.pdf"
+              title="Fitment report — export preview"
+            />
+            <a
+              href="/api/hub/report/export"
+              download
+              className="flex items-center bg-white/[0.06] hover:bg-white/[0.1] transition-colors font-[family-name:var(--font-poppins)] font-semibold text-white"
+              style={{ gap: 6, fontSize: 12.5, borderRadius: 50, padding: "7px 14px", border: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              <Download size={13} strokeWidth={2} /> Download PDF
+            </a>
+          </div>
         </div>
 
         <div>
