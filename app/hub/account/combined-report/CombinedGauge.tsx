@@ -1,4 +1,5 @@
 const SIZES = {
+  64: { radius: 26, stroke: 6, numFont: 14 },
   96: { radius: 42, stroke: 8, numFont: 21 },
   150: { radius: 70, stroke: 11, numFont: 34 },
 } as const;
@@ -16,7 +17,7 @@ export default function CombinedGauge({
   max: number;
   displayValue: string;
   caption?: string;
-  diameter: 96 | 150;
+  diameter: 64 | 96 | 150;
   band: { textColor: string; trackColor: string };
   numberColor?: string;
 }) {

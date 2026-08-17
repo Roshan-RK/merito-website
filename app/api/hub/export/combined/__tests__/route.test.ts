@@ -142,7 +142,7 @@ describe("GET /api/hub/export/combined", () => {
     expect(response.headers.get("content-type")).toBe("application/pdf");
     expect(renderPageToPdfMock).toHaveBeenCalledTimes(1);
     expect(renderPageToPdfMock).toHaveBeenCalledWith(
-      "http://localhost/hub/account/combined-report?include=fitment%2Cpersonality%2Cinterview%2Creferences&role=Senior+Product+Manager",
+      "http://localhost/hub/account/combined-report/print?include=fitment%2Cpersonality%2Cinterview%2Creferences&role=Senior+Product+Manager",
       [],
       { singlePage: true }
     );
