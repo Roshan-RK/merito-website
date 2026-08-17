@@ -258,6 +258,7 @@ export default async function FullReportPage() {
               phoneNumber={candidateDetails?.phoneNumber ?? null}
               location={candidateDetails?.location ?? null}
               totalExperience={candidateDetails?.totalExperience ?? null}
+              experience={candidateDetails?.experience ?? []}
             />
           </div>
 

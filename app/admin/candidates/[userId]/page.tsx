@@ -74,6 +74,7 @@ export default async function AdminCandidateDetailPage({
               phoneNumber={lead.candidateDetails.phoneNumber}
               location={lead.candidateDetails.location}
               totalExperience={lead.candidateDetails.totalExperience}
+              experience={lead.candidateDetails.experience}
             />
           )}
 
