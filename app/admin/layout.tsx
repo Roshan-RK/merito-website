@@ -20,6 +20,9 @@ export default async function AdminLayout({
         <Link href="/admin/candidates" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
           Candidates
         </Link>
+        <Link href="/admin/recruiters" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
+          Recruiters
+        </Link>
         <Link href="/admin/payments" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
           Payments
         </Link>
@@ -34,6 +37,9 @@ export default async function AdminLayout({
         </Link>
         <Link href="/admin/learned-skills" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
           Learned Skills
+        </Link>
+        <Link href="/admin/email-templates" className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
+          Email Templates
         </Link>
       </nav>
       {children}
