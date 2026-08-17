@@ -29,7 +29,6 @@ export default function DashboardClient({
   userEmail,
   userName,
   score,
-  prevScore,
   verdict,
   initialReportUnlocked,
   initialReport,
@@ -67,7 +66,7 @@ export default function DashboardClient({
   const [modal, setModal] = useState<"none" | "report" | "personality" | "references" | "interview" | "generate" | "counselling" | "tour">("none");
   const [interviewModalAlreadyInvited, setInterviewModalAlreadyInvited] = useState(false);
   const [reportUnlocked, setReportUnlocked] = useState(initialReportUnlocked);
-  const [report, setReport] = useState<ResumeMatchReportReady | null>(initialReport);
+  const [, setReport] = useState<ResumeMatchReportReady | null>(initialReport);
   const [interviewStatus, setInterviewStatus] = useState<InterviewStatus>(initialInterviewStatus);
   const [counsellingRequested, setCounsellingRequested] = useState(initialCounsellingRequested);
   const [personalityUnlockedState, setPersonalityUnlockedState] = useState(personalityUnlocked);
@@ -118,15 +117,7 @@ export default function DashboardClient({
 
         <QuickTipsCard onStartTour={() => setModal("tour")} />
 
-        <ScoreCard
-          roleTitle={roleTitle}
-          score={score}
-          prevScore={prevScore}
-          verdict={verdict}
-          reportUnlocked={reportUnlocked}
-          report={report}
-          onOpenReportPaywall={() => setModal("report")}
-        />
+        <ScoreCard roleTitle={roleTitle} score={score} verdict={verdict} />
 
         <ProgressRail
           reportUnlocked={reportUnlocked}
