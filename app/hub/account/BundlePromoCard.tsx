@@ -1,5 +1,6 @@
 "use client";
 
+import { Package } from "lucide-react";
 import { PRODUCT_PRICING, formatPrice, type CandidateLevel } from "@/lib/razorpay/pricing";
 
 export default function BundlePromoCard({ level, onOpenPaywall }: { level: CandidateLevel; onOpenPaywall: () => void }) {
@@ -8,25 +9,29 @@ export default function BundlePromoCard({ level, onOpenPaywall }: { level: Candi
     PRODUCT_PRICING.report[level] + PRODUCT_PRICING.personality[level] + PRODUCT_PRICING.references[level] - bundlePrice;
 
   return (
-    <div style={{ background: "#12121f", borderRadius: 14, padding: 18, margin: "0 0 18px" }}>
-      <span
-        className="font-[family-name:var(--font-poppins)] font-bold uppercase"
-        style={{ fontSize: 10, letterSpacing: "0.06em", color: "#ed1a24", background: "rgba(237,26,36,0.15)", borderRadius: 50, padding: "3px 10px" }}
-      >
-        Save {formatPrice(savings)} · Best value
-      </span>
-      <p className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.1rem", margin: "10px 0 4px" }}>
-        Get the Full Profile Bundle
-      </p>
-      <p style={{ color: "#c7c7cf", fontSize: 12.5, margin: "0 0 14px" }}>
-        Report + Personality + References, bundled cheaper than buying separately.
-      </p>
+    <div
+      className="flex items-center flex-wrap border border-white/[0.08]"
+      style={{ background: "#141416", borderRadius: 14, padding: 18, gap: 16 }}
+    >
+      <div className="flex items-center justify-center bg-[#ed1a24]/12 text-[#ed1a24] shrink-0" style={{ width: 40, height: 40, borderRadius: 10 }}>
+        <Package size={19} strokeWidth={2} />
+      </div>
+
+      <div style={{ flex: 1, minWidth: 220 }}>
+        <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 14.5, margin: "0 0 3px" }}>
+          Bundle: Report + Personality + References
+        </p>
+        <p className="text-white/50" style={{ fontSize: 12.5, margin: 0 }}>
+          Save {formatPrice(savings)} vs buying separately — {formatPrice(bundlePrice)}
+        </p>
+      </div>
+
       <button
         onClick={onOpenPaywall}
-        className="font-[family-name:var(--font-poppins)] font-semibold"
-        style={{ background: "#fff", color: "#000", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 13.5, cursor: "pointer" }}
+        className="font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors shrink-0"
+        style={{ border: "none", borderRadius: 8, padding: "11px 18px", fontSize: 13.5, cursor: "pointer" }}
       >
-        Book my bundle — {formatPrice(bundlePrice)}
+        Get bundle — {formatPrice(bundlePrice)}
       </button>
     </div>
   );

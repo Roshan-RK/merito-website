@@ -25,17 +25,17 @@ export default async function AccountPage() {
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("id, role_title, score, verdict, resume_match_status, resume_match_raw, ib_applied_job_id, created_at, candidate_level")
+    .select("id, role_title, name, score, verdict, resume_match_status, resume_match_raw, ib_applied_job_id, created_at, candidate_level")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   if (!leads || leads.length === 0) {
     return (
       <main style={{ padding: "48px 20px", maxWidth: 640, margin: "0 auto" }}>
-        <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.6rem" }}>
+        <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.6rem" }}>
           No fitment scores yet
         </h1>
-        <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 14 }}>
+        <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 14 }}>
           Head back to the HUB to check your fit for a role.
         </p>
         <Link
@@ -204,32 +204,31 @@ export default async function AccountPage() {
     .maybeSingle();
 
   const recruiterViewCount = await getRecruiterViewCount(user.id);
+  const userName = current.name || user.email?.split("@")[0] || "there";
 
   return (
-    <>
-      <DashboardClient
-        leadId={current.id}
-        roleTitle={current.role_title}
-        level={level}
-        bundleEligible={bundleEligible}
-        personalityUnlocked={personalityUnlocked}
-        referencesUnlocked={referencesUnlocked}
-        userEmail={user.email ?? ""}
-        score={score}
-        prevScore={prevForSameRole ? prevForSameRole.score : null}
-        verdict={verdict}
-        initialReportUnlocked={reportUnlocked}
-        initialReport={report}
-        initialInterviewStatus={interviewStatus}
-        interviewInvitedAt={interviewRow?.invited_at ?? null}
-        referenceCheckStatus={referenceCheckStatus}
-        personalityStatus={personalityStatus}
-        counsellingPriceLabel={counsellingPriceLabel}
-        initialCounsellingRequested={Boolean(counsellingRequest)}
-      />
-      <div className="mx-auto" style={{ maxWidth: 1440, padding: "0 24px 24px" }}>
-        <RecruiterActivityPanel viewCount={recruiterViewCount} />
-      </div>
-    </>
+    <DashboardClient
+      leadId={current.id}
+      roleTitle={current.role_title}
+      level={level}
+      bundleEligible={bundleEligible}
+      personalityUnlocked={personalityUnlocked}
+      referencesUnlocked={referencesUnlocked}
+      userEmail={user.email ?? ""}
+      userName={userName}
+      score={score}
+      prevScore={prevForSameRole ? prevForSameRole.score : null}
+      verdict={verdict}
+      initialReportUnlocked={reportUnlocked}
+      initialReport={report}
+      initialInterviewStatus={interviewStatus}
+      interviewInvitedAt={interviewRow?.invited_at ?? null}
+      referenceCheckStatus={referenceCheckStatus}
+      personalityStatus={personalityStatus}
+      counsellingPriceLabel={counsellingPriceLabel}
+      initialCounsellingRequested={Boolean(counsellingRequest)}
+      applications={leads.map((l) => ({ id: l.id, roleTitle: l.role_title, score: l.score, createdAt: l.created_at }))}
+      recruiterActivity={<RecruiterActivityPanel viewCount={recruiterViewCount} />}
+    />
   );
 }

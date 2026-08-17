@@ -23,52 +23,74 @@ export default function ScoreCard({
   const delta = prevScore !== null ? Math.round((score - prevScore) * 10) / 10 : null;
   const topStrong = report?.strongPoints[0];
   const topMissing = report?.weakPoints[0];
+  const percent = Math.max(0, Math.min(100, (score / 10) * 100));
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  const dashoffset = circumference - (percent / 100) * circumference;
 
   return (
-    <div
-      className="bg-white border border-black/[0.08]"
-      style={{ borderRadius: 20, padding: 24, boxShadow: "0 18px 50px rgba(17,35,89,0.05)" }}
-    >
-      <div className="flex items-center" style={{ gap: 8, marginBottom: 10 }}>
-        <span
-          className="rounded-full bg-[#ed1a24] inline-block"
-          style={{ width: 8, height: 8 }}
-        />
-        <span className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#4b4b4d]" style={{ fontSize: 11, letterSpacing: "0.06em" }}>
-          Your Job Fitment Score
-        </span>
-        <span
-          className="bg-[#eefdf1] text-[#16803c] font-[family-name:var(--font-poppins)] font-bold"
-          style={{ fontSize: 10, borderRadius: 50, padding: "3px 9px", marginLeft: "auto" }}
-        >
-          ✓ Step 1 complete
-        </span>
+    <div className="bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 20, padding: 24 }}>
+      <div className="flex items-start flex-wrap" style={{ gap: 24 }}>
+        <div className="relative shrink-0" style={{ width: 132, height: 132 }}>
+          <svg width="132" height="132" viewBox="0 0 132 132">
+            <circle cx="66" cy="66" r={radius} fill="none" stroke="rgba(237,26,36,0.15)" strokeWidth="10" />
+            <circle
+              cx="66"
+              cy="66"
+              r={radius}
+              fill="none"
+              stroke="#ed1a24"
+              strokeWidth="10"
+              strokeDasharray={circumference}
+              strokeDashoffset={dashoffset}
+              strokeLinecap="round"
+              transform="rotate(-90 66 66)"
+              style={{ transition: "stroke-dashoffset 600ms cubic-bezier(0.23,1,0.32,1)" }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="font-[family-name:var(--font-gabarito)] font-bold text-[#ed1a24]" style={{ fontSize: "1.9rem", lineHeight: 1 }}>
+              {score.toFixed(1)}
+            </span>
+            <span className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 11 }}>
+              / 10
+            </span>
+          </div>
+        </div>
+
+        <div style={{ minWidth: 240, flex: 1 }}>
+          <div className="flex items-center flex-wrap" style={{ gap: 10, marginBottom: 8 }}>
+            <span className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/45" style={{ fontSize: 11, letterSpacing: "0.06em" }}>
+              Job Fitment Score
+            </span>
+            <span
+              className="bg-[#16803c]/20 text-[#4ade80] font-[family-name:var(--font-poppins)] font-bold"
+              style={{ fontSize: 10, borderRadius: 50, padding: "3px 9px" }}
+            >
+              ✓ Step 1 complete
+            </span>
+            {delta !== null && delta !== 0 && (
+              <span
+                className={delta > 0 ? "bg-[#16803c]/20 text-[#4ade80]" : "bg-[#ed1a24]/15 text-[#ff6b6f]"}
+                style={{ fontSize: 11, fontWeight: 700, borderRadius: 50, padding: "3px 9px" }}
+              >
+                {delta > 0 ? "↑" : "↓"} was {prevScore?.toFixed(1)}
+              </span>
+            )}
+          </div>
+
+          <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 15, margin: "0 0 6px" }}>
+            {roleTitle}
+          </p>
+          <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+            {verdict}
+          </p>
+        </div>
       </div>
 
-      <div className="flex items-baseline flex-wrap" style={{ gap: 10 }}>
-        <span className="font-[family-name:var(--font-gabarito)] font-bold text-[#ed1a24]" style={{ fontSize: "3.2rem", lineHeight: 1, whiteSpace: "nowrap" }}>
-          {score.toFixed(1)}<span className="font-semibold text-[#9c9c9c]" style={{ fontSize: "1.2rem" }}> / 10</span>
-        </span>
-        {delta !== null && delta !== 0 && (
-          <span
-            className={delta > 0 ? "bg-[#eefdf1] text-[#16803c]" : "bg-[#fdeced] text-[#ed1a24]"}
-            style={{ fontSize: 12, fontWeight: 700, borderRadius: 50, padding: "4px 10px" }}
-          >
-            {delta > 0 ? "↑" : "↓"} was {prevScore?.toFixed(1)}
-          </span>
-        )}
-        <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#4b4b4d]" style={{ fontSize: 13, marginLeft: "auto" }}>
-          fit for {roleTitle}
-        </span>
+      <div className="bg-white/[0.06] overflow-hidden" style={{ marginTop: 18, height: 10, borderRadius: 6 }}>
+        <div className="bg-[#ed1a24] h-full" style={{ borderRadius: 6, width: `${percent}%` }} />
       </div>
-
-      <div className="bg-[#f0e6ea] overflow-hidden" style={{ marginTop: 12, height: 12, borderRadius: 6 }}>
-        <div className="bg-[#ed1a24] h-full" style={{ borderRadius: 6, width: `${score * 10}%` }} />
-      </div>
-
-      <p className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 13, margin: "12px 0 0" }}>
-        {verdict}
-      </p>
 
       {!reportUnlocked ? (
         <>
@@ -79,7 +101,7 @@ export default function ScoreCard({
           >
             🔒 See my detailed report
           </button>
-          <p className="text-[#9c9c9c]" style={{ fontSize: 12, margin: "10px 0 0", lineHeight: 1.6 }}>
+          <p className="text-white/40" style={{ fontSize: 12, margin: "10px 0 0", lineHeight: 1.6 }}>
             Why {score.toFixed(1)}? Your strengths, your gaps, and how to fix your CV — ₹299
           </p>
         </>
@@ -87,33 +109,21 @@ export default function ScoreCard({
         <div style={{ marginTop: 18 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {topStrong && (
-              <div
-                className="bg-[#eefdf1]"
-                style={{ borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}
-              >
-                <span
-                  className="bg-[#16803c] text-white font-[family-name:var(--font-poppins)] font-bold"
-                  style={{ borderRadius: 50, padding: "2px 8px", fontSize: 10 }}
-                >
+              <div className="bg-[#16803c]/10" style={{ borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="bg-[#16803c] text-white font-[family-name:var(--font-poppins)] font-bold" style={{ borderRadius: 50, padding: "2px 8px", fontSize: 10 }}>
                   Strong
                 </span>
-                <span className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5 }}>
+                <span className="font-[family-name:var(--font-poppins)] text-white/80" style={{ fontSize: 12.5 }}>
                   {topStrong}
                 </span>
               </div>
             )}
             {topMissing && (
-              <div
-                className="bg-[#fdeced]"
-                style={{ borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}
-              >
-                <span
-                  className="bg-[#ed1a24] text-white font-[family-name:var(--font-poppins)] font-bold"
-                  style={{ borderRadius: 50, padding: "2px 8px", fontSize: 10 }}
-                >
+              <div className="bg-[#ed1a24]/10" style={{ borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="bg-[#ed1a24] text-white font-[family-name:var(--font-poppins)] font-bold" style={{ borderRadius: 50, padding: "2px 8px", fontSize: 10 }}>
                   Missing
                 </span>
-                <span className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 12.5 }}>
+                <span className="font-[family-name:var(--font-poppins)] text-white/80" style={{ fontSize: 12.5 }}>
                   {topMissing}
                 </span>
               </div>
@@ -121,14 +131,14 @@ export default function ScoreCard({
           </div>
           <Link
             href="/hub/account/report"
-            className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+            className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24] hover:text-[#ff6b6f] transition-colors"
             style={{ fontSize: 13, display: "inline-block", marginTop: 12 }}
           >
             Open full report →
           </Link>
         </div>
       ) : (
-        <p className="text-[#9c9c9c]" style={{ fontSize: 12, margin: "18px 0 0" }}>
+        <p className="text-white/40" style={{ fontSize: 12, margin: "18px 0 0" }}>
           Unlocked — your report is generating. Refresh in a moment.
         </p>
       )}

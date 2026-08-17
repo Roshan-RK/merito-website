@@ -27,7 +27,7 @@ export default async function AccountLayout({
   const userName = lead?.name || user.email?.split("@")[0] || "there";
 
   return (
-    <AppShell roleTitle={lead?.role_title ?? ""} userName={userName}>
+    <AppShell roleTitle={lead?.role_title ?? ""} userName={userName} userEmail={user.email ?? ""}>
       {children}
     </AppShell>
   );
