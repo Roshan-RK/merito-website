@@ -3,17 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutGrid,
+  LayoutDashboard,
   FileText,
   Mic,
-  BarChart3,
+  FileStack,
   Brain,
   Users,
   Eye,
   Briefcase,
-  LifeBuoy,
-  IndianRupee,
-  ReceiptText,
+  UserCheck,
+  Tag,
+  Receipt,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -28,10 +28,10 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: "This application",
     items: [
-      { label: "Overview", href: "/hub/account", icon: LayoutGrid },
+      { label: "Overview", href: "/hub/account", icon: LayoutDashboard },
       { label: "Fitment report", href: "/hub/account/report", icon: FileText },
       { label: "Mock interview", href: "/hub/account/interview", icon: Mic },
-      { label: "Consolidated report", href: "/hub/account/combined-report", icon: BarChart3, tourId: "nav-consolidated" },
+      { label: "Consolidated report", href: "/hub/account/combined-report", icon: FileStack, tourId: "nav-consolidated" },
     ],
   },
   {
@@ -44,11 +44,11 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: "Account",
     items: [
-      { label: "Recruiter preview", href: "/hub/account/recruiter-preview", icon: Eye },
-      { label: "Pricing", href: "/hub/account/pricing", icon: IndianRupee },
-      { label: "Order history", href: "/hub/account/orders", icon: ReceiptText },
       { label: "Applications & history", href: "/hub/account#applications", icon: Briefcase },
-      { label: "Expert guidance", href: "/hub/account#guidance", icon: LifeBuoy },
+      { label: "Pricing", href: "/hub/account/pricing", icon: Tag },
+      { label: "Recruiter preview", href: "/hub/account/recruiter-preview", icon: Eye },
+      { label: "Order history", href: "/hub/account/orders", icon: Receipt },
+      { label: "Expert guidance", href: "/hub/account#guidance", icon: UserCheck },
     ],
   },
 ];

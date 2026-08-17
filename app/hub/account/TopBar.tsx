@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, Bell, HelpCircle } from "lucide-react";
+import { Search, Bell, HelpCircle, Briefcase, Receipt } from "lucide-react";
 import SignOutButton from "./SignOutButton";
 import { formatRelativeTime } from "@/lib/formatRelativeTime";
 import type { HubNotification } from "@/lib/hubNotifications";
@@ -315,11 +315,21 @@ export default function TopBar({
                 href="/hub/account#applications"
                 onClick={close}
                 className="flex items-center text-white/75 hover:text-white hover:bg-white/[0.06] transition-colors font-[family-name:var(--font-poppins)] font-semibold"
-                style={{ fontSize: 12.5, padding: "9px 10px", borderRadius: 8 }}
+                style={{ gap: 10, fontSize: 12.5, padding: "9px 10px", borderRadius: 8 }}
               >
+                <Briefcase size={14} strokeWidth={2} />
                 Applications &amp; history
               </Link>
-              <div style={{ padding: "4px 10px 8px" }}>
+              <Link
+                href="/hub/account/orders"
+                onClick={close}
+                className="flex items-center text-white/75 hover:text-white hover:bg-white/[0.06] transition-colors font-[family-name:var(--font-poppins)] font-semibold"
+                style={{ gap: 10, fontSize: 12.5, padding: "9px 10px", borderRadius: 8 }}
+              >
+                <Receipt size={14} strokeWidth={2} />
+                Order history
+              </Link>
+              <div style={{ padding: "4px 10px 8px", marginTop: 2, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
                 <SignOutButton />
               </div>
             </div>
