@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Search, Bell, HelpCircle } from "lucide-react";
 import SignOutButton from "./SignOutButton";
+import { formatRelativeTime } from "@/lib/formatRelativeTime";
+import type { HubNotification } from "@/lib/hubNotifications";
 
 // Closes any open dropdown when a click lands outside every registered
 // trigger/panel pair, or when Escape is pressed -- shared by the three
@@ -50,6 +52,59 @@ export default function TopBar({
   useDismiss(openMenu === "notifications", close, [notifTriggerRef, notifPanelRef]);
   useDismiss(openMenu === "help", close, [helpTriggerRef, helpPanelRef]);
   useDismiss(openMenu === "avatar", close, [avatarTriggerRef, avatarPanelRef]);
+
+  const [notifications, setNotifications] = useState<HubNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
+
+  // Fetched once on mount (no SWR/react-query in this codebase -- plain
+  // fetch-on-mount matches how the rest of the client-side hub components
+  // load data) so the unread badge is correct before the dropdown is ever
+  // opened.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch("/api/hub/notifications");
+        if (!response.ok) return;
+        const data = await response.json();
+        if (cancelled) return;
+        setNotifications(data.notifications ?? []);
+        setUnreadCount(data.unreadCount ?? 0);
+      } catch {
+        // Best-effort -- bell just stays empty on failure.
+      } finally {
+        if (!cancelled) setNotificationsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleMarkRead(id: string) {
+    const target = notifications.find((n) => n.id === id);
+    if (!target || target.readAt) return;
+    const now = new Date().toISOString();
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, readAt: now } : n)));
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+    try {
+      await fetch(`/api/hub/notifications/${id}/read`, { method: "POST" });
+    } catch {
+      // Best-effort -- local state already reflects "read".
+    }
+  }
+
+  async function handleMarkAllRead() {
+    const now = new Date().toISOString();
+    setNotifications((prev) => prev.map((n) => ({ ...n, readAt: n.readAt ?? now })));
+    setUnreadCount(0);
+    try {
+      await fetch("/api/hub/notifications/mark-all-read", { method: "POST" });
+    } catch {
+      // Best-effort -- local state already reflects "all read".
+    }
+  }
 
   return (
     <header
@@ -109,6 +164,14 @@ export default function TopBar({
             style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer" }}
           >
             <Bell size={16} strokeWidth={2} />
+            {unreadCount > 0 && (
+              <span
+                className="absolute bg-[#ed1a24] text-white font-[family-name:var(--font-poppins)] font-bold flex items-center justify-center"
+                style={{ top: -2, right: -2, minWidth: 16, height: 16, borderRadius: 50, fontSize: 9.5, padding: "0 3px", border: "1.5px solid #0a0a0a" }}
+              >
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </button>
           {openMenu === "notifications" && (
             <div
@@ -116,15 +179,58 @@ export default function TopBar({
               role="dialog"
               aria-label="Notifications"
               className="absolute right-0 bg-[#141416] border border-white/[0.1]"
-              style={{ top: 46, width: 280, borderRadius: 14, padding: 8, boxShadow: "0 24px 48px rgba(0,0,0,0.5)" }}
+              style={{ top: 46, width: 300, borderRadius: 14, padding: 8, boxShadow: "0 24px 48px rgba(0,0,0,0.5)" }}
             >
-              <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 10.5, letterSpacing: "0.08em", padding: "8px 10px 6px" }}>
-                Activity
-              </p>
-              {/* No notification event system exists yet -- see report gap notes. */}
-              <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 12.5, padding: "6px 10px 12px" }}>
-                You&apos;re all caught up — check the Overview page for your latest activity.
-              </p>
+              <div className="flex items-center justify-between" style={{ padding: "8px 10px 6px" }}>
+                <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: 0 }}>
+                  Activity
+                </p>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAllRead}
+                    className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+                    style={{ fontSize: 10.5, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                  >
+                    Mark all read
+                  </button>
+                )}
+              </div>
+              {notificationsLoading ? (
+                <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 12.5, padding: "6px 10px 12px" }}>
+                  Loading…
+                </p>
+              ) : notifications.length === 0 ? (
+                <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 12.5, padding: "6px 10px 12px" }}>
+                  You&apos;re all caught up — check the Overview page for your latest activity.
+                </p>
+              ) : (
+                <div style={{ maxHeight: 320, overflowY: "auto" }}>
+                  {notifications.map((n) => (
+                    <button
+                      key={n.id}
+                      onClick={() => handleMarkRead(n.id)}
+                      className="text-left"
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        background: n.readAt ? "transparent" : "rgba(237,26,36,0.1)",
+                        border: "none",
+                        cursor: n.readAt ? "default" : "pointer",
+                        padding: "8px 10px",
+                        borderRadius: 8,
+                        marginBottom: 2,
+                      }}
+                    >
+                      <p className="font-[family-name:var(--font-poppins)] text-white" style={{ fontSize: 12.5, margin: 0, lineHeight: 1.5 }}>
+                        {n.message}
+                      </p>
+                      <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 11, margin: "3px 0 0" }}>
+                        {formatRelativeTime(n.createdAt)}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -7,12 +7,14 @@ const fitmentLeadsSelectMock = vi.fn();
 const fitmentLeadsUpdateMock = vi.fn();
 const rpcMock = vi.fn();
 const logAdminActionMock = vi.fn();
+const hubNotificationsInsertMock = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({
     auth: { admin: { updateUserById: updateUserByIdMock, deleteUser: deleteUserMock, generateLink: generateLinkMock } },
     from: (table: string) => {
       if (table === "fitment_leads") return { select: fitmentLeadsSelectMock, update: fitmentLeadsUpdateMock };
+      if (table === "hub_notifications") return { insert: hubNotificationsInsertMock };
       throw new Error(`Unexpected table in test: ${table}`);
     },
     rpc: rpcMock,
@@ -275,5 +277,44 @@ describe("retryResumeMatch", () => {
     await expect(retryResumeMatch("lead-1", "rushi.humbe@gmail.com")).rejects.toThrow(
       "IntervueBox still hasn't produced a result for this candidate."
     );
+  });
+});
+
+describe("sendCandidateNotification", () => {
+  beforeEach(() => {
+    hubNotificationsInsertMock.mockReset();
+    hubNotificationsInsertMock.mockResolvedValue({ error: null });
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+  });
+
+  it("inserts the notification with created_by set and logs the action", async () => {
+    const { sendCandidateNotification } = await import("../adminCandidates");
+
+    await sendCandidateNotification("user-1", "Your report is ready.", "rushi.humbe@gmail.com");
+
+    expect(hubNotificationsInsertMock).toHaveBeenCalledWith({
+      user_id: "user-1",
+      message: "Your report is ready.",
+      created_by: "rushi.humbe@gmail.com",
+    });
+    expect(logAdminActionMock).toHaveBeenCalledWith({
+      adminEmail: "rushi.humbe@gmail.com",
+      action: "candidate.notify",
+      targetType: "candidate",
+      targetId: "user-1",
+      priorValue: null,
+      newValue: { message: "Your report is ready." },
+    });
+  });
+
+  it("throws without logging when the insert fails", async () => {
+    hubNotificationsInsertMock.mockResolvedValue({ error: { message: "db error" } });
+    const { sendCandidateNotification } = await import("../adminCandidates");
+
+    await expect(sendCandidateNotification("user-1", "hi", "rushi.humbe@gmail.com")).rejects.toThrow(
+      "Failed to send notification: db error"
+    );
+    expect(logAdminActionMock).not.toHaveBeenCalled();
   });
 });

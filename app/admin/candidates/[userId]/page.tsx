@@ -17,6 +17,7 @@ import ShareLinkRevokeToggle from "./ShareLinkRevokeToggle";
 import InterviewRecoveryActions from "./InterviewRecoveryActions";
 import AccountActions from "./AccountActions";
 import ResumeMatchRetry from "./ResumeMatchRetry";
+import SendNotificationAction from "./SendNotificationAction";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -52,6 +53,13 @@ export default async function AdminCandidateDetailPage({
           Account
         </h3>
         <AccountActions userId={candidate.userId} email={candidate.email} />
+      </section>
+
+      <section style={{ marginBottom: 32 }}>
+        <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
+          Send notification
+        </h3>
+        <SendNotificationAction userId={candidate.userId} />
       </section>
 
       {candidate.leads.map((lead) => (

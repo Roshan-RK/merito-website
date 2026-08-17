@@ -375,3 +375,24 @@ export async function retryResumeMatch(leadId: string, adminEmail: string): Prom
     newValue: { status: report.status },
   });
 }
+
+export async function sendCandidateNotification(userId: string, message: string, adminEmail: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase.from("hub_notifications").insert({
+    user_id: userId,
+    message,
+    created_by: adminEmail,
+  });
+  if (error) {
+    throw new Error(`Failed to send notification: ${error.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "candidate.notify",
+    targetType: "candidate",
+    targetId: userId,
+    priorValue: null,
+    newValue: { message },
+  });
+}
