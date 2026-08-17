@@ -44,7 +44,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: "Account",
     items: [
-      { label: "Applications & history", href: "/hub/account#applications", icon: Briefcase },
+      { label: "Applications & history", href: "/hub/account/applications", icon: Briefcase },
       { label: "Pricing", href: "/hub/account/pricing", icon: Tag },
       { label: "Recruiter preview", href: "/hub/account/recruiter-preview", icon: Eye },
       { label: "Order history", href: "/hub/account/orders", icon: Receipt },

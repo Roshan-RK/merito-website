@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export type Application = {
   id: string;
   roleTitle: string;
@@ -15,9 +17,18 @@ export default function ApplicationsCard({ applications, currentLeadId }: { appl
 
   return (
     <section id="applications" style={{ scrollMarginTop: 82 }}>
-      <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 11, letterSpacing: "0.08em", margin: "0 0 10px" }}>
-        Your applications
-      </p>
+      <div className="flex items-center justify-between" style={{ margin: "0 0 10px" }}>
+        <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 11, letterSpacing: "0.08em", margin: 0 }}>
+          Your applications
+        </p>
+        <Link
+          href="/hub/account/applications"
+          className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24] hover:text-white transition-colors"
+          style={{ fontSize: 11.5 }}
+        >
+          View all →
+        </Link>
+      </div>
       <div className="bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 16, padding: 6 }}>
         {applications.map((app, i) => {
           const isCurrent = app.id === currentLeadId;

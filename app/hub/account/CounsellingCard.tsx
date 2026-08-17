@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { UserRound } from "lucide-react";
 
 export default function CounsellingCard({
@@ -48,6 +49,13 @@ export default function CounsellingCard({
         <p className="font-[family-name:var(--font-poppins)]" style={{ fontSize: 12.5, color: "rgba(255,255,255,0.65)", lineHeight: 1.6, margin: "6px 0 0" }}>
           Reads your fitment, personality and mock interview results — then gives you a straight, personalised plan.
         </p>
+        <Link
+          href="/hub/account/expert"
+          className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24] hover:text-white transition-colors"
+          style={{ display: "inline-block", fontSize: 12, margin: "8px 0 0" }}
+        >
+          Meet Rushikesh & see her track record →
+        </Link>
       </div>
 
       <div className="shrink-0">
