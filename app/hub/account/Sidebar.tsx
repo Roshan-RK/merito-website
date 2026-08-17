@@ -12,6 +12,7 @@ import {
   Eye,
   Briefcase,
   LifeBuoy,
+  IndianRupee,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -42,6 +43,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     title: "Account",
     items: [
       { label: "Recruiter preview", href: "/hub/account/recruiter-preview", icon: Eye },
+      { label: "Pricing", href: "/hub/account/pricing", icon: IndianRupee },
       { label: "Applications & history", href: "/hub/account#applications", icon: Briefcase },
       { label: "Expert guidance", href: "/hub/account#guidance", icon: LifeBuoy },
     ],
