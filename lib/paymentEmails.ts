@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { renderTemplate } from "@/lib/emailTemplates";
 
 type PaymentFailedAlertParams = {
   orderId: string;
@@ -36,12 +37,13 @@ function getOpsEmail(): string {
 export async function sendPaymentFailedAlertEmail(params: PaymentFailedAlertParams): Promise<void> {
   const resend = getResendClient();
   const rupees = (params.amountPaise / 100).toFixed(2);
+  const rendered = await renderTemplate("payment_failed_alert", { orderId: params.orderId, amountRupees: rupees, candidateEmail: params.candidateEmail });
 
   await resend.emails.send({
     from: getFromEmail(),
     to: [getOpsEmail()],
-    subject: `Payment failed — order ${params.orderId}`,
-    text: `A payment failed.\n\nOrder: ${params.orderId}\nAmount: ₹${rupees}\nCandidate: ${params.candidateEmail}`,
-    html: `<p>A payment failed.</p><p>Order: ${params.orderId}<br/>Amount: ₹${rupees}<br/>Candidate: ${params.candidateEmail}</p>`,
+    subject: rendered.subject,
+    text: rendered.bodyText,
+    html: rendered.bodyHtml,
   });
 }
