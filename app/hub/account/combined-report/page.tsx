@@ -36,7 +36,7 @@ function StatusCard({
         </div>
         {included ? (
           <span
-            className="bg-[#16803c]/15 font-[family-name:var(--font-poppins)] font-semibold text-[#3FCB8C]"
+            className="bg-[#3FCB8C]/15 font-[family-name:var(--font-poppins)] font-semibold text-[#3FCB8C]"
             style={{ fontSize: 10, borderRadius: 50, padding: "3px 10px", whiteSpace: "nowrap" }}
           >
             Included
@@ -191,7 +191,16 @@ export default async function CombinedReportPage({
         >
           <div className="flex items-center" style={{ gap: 16 }}>
             {fitment && fitmentBandDark ? (
-              <CombinedGauge value={fitment.report.overallScore} max={100} displayValue={`${Math.round(fitment.report.overallScore)}%`} diameter={64} band={fitmentBandDark} numberColor="#fff" />
+              <CombinedGauge
+                value={fitment.report.overallScore}
+                max={100}
+                displayValue={`${Math.round(fitment.report.overallScore)}%`}
+                diameter={64}
+                band={fitmentBandDark}
+                numberColor="#fff"
+                numberFontVar="var(--font-gabarito)"
+                captionFontVar="var(--font-poppins)"
+              />
             ) : (
               <div
                 className="flex items-center justify-center bg-[#ed1a24]/15 font-[family-name:var(--font-poppins)] font-bold text-[#ed1a24]"
