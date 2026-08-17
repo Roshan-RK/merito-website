@@ -1,13 +1,15 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import { ArrowLeft, Download, CheckCircle2, XCircle } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { isReportUnlocked } from "@/lib/reportUnlocks";
 import { getCandidateResumeDetails, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import ResumeMatchCategoryCard from "./ResumeMatchCategoryCard";
-import ResumeMatchGauge from "./ResumeMatchGauge";
+import ResumeMatchGauge, { getMatchBandDark } from "./ResumeMatchGauge";
 import CandidateStatsCard from "./CandidateStatsCard";
 import CandidateProfile from "./CandidateProfile";
+
+const EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40";
 
 export default async function FullReportPage() {
   const supabase = await createSupabaseServerClient();
@@ -56,80 +58,80 @@ export default async function FullReportPage() {
     day: "numeric",
   });
 
+  // This route only ever renders once resume_match_status is READY and
+  // isReportUnlocked() has passed (both redirect away above) — so unlike the
+  // mockup's single panel that toggles between a locked teaser and the full
+  // breakdown, there is no reachable "locked" state here to render.
+  const sortedCategories = [...report.categories].sort((a, b) => b.score - a.score);
+  const strongest = sortedCategories[0];
+  const weakest = sortedCategories[sortedCategories.length - 1];
+  const weakestBand = weakest ? getMatchBandDark(weakest.score) : null;
+
+  const hasProfile = Boolean(candidateDetails && (candidateDetails.education.length > 0 || candidateDetails.experience.length > 0 || candidateDetails.certifications.length > 0));
+
+  const jumpLinks = [
+    { id: "summary", label: "Summary" },
+    { id: "dimensions", label: "Dimensions" },
+    { id: "strengths", label: "Strengths & gaps" },
+    { id: "profile", label: "Profile" },
+  ];
+
   return (
-    <main className="bg-[#fdf8fb]" style={{ minHeight: "60vh", padding: "48px 20px" }}>
-      <div className="mx-auto" style={{ maxWidth: 820 }}>
-        <div className="print:hidden">
+    <main>
+      <div className="mx-auto" style={{ maxWidth: 880, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <div className="print:hidden flex items-center justify-between flex-wrap" style={{ gap: 12 }}>
           <Link
             href="/hub/account"
-            className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-            style={{ fontSize: 13 }}
+            className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white/55 hover:text-white transition-colors"
+            style={{ gap: 6, fontSize: 13 }}
           >
-            ← Back to dashboard
+            <ArrowLeft size={14} strokeWidth={2} /> Back to dashboard
           </Link>
           <a
             href="/api/hub/report/export"
             download
-            className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-            style={{ fontSize: 13, marginLeft: 16 }}
+            className="flex items-center bg-white/[0.06] hover:bg-white/[0.1] transition-colors font-[family-name:var(--font-poppins)] font-semibold text-white"
+            style={{ gap: 6, fontSize: 12.5, borderRadius: 50, padding: "7px 14px", border: "1px solid rgba(255,255,255,0.08)" }}
           >
-            Download PDF
+            <Download size={13} strokeWidth={2} /> Download PDF
           </a>
         </div>
 
-        <div className="flex items-center justify-between flex-wrap" style={{ margin: "14px 0 4px", gap: 12 }}>
-          <div>
-            <div className="flex items-center flex-wrap" style={{ gap: 10 }}>
-              <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.8rem", margin: 0 }}>
-                {displayName}
-              </h1>
-              <span
-                className="bg-[#ed1a24] font-[family-name:var(--font-poppins)] font-semibold text-white"
-                style={{ fontSize: 11.5, borderRadius: 50, padding: "4px 12px" }}
-              >
-                {current.role_title}
-              </span>
-            </div>
-            <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 13, margin: "8px 0 0" }}>
-              {formattedDate}
-            </p>
+        <div>
+          <p className={EYEBROW} style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>
+            Fitment report
+          </p>
+          <div className="flex items-center flex-wrap" style={{ gap: 10 }}>
+            <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.7rem", margin: 0 }}>
+              {displayName}
+            </h1>
+            <span
+              className="bg-[#ed1a24] font-[family-name:var(--font-poppins)] font-semibold text-white"
+              style={{ fontSize: 11.5, borderRadius: 50, padding: "4px 12px" }}
+            >
+              {current.role_title}
+            </span>
           </div>
-          <Image src="/logo.png" alt="Merito" width={100} height={28} style={{ height: 24, width: "auto" }} />
+          <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 12.5, margin: "6px 0 0" }}>
+            {formattedDate}
+          </p>
         </div>
 
-        <CandidateStatsCard
-          email={user.email ?? null}
-          phoneNumber={candidateDetails?.phoneNumber ?? null}
-          location={candidateDetails?.location ?? null}
-          totalExperience={candidateDetails?.totalExperience ?? null}
-        />
-
         <div
-          className="bg-white border border-black/[0.08]"
-          style={{
-            borderRadius: 14,
-            padding: 20,
-            margin: "0 0 24px",
-            display: "grid",
-            gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr)",
-            gap: 24,
-            alignItems: "center",
-          }}
+          className="bg-[#141416] border border-white/[0.08] flex flex-col sm:flex-row items-start sm:items-center"
+          style={{ borderRadius: 14, padding: 20, gap: 20 }}
         >
-          <div>
-            <p
-              className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]"
-              style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 12px" }}
-            >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p className={EYEBROW} style={{ fontSize: 10.5, letterSpacing: "0.06em", margin: "0 0 10px" }}>
               Resume match for {current.role_title}
             </p>
             {candidateDetails && candidateDetails.skills.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <div className="flex flex-wrap" style={{ gap: 8 }}>
                 {candidateDetails.skills.map((skill) => (
                   <span
                     key={skill}
-                    className="bg-[#fdf8fb] border border-black/[0.08] font-[family-name:var(--font-poppins)] text-[#4b4b4d]"
-                    style={{ fontSize: 12.5, borderRadius: 50, padding: "6px 14px" }}
+                    className="bg-white/[0.05] border border-white/[0.08] font-[family-name:var(--font-poppins)] text-white/60"
+                    style={{ fontSize: 12, borderRadius: 50, padding: "6px 14px" }}
                   >
                     {skill}
                   </span>
@@ -137,69 +139,122 @@ export default async function FullReportPage() {
               </div>
             )}
           </div>
-          <div className="flex items-center justify-center">
+          <div className="shrink-0" style={{ margin: "0 auto" }}>
             <ResumeMatchGauge percent={report.overallScore} />
           </div>
         </div>
 
-        <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, margin: "0 0 32px" }}>
-          <p
-            className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]"
-            style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}
-          >
+        <div className="print:hidden flex flex-wrap" style={{ gap: 8 }}>
+          {jumpLinks.map((link) => (
+            <a
+              key={link.id}
+              href={`#${link.id}`}
+              className="bg-[#141416] border border-white/[0.08] hover:border-[#ed1a24]/40 hover:text-white transition-colors font-[family-name:var(--font-poppins)] font-medium text-white/55"
+              style={{ fontSize: 12, borderRadius: 50, padding: "6px 14px" }}
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+
+        <div id="summary" className="bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 14, padding: 20, scrollMarginTop: 24 }}>
+          <p className={EYEBROW} style={{ fontSize: 10.5, letterSpacing: "0.06em", margin: "0 0 8px" }}>
             Assessment summary
           </p>
-          <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14.5, lineHeight: 1.7, margin: 0 }}>
+          <p className="font-[family-name:var(--font-poppins)] text-white/70" style={{ fontSize: 14, lineHeight: 1.7, margin: 0 }}>
             {report.summary}
           </p>
         </div>
 
-        <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.3rem", margin: "0 0 14px" }}>
-          Dimension scores
-        </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14, marginBottom: 32 }}>
-          {report.categories.map((category) => (
-            <ResumeMatchCategoryCard key={category.key} category={category} />
-          ))}
+        <div id="dimensions" style={{ scrollMarginTop: 24 }}>
+          <p className={EYEBROW} style={{ fontSize: 10.5, letterSpacing: "0.06em", margin: "0 0 10px" }}>
+            Dimension scores
+          </p>
+          {strongest && weakest && weakestBand && (
+            <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 10, marginBottom: 12 }}>
+              <div className="flex items-center bg-[#16803c]/10 border border-[#16803c]/25" style={{ gap: 8, borderRadius: 10, padding: "10px 14px" }}>
+                <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#3FCB8C]" style={{ fontSize: 12 }}>
+                  Strongest —
+                </span>
+                <span className="font-[family-name:var(--font-poppins)] text-white/70" style={{ fontSize: 12 }}>
+                  {strongest.label} ({strongest.score}%)
+                </span>
+              </div>
+              <div
+                className="flex items-center"
+                style={{ gap: 8, borderRadius: 10, padding: "10px 14px", background: weakestBand.trackColor, border: `1px solid ${weakestBand.textColor}40` }}
+              >
+                <span className="font-[family-name:var(--font-poppins)] font-semibold" style={{ fontSize: 12, color: weakestBand.textColor }}>
+                  Focus area —
+                </span>
+                <span className="font-[family-name:var(--font-poppins)] text-white/70" style={{ fontSize: 12 }}>
+                  {weakest.label} ({weakest.score}%)
+                </span>
+              </div>
+            </div>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 12 }}>
+            {report.categories.map((category) => (
+              <ResumeMatchCategoryCard key={category.key} category={category} />
+            ))}
+          </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14 }}>
-          <div className="bg-[#eefdf1]" style={{ borderRadius: 14, padding: "14px 16px" }}>
-            <p
-              className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#16803c]"
-              style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}
-            >
+        <div id="strengths" className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 12, scrollMarginTop: 24 }}>
+          <div className="bg-[#16803c]/10 border border-[#16803c]/20" style={{ borderRadius: 14, padding: 16 }}>
+            <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#3FCB8C]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>
               Strong points
             </p>
-            {report.strongPoints.map((point, i) => (
-              <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: "0 0 8px" }}>
-                ✓ {point}
-              </p>
-            ))}
+            <div className="flex flex-col" style={{ gap: 8 }}>
+              {report.strongPoints.map((point, i) => (
+                <div key={i} className="flex items-start" style={{ gap: 8 }}>
+                  <CheckCircle2 size={14} strokeWidth={2} className="shrink-0 text-[#3FCB8C]" style={{ marginTop: 2 }} />
+                  <span className="font-[family-name:var(--font-poppins)] text-white/70" style={{ fontSize: 12.5, lineHeight: 1.6 }}>
+                    {point}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="bg-[#fdeced]" style={{ borderRadius: 14, padding: "14px 16px" }}>
-            <p
-              className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#ed1a24]"
-              style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}
-            >
+          <div className="bg-[#ed1a24]/10 border border-[#ed1a24]/20" style={{ borderRadius: 14, padding: 16 }}>
+            <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#E8798F]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>
               Weak points
             </p>
-            {report.weakPoints.map((point, i) => (
-              <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, lineHeight: 1.7, margin: "0 0 8px" }}>
-                ✗ {point}
-              </p>
-            ))}
+            <div className="flex flex-col" style={{ gap: 8 }}>
+              {report.weakPoints.map((point, i) => (
+                <div key={i} className="flex items-start" style={{ gap: 8 }}>
+                  <XCircle size={14} strokeWidth={2} className="shrink-0 text-[#E8798F]" style={{ marginTop: 2 }} />
+                  <span className="font-[family-name:var(--font-poppins)] text-white/70" style={{ fontSize: 12.5, lineHeight: 1.6 }}>
+                    {point}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {candidateDetails && (candidateDetails.education.length > 0 || candidateDetails.experience.length > 0) && (
-          <CandidateProfile
-            education={candidateDetails.education}
-            experience={candidateDetails.experience}
-            certifications={candidateDetails.certifications}
-          />
-        )}
+        <div id="profile" style={{ scrollMarginTop: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+          <div>
+            <p className={EYEBROW} style={{ fontSize: 10.5, letterSpacing: "0.06em", margin: "0 0 10px" }}>
+              Professional details
+            </p>
+            <CandidateStatsCard
+              email={user.email ?? null}
+              phoneNumber={candidateDetails?.phoneNumber ?? null}
+              location={candidateDetails?.location ?? null}
+              totalExperience={candidateDetails?.totalExperience ?? null}
+            />
+          </div>
+
+          {hasProfile && candidateDetails && (
+            <CandidateProfile
+              education={candidateDetails.education}
+              experience={candidateDetails.experience}
+              certifications={candidateDetails.certifications}
+            />
+          )}
+        </div>
       </div>
     </main>
   );

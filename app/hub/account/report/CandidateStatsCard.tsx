@@ -11,24 +11,24 @@ const NOT_SPECIFIED = "Not specified";
 function StatItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, margin: "0 0 4px" }}>
+      <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 11, margin: "0 0 4px" }}>
         {label}
       </p>
-      <p className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: 14.5, margin: 0 }}>
+      <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13, margin: 0 }}>
         {value}
       </p>
     </div>
   );
 }
 
-function ContactRow({ icon, value }: { icon: React.ReactNode; value: string }) {
+function ContactItem({ icon, value }: { icon: React.ReactNode; value: string }) {
   return (
-    <div className="flex items-center text-[#4b4b4d]" style={{ gap: 8 }}>
+    <span className="flex items-center text-white/55" style={{ gap: 6 }}>
       {icon}
-      <span className="font-[family-name:var(--font-poppins)]" style={{ fontSize: 13.5 }}>
+      <span className="font-[family-name:var(--font-poppins)]" style={{ fontSize: 13 }}>
         {value}
       </span>
-    </div>
+    </span>
   );
 }
 
@@ -43,24 +43,18 @@ export default function CandidateStatsCard({
   location: string | null;
   totalExperience: number | null;
 }) {
+  const hasContact = Boolean(phoneNumber || email || location);
+
   return (
-    <div
-      className="bg-white border border-black/[0.08]"
-      style={{
-        borderRadius: 14,
-        padding: 20,
-        margin: "20px 0 24px",
-        display: "grid",
-        gridTemplateColumns: "minmax(0,1fr) minmax(0,2fr)",
-        gap: 24,
-      }}
-    >
-      <div className="flex flex-col" style={{ gap: 10, borderRight: "1px solid rgba(0,0,0,0.08)", paddingRight: 24 }}>
-        {phoneNumber && <ContactRow icon={<Phone size={14} />} value={phoneNumber} />}
-        {email && <ContactRow icon={<Mail size={14} />} value={email} />}
-        {location && <ContactRow icon={<MapPin size={14} />} value={location} />}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 18 }}>
+    <div className="bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 14, padding: 18 }}>
+      {hasContact && (
+        <div className="flex flex-wrap items-center border-b border-white/[0.08]" style={{ gap: 18, paddingBottom: 14, marginBottom: 14 }}>
+          {phoneNumber && <ContactItem icon={<Phone size={13} strokeWidth={2} />} value={phoneNumber} />}
+          {email && <ContactItem icon={<Mail size={13} strokeWidth={2} />} value={email} />}
+          {location && <ContactItem icon={<MapPin size={13} strokeWidth={2} />} value={location} />}
+        </div>
+      )}
+      <div className="grid grid-cols-2 sm:grid-cols-3" style={{ gap: 16 }}>
         <StatItem label="Total work experience" value={totalExperience != null ? `${totalExperience} years` : NOT_SPECIFIED} />
         <StatItem label="Current salary" value={NOT_SPECIFIED} />
         <StatItem label="Expected salary" value={NOT_SPECIFIED} />
