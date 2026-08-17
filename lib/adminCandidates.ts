@@ -4,6 +4,7 @@ import { getCandidateResumeDetails, getResumeMatchReport, scoreOutOfTen, type Ca
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import type { Scores, Validity } from "@/lib/personality";
 import { logAdminAction } from "@/lib/adminAuditLog";
+import type { HubNotificationCategory } from "@/lib/hubNotifications";
 
 const BAN_DURATION_INDEFINITE = "876000h"; // ~100 years, matches Supabase's ban_duration API shape for "indefinite"
 
@@ -376,11 +377,17 @@ export async function retryResumeMatch(leadId: string, adminEmail: string): Prom
   });
 }
 
-export async function sendCandidateNotification(userId: string, message: string, adminEmail: string): Promise<void> {
+export async function sendCandidateNotification(
+  userId: string,
+  message: string,
+  adminEmail: string,
+  category: HubNotificationCategory = "general"
+): Promise<void> {
   const supabase = getSupabaseServerClient();
   const { error } = await supabase.from("hub_notifications").insert({
     user_id: userId,
     message,
+    category,
     created_by: adminEmail,
   });
   if (error) {
@@ -393,6 +400,6 @@ export async function sendCandidateNotification(userId: string, message: string,
     targetType: "candidate",
     targetId: userId,
     priorValue: null,
-    newValue: { message },
+    newValue: { message, category },
   });
 }

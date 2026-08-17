@@ -22,7 +22,7 @@ describe("getUnreadNotifications", () => {
 
   it("returns only unread rows, mapped to camelCase", async () => {
     orderMock.mockResolvedValue({
-      data: [{ id: "n-1", message: "hi", created_at: "2026-08-17T00:00:00.000Z", read_at: null }],
+      data: [{ id: "n-1", message: "hi", category: "report", created_at: "2026-08-17T00:00:00.000Z", read_at: null }],
       error: null,
     });
     const { getUnreadNotifications } = await import("../hubNotifications");
@@ -31,7 +31,9 @@ describe("getUnreadNotifications", () => {
 
     expect(eqMock).toHaveBeenCalledWith("user_id", "user-1");
     expect(isMock).toHaveBeenCalledWith("read_at", null);
-    expect(result).toEqual([{ id: "n-1", message: "hi", createdAt: "2026-08-17T00:00:00.000Z", readAt: null }]);
+    expect(result).toEqual([
+      { id: "n-1", message: "hi", category: "report", createdAt: "2026-08-17T00:00:00.000Z", readAt: null },
+    ]);
   });
 
   it("throws on a query error", async () => {
@@ -55,7 +57,15 @@ describe("getAllNotifications", () => {
 
   it("returns rows up to the given limit", async () => {
     limitMock.mockResolvedValue({
-      data: [{ id: "n-1", message: "hi", created_at: "2026-08-17T00:00:00.000Z", read_at: "2026-08-17T01:00:00.000Z" }],
+      data: [
+        {
+          id: "n-1",
+          message: "hi",
+          category: "payment",
+          created_at: "2026-08-17T00:00:00.000Z",
+          read_at: "2026-08-17T01:00:00.000Z",
+        },
+      ],
       error: null,
     });
     const { getAllNotifications } = await import("../hubNotifications");
@@ -64,7 +74,13 @@ describe("getAllNotifications", () => {
 
     expect(limitMock).toHaveBeenCalledWith(5);
     expect(result).toEqual([
-      { id: "n-1", message: "hi", createdAt: "2026-08-17T00:00:00.000Z", readAt: "2026-08-17T01:00:00.000Z" },
+      {
+        id: "n-1",
+        message: "hi",
+        category: "payment",
+        createdAt: "2026-08-17T00:00:00.000Z",
+        readAt: "2026-08-17T01:00:00.000Z",
+      },
     ]);
   });
 

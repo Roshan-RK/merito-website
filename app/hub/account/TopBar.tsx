@@ -3,10 +3,26 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, Bell, HelpCircle, Briefcase, Receipt } from "lucide-react";
+import { Search, Bell, HelpCircle, Briefcase, Receipt, FileText, Brain, Mic, Users, Eye, Megaphone } from "lucide-react";
+import type { ComponentType } from "react";
 import SignOutButton from "./SignOutButton";
 import { formatRelativeTime } from "@/lib/formatRelativeTime";
-import type { HubNotification } from "@/lib/hubNotifications";
+import type { HubNotification, HubNotificationCategory } from "@/lib/hubNotifications";
+
+// Matches the concept-to-icon mapping already used in Sidebar.tsx (fitment
+// report / mock interview / personality / references / recruiter preview /
+// order history) so a notification's leading icon means the same thing it
+// means everywhere else in the hub. "general" covers the admin's free-form
+// manual sends, which don't map to a specific panel.
+const NOTIFICATION_ICON: Record<HubNotificationCategory, ComponentType<{ size?: number; strokeWidth?: number }>> = {
+  report: FileText,
+  personality: Brain,
+  interview: Mic,
+  references: Users,
+  payment: Receipt,
+  recruiter: Eye,
+  general: Megaphone,
+};
 
 // Closes any open dropdown when a click lands outside every registered
 // trigger/panel pair, or when Escape is pressed -- shared by the three
@@ -205,30 +221,41 @@ export default function TopBar({
                 </p>
               ) : (
                 <div style={{ maxHeight: 320, overflowY: "auto" }}>
-                  {notifications.map((n) => (
-                    <button
-                      key={n.id}
-                      onClick={() => handleMarkRead(n.id)}
-                      className="text-left"
-                      style={{
-                        display: "block",
-                        width: "100%",
-                        background: n.readAt ? "transparent" : "rgba(237,26,36,0.1)",
-                        border: "none",
-                        cursor: n.readAt ? "default" : "pointer",
-                        padding: "8px 10px",
-                        borderRadius: 8,
-                        marginBottom: 2,
-                      }}
-                    >
-                      <p className="font-[family-name:var(--font-poppins)] text-white" style={{ fontSize: 12.5, margin: 0, lineHeight: 1.5 }}>
-                        {n.message}
-                      </p>
-                      <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 11, margin: "3px 0 0" }}>
-                        {formatRelativeTime(n.createdAt)}
-                      </p>
-                    </button>
-                  ))}
+                  {notifications.map((n) => {
+                    const Icon = NOTIFICATION_ICON[n.category] ?? Megaphone;
+                    return (
+                      <button
+                        key={n.id}
+                        onClick={() => handleMarkRead(n.id)}
+                        className="text-left flex items-start"
+                        style={{
+                          width: "100%",
+                          background: n.readAt ? "transparent" : "rgba(237,26,36,0.1)",
+                          border: "none",
+                          cursor: n.readAt ? "default" : "pointer",
+                          padding: "8px 10px",
+                          borderRadius: 8,
+                          marginBottom: 2,
+                          gap: 10,
+                        }}
+                      >
+                        <div
+                          className="flex items-center justify-center bg-[#ed1a24]/12 text-[#ed1a24] shrink-0"
+                          style={{ width: 30, height: 30, borderRadius: 8 }}
+                        >
+                          <Icon size={14} strokeWidth={2} />
+                        </div>
+                        <div>
+                          <p className="font-[family-name:var(--font-poppins)] text-white" style={{ fontSize: 12.5, margin: 0, lineHeight: 1.5 }}>
+                            {n.message}
+                          </p>
+                          <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 11, margin: "3px 0 0" }}>
+                            {formatRelativeTime(n.createdAt)}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

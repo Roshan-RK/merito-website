@@ -1,8 +1,12 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/adminAuth";
 import { sendCandidateNotification } from "@/lib/adminCandidates";
+import { HUB_NOTIFICATION_CATEGORIES } from "@/lib/hubNotifications";
 
-const PostSchema = z.object({ message: z.string().min(1).max(2000) });
+const PostSchema = z.object({
+  message: z.string().min(1).max(2000),
+  category: z.enum(HUB_NOTIFICATION_CATEGORIES).default("general"),
+});
 
 type RouteContext = { params: Promise<{ userId: string }> };
 
@@ -23,7 +27,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   try {
-    await sendCandidateNotification(userId, parsed.data.message.trim(), admin.email as string);
+    await sendCandidateNotification(userId, parsed.data.message.trim(), admin.email as string, parsed.data.category);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to send notification.";
     return Response.json({ error: message }, { status: 409 });

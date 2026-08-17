@@ -288,7 +288,7 @@ describe("sendCandidateNotification", () => {
     logAdminActionMock.mockResolvedValue(undefined);
   });
 
-  it("inserts the notification with created_by set and logs the action", async () => {
+  it("inserts the notification with created_by set, category defaulted to general, and logs the action", async () => {
     const { sendCandidateNotification } = await import("../adminCandidates");
 
     await sendCandidateNotification("user-1", "Your report is ready.", "rushi.humbe@gmail.com");
@@ -296,6 +296,7 @@ describe("sendCandidateNotification", () => {
     expect(hubNotificationsInsertMock).toHaveBeenCalledWith({
       user_id: "user-1",
       message: "Your report is ready.",
+      category: "general",
       created_by: "rushi.humbe@gmail.com",
     });
     expect(logAdminActionMock).toHaveBeenCalledWith({
@@ -304,8 +305,24 @@ describe("sendCandidateNotification", () => {
       targetType: "candidate",
       targetId: "user-1",
       priorValue: null,
-      newValue: { message: "Your report is ready." },
+      newValue: { message: "Your report is ready.", category: "general" },
     });
+  });
+
+  it("inserts the notification with an explicit category when given", async () => {
+    const { sendCandidateNotification } = await import("../adminCandidates");
+
+    await sendCandidateNotification("user-1", "Payment received.", "rushi.humbe@gmail.com", "payment");
+
+    expect(hubNotificationsInsertMock).toHaveBeenCalledWith({
+      user_id: "user-1",
+      message: "Payment received.",
+      category: "payment",
+      created_by: "rushi.humbe@gmail.com",
+    });
+    expect(logAdminActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ newValue: { message: "Payment received.", category: "payment" } })
+    );
   });
 
   it("throws without logging when the insert fails", async () => {

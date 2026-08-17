@@ -21,7 +21,7 @@ describe("POST /api/admin/candidates/[userId]/notify", () => {
     sendCandidateNotificationMock.mockResolvedValue(undefined);
   });
 
-  it("sends the notification and returns ok", async () => {
+  it("sends the notification with category defaulted to general and returns ok", async () => {
     const { POST } = await import("../route");
 
     const response = await POST(buildRequest({ message: "Your report is ready." }), {
@@ -29,13 +29,45 @@ describe("POST /api/admin/candidates/[userId]/notify", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(sendCandidateNotificationMock).toHaveBeenCalledWith("user-1", "Your report is ready.", "rushi.humbe@gmail.com");
+    expect(sendCandidateNotificationMock).toHaveBeenCalledWith(
+      "user-1",
+      "Your report is ready.",
+      "rushi.humbe@gmail.com",
+      "general"
+    );
+  });
+
+  it("sends the notification with an explicit category", async () => {
+    const { POST } = await import("../route");
+
+    const response = await POST(buildRequest({ message: "Payment received.", category: "payment" }), {
+      params: Promise.resolve({ userId: "user-1" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(sendCandidateNotificationMock).toHaveBeenCalledWith(
+      "user-1",
+      "Payment received.",
+      "rushi.humbe@gmail.com",
+      "payment"
+    );
   });
 
   it("returns 400 when message is missing", async () => {
     const { POST } = await import("../route");
 
     const response = await POST(buildRequest({}), { params: Promise.resolve({ userId: "user-1" }) });
+
+    expect(response.status).toBe(400);
+    expect(sendCandidateNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when category is invalid", async () => {
+    const { POST } = await import("../route");
+
+    const response = await POST(buildRequest({ message: "hi", category: "not-a-real-category" }), {
+      params: Promise.resolve({ userId: "user-1" }),
+    });
 
     expect(response.status).toBe(400);
     expect(sendCandidateNotificationMock).not.toHaveBeenCalled();
