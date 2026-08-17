@@ -10,6 +10,7 @@ export default function BundlePromoCard({ level, onOpenPaywall }: { level: Candi
 
   return (
     <div
+      data-tour="bundle"
       className="flex items-center flex-wrap border border-white/[0.08]"
       style={{ background: "#141416", borderRadius: 14, padding: 18, gap: 16 }}
     >

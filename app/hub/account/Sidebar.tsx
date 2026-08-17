@@ -21,6 +21,7 @@ type NavItem = {
   label: string;
   href: string;
   icon: ComponentType<{ size?: number; strokeWidth?: number }>;
+  tourId?: string;
 };
 
 const GROUPS: { title: string; items: NavItem[] }[] = [
@@ -30,7 +31,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { label: "Overview", href: "/hub/account", icon: LayoutGrid },
       { label: "Fitment report", href: "/hub/account/report", icon: FileText },
       { label: "Mock interview", href: "/hub/account/interview", icon: Mic },
-      { label: "Consolidated report", href: "/hub/account/combined-report", icon: BarChart3 },
+      { label: "Consolidated report", href: "/hub/account/combined-report", icon: BarChart3, tourId: "nav-consolidated" },
     ],
   },
   {
@@ -81,6 +82,7 @@ export default function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  data-tour={item.tourId}
                   aria-current={isActive ? "page" : undefined}
                   className={
                     isActive

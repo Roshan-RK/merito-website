@@ -13,6 +13,7 @@ export default function CounsellingCard({
 }) {
   return (
     <div
+      data-tour="guidance"
       className="flex items-center flex-wrap"
       style={{
         background: "linear-gradient(to bottom right,#000,#1a1a1a,#2d0a0c)",

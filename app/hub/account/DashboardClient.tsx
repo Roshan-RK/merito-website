@@ -15,6 +15,7 @@ import InterviewPaywallModal from "./InterviewPaywallModal";
 import GenerateReportModal from "./GenerateReportModal";
 import CounsellingCard from "./CounsellingCard";
 import CounsellingPaywallModal from "./CounsellingPaywallModal";
+import OnboardingTour from "./OnboardingTour";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import type { CandidateLevel } from "@/lib/razorpay/pricing";
 
@@ -63,7 +64,7 @@ export default function DashboardClient({
   applications: Application[];
   recruiterActivity: React.ReactNode;
 }) {
-  const [modal, setModal] = useState<"none" | "report" | "personality" | "references" | "interview" | "generate" | "counselling">("none");
+  const [modal, setModal] = useState<"none" | "report" | "personality" | "references" | "interview" | "generate" | "counselling" | "tour">("none");
   const [interviewModalAlreadyInvited, setInterviewModalAlreadyInvited] = useState(false);
   const [reportUnlocked, setReportUnlocked] = useState(initialReportUnlocked);
   const [report, setReport] = useState<ResumeMatchReportReady | null>(initialReport);
@@ -115,7 +116,7 @@ export default function DashboardClient({
 
         <OnboardingBanner roleTitle={roleTitle} />
 
-        <QuickTipsCard />
+        <QuickTipsCard onStartTour={() => setModal("tour")} />
 
         <ScoreCard
           roleTitle={roleTitle}
@@ -250,6 +251,7 @@ export default function DashboardClient({
           onClose={() => setModal("none")}
         />
       )}
+      {modal === "tour" && <OnboardingTour onClose={() => setModal("none")} />}
     </>
   );
 }

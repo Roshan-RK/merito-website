@@ -195,14 +195,14 @@ function StatusPill({ pill }: { pill: Pill }) {
 
   if (pill.href) {
     return (
-      <Link href={pill.href} className="bg-[#141416] border border-white/[0.08] hover:border-white/[0.16] transition-colors" style={style}>
+      <Link data-tour={`pill-${pill.key}`} href={pill.href} className="bg-[#141416] border border-white/[0.08] hover:border-white/[0.16] transition-colors" style={style}>
         {content}
       </Link>
     );
   }
 
   return (
-    <button onClick={pill.onClick} className="w-full text-left bg-[#141416] border border-white/[0.08] hover:border-white/[0.16] transition-colors" style={style}>
+    <button data-tour={`pill-${pill.key}`} onClick={pill.onClick} className="w-full text-left bg-[#141416] border border-white/[0.08] hover:border-white/[0.16] transition-colors" style={style}>
       {content}
     </button>
   );

@@ -29,7 +29,7 @@ export default function ScoreCard({
   const dashoffset = circumference - (percent / 100) * circumference;
 
   return (
-    <div className="bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 20, padding: 24 }}>
+    <div data-tour="score" className="bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 20, padding: 24 }}>
       <div className="flex items-start flex-wrap" style={{ gap: 24 }}>
         <div className="relative shrink-0" style={{ width: 132, height: 132 }}>
           <svg width="132" height="132" viewBox="0 0 132 132">
