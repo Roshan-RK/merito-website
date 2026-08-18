@@ -55,7 +55,7 @@ export default function Sidebar() {
     <nav
       aria-label="Account navigation"
       className="print:hidden hidden md:flex flex-col shrink-0 sticky overflow-y-auto bg-[#0a0a0a] border-r border-white/[0.08]"
-      style={{ width: 248, top: 66, height: "calc(100vh - 66px)", padding: "20px 12px" }}
+      style={{ width: 248, top: 64, height: "calc(100vh - 64px)", padding: "20px 12px" }}
     >
       {GROUPS.map((group) => (
         <div key={group.title} style={{ marginBottom: 4 }}>
