@@ -3,9 +3,13 @@ import { Download, ListChecks, ChartColumn, ShieldCheck, ShieldAlert, Clock } fr
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import { getCandidateResumeDetails } from "@/lib/intervuebox/reports";
+import { DEFAULT_LEVEL, type CandidateLevel } from "@/lib/razorpay/pricing";
 import InterviewScoreGauge from "./InterviewScoreGauge";
 import SkillDistribution from "./SkillDistribution";
 import InterviewTabs from "./InterviewTabs";
+import InterviewLockedState from "./InterviewLockedState";
+import InterviewInProgressState from "./InterviewInProgressState";
+import { resolveInterviewViewState } from "./resolveInterviewViewState";
 
 const EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40";
 
@@ -69,8 +73,54 @@ export default async function InterviewReportPage({
     interview = await latestReadyInterview(null);
   }
 
-  if (!interview || interview.status !== "ready" || !interview.report_raw) {
+  const viewState = resolveInterviewViewState(interview);
+
+  if (viewState === "locked") {
+    const { data: leads } = await supabase
+      .from("fitment_leads")
+      .select("id, role_title, candidate_level")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    const current = leads?.[0];
+    if (!current) {
+      redirect("/hub/account");
+    }
+
+    const level = (current.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
+
+    return (
+      <main>
+        <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+          <div>
+            <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.6rem", margin: "0 0 6px" }}>
+              Mock AI interview
+            </h1>
+            <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 14, margin: 0 }}>
+              Role-matched questions with a scored breakdown afterward.
+            </p>
+          </div>
+          <InterviewLockedState roleTitle={current.role_title} level={level} userEmail={user.email ?? ""} />
+        </div>
+      </main>
+    );
+  }
+
+  if (!interview) {
+    // Unreachable -- resolveInterviewViewState only returns "locked" (handled
+    // above) when interview is null. Narrows the type for everything below.
     redirect("/hub/account");
+  }
+
+  if (viewState === "in_progress") {
+    return (
+      <main>
+        <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+          <InterviewInProgressState roleTitle={interview.role_title} />
+        </div>
+      </main>
+    );
   }
 
   const report = interview.report_raw as InterviewReportReady;
