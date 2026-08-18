@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Manrope } from "next/font/google";
-import { CheckCircle2, XCircle, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Phone, Mail, MapPin, Sparkles, ShieldCheck, ShieldAlert, ListChecks, ThumbsUp, TrendingDown, Compass, CheckCircle2 } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import { getCandidateResumeDetails } from "@/lib/intervuebox/reports";
@@ -11,31 +11,63 @@ const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700
 
 export const metadata: Metadata = { title: "Mock interview" };
 
-// Printable/PDF-export target for the mock interview report -- mirrors
-// app/hub/account/report/print/page.tsx's pattern (light theme, single
-// continuous page, screenshotted by app/api/hub/interview/export/route.tsx
-// via headless Chromium).
+// Printable/PDF-export target for the mock interview report. Rebuilt to
+// mirror the mockup's dedicated `cF` PDF template (mockups/merito-dashboard-v34.html)
+// rather than the generic fitment-report-style layout the first pass used --
+// see app/api/hub/interview/export/route.tsx for the headless-Chromium caller.
+//
+// cF's own mockup data includes fields with no real backing source in our
+// system (current/expected salary, expected joining date, interview
+// language, and a fabricated multi-milestone "Candidate roadmap" timeline
+// with per-milestone goals/resources). Those are intentionally omitted
+// rather than invented -- every stat/section below maps to a real field.
 
-function scoreTone(score: number): { label: string; background: string; color: string } {
-  if (score >= 70) return { label: "Strong", background: "#DCFCE7", color: "#15803D" };
-  if (score >= 40) return { label: "Developing", background: "#F1F5F9", color: "#475569" };
-  return { label: "Needs work", background: "#FEE2E2", color: "#B91C1C" };
+const TIER_COLORS: Record<string, { bg: string; fg: string }> = {
+  Exceptional: { bg: "#DCFCE7", fg: "#15803D" },
+  Proficient: { bg: "#DCFCE7", fg: "#15803D" },
+  Good: { bg: "#FEF3C7", fg: "#92400E" },
+  Unsatisfactory: { bg: "#FEE2E2", fg: "#B91C1C" },
+  Poor: { bg: "#FEE2E2", fg: "#B91C1C" },
+};
+const TIER_ORDER = ["Exceptional", "Proficient", "Good", "Unsatisfactory", "Poor"] as const;
+
+function tierFor(score: number): (typeof TIER_ORDER)[number] {
+  if (score >= 60) return "Exceptional";
+  if (score >= 45) return "Proficient";
+  if (score >= 35) return "Good";
+  if (score >= 15) return "Unsatisfactory";
+  return "Poor";
 }
 
-function skillTone(score: number): string {
-  if (score >= 60) return "#15803D";
-  if (score >= 45) return "#15803D";
-  if (score >= 35) return "#92400E";
-  return "#B91C1C";
+function paramColor(score: number): string {
+  if (score >= 45) return "#16A34A";
+  if (score >= 35) return "#D97706";
+  return "#DC2626";
+}
+
+function titleCase(key: string): string {
+  return key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (c) => c.toUpperCase())
+    .trim();
 }
 
 function MeritoMark() {
-  return <Image src="/logo.png" alt="Merito" width={128} height={36} style={{ height: 26, width: "auto" }} />;
+  return <Image src="/logo.png" alt="Merito" width={128} height={36} style={{ height: 24, width: "auto" }} />;
 }
 
-function Card({ children }: { children: React.ReactNode }) {
+function SectionCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className="border" style={{ background: "#fff", borderColor: "#F1E3E5", borderRadius: 16, padding: 20, marginBottom: 16 }}>
+    <div className="border" style={{ background: "#fff", borderColor: "#F0E4C8", borderRadius: 16, padding: 20, marginBottom: 16, breakInside: "avoid" }}>
+      {children}
+    </div>
+  );
+}
+
+function SectionHeading({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center font-bold" style={{ gap: 8, marginBottom: 12, fontSize: 14, color: "#111827" }}>
+      {icon}
       {children}
     </div>
   );
@@ -89,13 +121,39 @@ export default async function InterviewPrintPage({
     : null;
 
   const displayName = lead?.name || "Candidate";
-  const tone = scoreTone(report.overallScore);
+  const currentOrganisation = candidateDetails?.experience?.[0]?.company ?? null;
   const formattedDate = new Date(interview.updated_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-  const skillEntries = Object.entries(report.skillReport ?? {}).sort((a, b) => b[1].score - a[1].score);
+
+  // Natural declaration order, not sorted -- mirrors the mockup's own
+  // divide-y skill list, which isn't score-sorted either.
+  const skillEntries = Object.entries(report.skillReport ?? {});
+  const isCriteriaMatchMode = typeof report.skillMetrics?.criteriaMatch === "number";
+  const parameterEntries = isCriteriaMatchMode ? [] : Object.entries(report.skillMetrics ?? {});
+
+  const tierCounts = TIER_ORDER.map((label) => ({
+    label,
+    count: skillEntries.filter(([, entry]) => entry.score != null && tierFor(entry.score) === label).length,
+  }));
+
+  const infoStats = [
+    candidateDetails?.totalExperience != null
+      ? { label: "Total work experience", value: `${candidateDetails.totalExperience} year${candidateDetails.totalExperience === 1 ? "" : "s"}` }
+      : null,
+    currentOrganisation ? { label: "Current organisation", value: currentOrganisation } : null,
+    { label: "Interview date", value: formattedDate },
+    report.approxDurationMinutes != null ? { label: "Interview duration", value: `${report.approxDurationMinutes} min` } : null,
+    { label: "Overall score", value: `${Math.round(report.overallScore)}%` },
+  ].filter((stat): stat is { label: string; value: string } => stat !== null);
+
+  const conductFlagged = report.flagForSuspiciousActivity;
+  const conductDetails = report.integrityCheck ?? (conductFlagged ? "Flagged for review." : "No issues detected during this interview.");
 
   return (
-    <div className={`${manrope.variable} sm:p-8`} style={{ background: "#FBF3F4", color: "#111827", fontFamily: "var(--font-manrope), system-ui, sans-serif", minHeight: "100vh", padding: "24px" }}>
-      <div className="flex items-start justify-between flex-wrap" style={{ gap: 12, marginBottom: 20 }}>
+    <div
+      className={`${manrope.variable} p-6 sm:p-8`}
+      style={{ background: "#FFFBF0", color: "#111827", fontFamily: "var(--font-manrope), system-ui, sans-serif" }}
+    >
+      <div className="mb-5 flex items-start justify-between flex-wrap" style={{ gap: 12 }}>
         <div>
           <div className="flex items-center flex-wrap" style={{ gap: 10 }}>
             <h1 className="font-bold" style={{ fontSize: 24, margin: 0, color: "#111827" }}>
@@ -105,150 +163,186 @@ export default async function InterviewPrintPage({
               {interview.role_title}
             </span>
           </div>
-          <p style={{ fontSize: 14, margin: "4px 0 0", color: "#6B7280" }}>
-            {formattedDate}
-            {report.approxDurationMinutes != null ? ` · ~${report.approxDurationMinutes} min` : ""}
-            {candidateDetails?.location ? ` · ${candidateDetails.location}` : ""}
-          </p>
+          <div className="flex flex-wrap items-center" style={{ gap: 16, marginTop: 8, fontSize: 13, color: "#374151" }}>
+            {candidateDetails?.phoneNumber && (
+              <span className="flex items-center" style={{ gap: 6 }}>
+                <Phone size={13} style={{ color: "#9CA3AF" }} />
+                {candidateDetails.phoneNumber}
+              </span>
+            )}
+            {user.email && (
+              <span className="flex items-center" style={{ gap: 6 }}>
+                <Mail size={13} style={{ color: "#9CA3AF" }} />
+                {user.email}
+              </span>
+            )}
+            {candidateDetails?.location && (
+              <span className="flex items-center" style={{ gap: 6 }}>
+                <MapPin size={13} style={{ color: "#9CA3AF" }} />
+                {candidateDetails.location}
+              </span>
+            )}
+          </div>
         </div>
         <MeritoMark />
       </div>
 
-      <Card>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between" style={{ gap: 20 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="font-semibold uppercase" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px", color: "#9CA3AF" }}>
-              Mock AI interview
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3" style={{ gap: 12 }}>
-              {[
-                { label: "Questions", value: String(report.answers.length) },
-                { label: "Skills assessed", value: String(skillEntries.length) },
-                { label: "Integrity", value: report.flagForSuspiciousActivity ? "Flagged" : "All clear" },
-              ].map((stat) => (
-                <div key={stat.label}>
-                  <p style={{ fontSize: 12, margin: "0 0 3px", color: "#9CA3AF" }}>{stat.label}</p>
-                  <p className="font-semibold" style={{ fontSize: 14, margin: 0, color: "#111827" }}>
-                    {stat.value}
-                  </p>
+      <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 border" style={{ gap: 16, background: "#fff", borderColor: "#F0E4C8", borderRadius: 16, padding: 20 }}>
+        {infoStats.map((stat) => (
+          <div key={stat.label}>
+            <div style={{ fontSize: 12, color: "#9CA3AF" }}>{stat.label}</div>
+            <div className="font-semibold" style={{ fontSize: 14, color: "#111827" }}>
+              {stat.value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mb-4 grid grid-cols-1 sm:grid-cols-2" style={{ gap: 16 }}>
+        {parameterEntries.length > 0 && (
+          <SectionCard>
+            <SectionHeading icon={null}>Parameters score</SectionHeading>
+            <div className="grid grid-cols-2" style={{ gap: 12 }}>
+              {parameterEntries.map(([skill, score]) => (
+                <div key={skill} className="rounded-lg" style={{ background: "#F9FAFB", padding: 10 }}>
+                  <div style={{ fontSize: 11, color: "#9CA3AF" }}>{titleCase(skill)}</div>
+                  <div className="font-bold" style={{ fontSize: 18, color: paramColor(score) }}>
+                    {Math.round(score)}%
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
-          <div className="shrink-0 flex flex-col items-center" style={{ gap: 8 }}>
-            <span className="font-semibold" style={{ fontSize: 12, borderRadius: 50, padding: "4px 12px", background: tone.background, color: tone.color }}>
-              {tone.label}
-            </span>
-            <div className="relative" style={{ width: 96, height: 96 }}>
-              <svg width={96} height={96} viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)" }}>
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#F1F5F9" strokeWidth={9} />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="none"
-                  stroke={tone.color}
-                  strokeWidth={9}
-                  strokeLinecap="round"
-                  strokeDasharray={2 * Math.PI * 42}
-                  strokeDashoffset={2 * Math.PI * 42 * (1 - report.overallScore / 100)}
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="font-bold" style={{ fontSize: 20, color: "#111827" }}>
-                  {Math.round(report.overallScore)}%
-                </span>
+          </SectionCard>
+        )}
+
+        {report.overallSkillScore != null && (
+          <SectionCard>
+            <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
+              <span className="font-bold" style={{ fontSize: 14, color: "#111827" }}>
+                Overall skill score
+              </span>
+              <span
+                className="font-bold uppercase"
+                style={{ fontSize: 11, borderRadius: 50, padding: "4px 10px", background: TIER_COLORS[tierFor(report.overallSkillScore)].bg, color: TIER_COLORS[tierFor(report.overallSkillScore)].fg }}
+              >
+                {tierFor(report.overallSkillScore)}
+              </span>
+            </div>
+            <div className="flex items-center justify-center">
+              <div className="relative" style={{ height: 96, width: 96 }}>
+                <svg viewBox="0 0 100 100" className="h-full w-full" style={{ transform: "rotate(-90deg)" }}>
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="#F3F4F6" strokeWidth={9} />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="42"
+                    fill="none"
+                    stroke={TIER_COLORS[tierFor(report.overallSkillScore)].fg}
+                    strokeWidth={9}
+                    strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 42}
+                    strokeDashoffset={2 * Math.PI * 42 * (1 - report.overallSkillScore / 100)}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center font-bold" style={{ fontSize: 20 }}>
+                  {Math.round(report.overallSkillScore)}%
+                </div>
               </div>
             </div>
-            <span style={{ fontSize: 12, color: "#9CA3AF" }}>Overall score</span>
-          </div>
-        </div>
-      </Card>
-
-      <Card>
-        <p className="font-semibold uppercase" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 8px", color: "#9CA3AF" }}>
-          Summary
-        </p>
-        <p style={{ fontSize: 14, lineHeight: 1.7, margin: 0, color: "#374151" }}>{report.overallSummary}</p>
-      </Card>
-
-      {skillEntries.length > 0 && (
-        <>
-          <h2 className="font-bold" style={{ fontSize: 18, margin: "0 0 10px", color: "#111827" }}>
-            Skill scores
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 12, marginBottom: 16 }}>
-            {skillEntries.map(([skill, entry]) => {
-              const color = skillTone(entry.score);
-              return (
-                <div key={skill} className="border" style={{ background: "#fff", borderColor: "#F1E3E5", borderRadius: 16, padding: 16, breakInside: "avoid" }}>
-                  <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
-                    <span className="font-semibold" style={{ fontSize: 14, color: "#111827" }}>
-                      {skill}
-                    </span>
-                    <span className="font-bold" style={{ fontSize: 14, color }}>
-                      {Math.round(entry.score)}%
-                    </span>
+            <div className="mt-4 grid grid-cols-5 gap-1 text-center">
+              {tierCounts.map((tier) => (
+                <div key={tier.label}>
+                  <div className="font-bold" style={{ fontSize: 16, color: TIER_COLORS[tier.label].fg }}>
+                    {tier.count}
                   </div>
-                  <div style={{ height: 6, borderRadius: 6, overflow: "hidden", marginBottom: 10, background: "#E5E7EB" }}>
-                    <div style={{ height: "100%", borderRadius: 6, width: `${entry.score}%`, background: color }} />
+                  <div className="leading-tight" style={{ fontSize: 9, color: "#9CA3AF" }}>
+                    {tier.label}
                   </div>
-                  <p style={{ fontSize: 13, lineHeight: 1.6, margin: 0, color: "#4B5563" }}>{entry.comment}</p>
                 </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 12, marginBottom: 16 }}>
-        {report.strengths && (
-          <div style={{ background: "#F0FDF4", borderRadius: 16, padding: 16 }}>
-            <p className="font-semibold uppercase" style={{ fontSize: 12, letterSpacing: "0.06em", margin: "0 0 10px", color: "#15803D" }}>
-              Strengths
-            </p>
-            <div className="flex items-start" style={{ gap: 8, fontSize: 13, lineHeight: 1.6, color: "#166534" }}>
-              <CheckCircle2 size={14} strokeWidth={2} style={{ marginTop: 2, flexShrink: 0 }} />
-              {report.strengths}
+              ))}
             </div>
-          </div>
-        )}
-        {report.areasOfImprovement && (
-          <div style={{ background: "#FEF2F2", borderRadius: 16, padding: 16 }}>
-            <p className="font-semibold uppercase" style={{ fontSize: 12, letterSpacing: "0.06em", margin: "0 0 10px", color: "#B91C1C" }}>
-              Areas of improvement
-            </p>
-            <div className="flex items-start" style={{ gap: 8, fontSize: 13, lineHeight: 1.6, color: "#991B1B" }}>
-              <XCircle size={14} strokeWidth={2} style={{ marginTop: 2, flexShrink: 0 }} />
-              {report.areasOfImprovement}
-            </div>
-          </div>
+          </SectionCard>
         )}
       </div>
 
-      <Card>
-        <div className="flex items-center" style={{ gap: 8, marginBottom: 8 }}>
-          {report.flagForSuspiciousActivity ? (
-            <ShieldAlert size={16} strokeWidth={2} style={{ color: "#B91C1C" }} />
-          ) : (
-            <ShieldCheck size={16} strokeWidth={2} style={{ color: "#6B7280" }} />
-          )}
-          <span className="font-bold" style={{ fontSize: 16, color: "#111827" }}>
-            Integrity
+      <SectionCard>
+        <SectionHeading icon={<Sparkles size={16} style={{ color: "#D97706" }} />}>AI overview</SectionHeading>
+        <p style={{ fontSize: 13, lineHeight: 1.65, margin: 0, color: "#374151" }}>{report.overallSummary}</p>
+      </SectionCard>
+
+      <SectionCard>
+        <SectionHeading icon={conductFlagged ? <ShieldAlert size={16} style={{ color: "#D97706" }} /> : <ShieldCheck size={16} style={{ color: "#D97706" }} />}>Practice conduct</SectionHeading>
+        <div className="flex items-center" style={{ gap: 8, marginBottom: 10 }}>
+          <span style={{ fontSize: 12, color: "#9CA3AF" }}>Overall</span>
+          <span
+            className="font-semibold"
+            style={{ fontSize: 12, borderRadius: 50, padding: "2px 10px", background: conductFlagged ? "#FEE2E2" : "#DCFCE7", color: conductFlagged ? "#B91C1C" : "#15803D" }}
+          >
+            {conductFlagged ? "Flagged" : "All clear"}
           </span>
         </div>
-        <p style={{ fontSize: 13, lineHeight: 1.65, margin: 0, color: "#4B5563" }}>
-          {report.integrityCheck ?? (report.flagForSuspiciousActivity ? "Flagged for review." : "No issues detected during this interview.")}
+        <p className="border-t" style={{ paddingTop: 10, fontSize: 13, lineHeight: 1.65, margin: 0, color: "#374151", borderColor: "#F0E4C8" }}>
+          {conductDetails}
         </p>
-      </Card>
+      </SectionCard>
+
+      {skillEntries.length > 0 && (
+        <SectionCard>
+          <SectionHeading icon={<ListChecks size={16} style={{ color: "#D97706" }} />}>Skill-wise evaluation</SectionHeading>
+          <div className="divide-y" style={{ borderColor: "#F0E4C8" }}>
+            {skillEntries.map(([skill, entry]) => (
+              <div key={skill} className="flex items-start justify-between" style={{ gap: 16, padding: "12px 0" }}>
+                <div className="shrink-0 font-semibold" style={{ width: 128, fontSize: 13, color: "#111827" }}>
+                  {skill}
+                </div>
+                <p className="flex-1" style={{ fontSize: 13, lineHeight: 1.6, margin: 0, color: "#4B5563" }}>
+                  {entry.comment}
+                </p>
+                <div className="shrink-0 text-right">
+                  {entry.score == null ? (
+                    <span className="rounded font-semibold" style={{ fontSize: 11, padding: "4px 8px", background: "#F3F4F6", color: "#9CA3AF" }}>
+                      NA
+                    </span>
+                  ) : (
+                    <>
+                      <div className="rounded font-bold text-white" style={{ fontSize: 13, padding: "4px 8px", background: TIER_COLORS[tierFor(entry.score)].fg }}>
+                        {entry.score}
+                      </div>
+                      <div className="mt-1 font-medium" style={{ fontSize: 10, color: TIER_COLORS[tierFor(entry.score)].fg }}>
+                        {tierFor(entry.score)}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      <div className="mb-4 grid grid-cols-1 sm:grid-cols-2" style={{ gap: 16 }}>
+        {report.strengths && (
+          <SectionCard>
+            <SectionHeading icon={<ThumbsUp size={16} style={{ color: "#D97706" }} />}>Strengths</SectionHeading>
+            <div className="flex items-start" style={{ gap: 8, fontSize: 13, lineHeight: 1.6, color: "#374151" }}>
+              <CheckCircle2 size={14} strokeWidth={2} style={{ marginTop: 2, flexShrink: 0, color: "#16A34A" }} />
+              {report.strengths}
+            </div>
+          </SectionCard>
+        )}
+        {report.areasOfImprovement && (
+          <SectionCard>
+            <SectionHeading icon={<TrendingDown size={16} style={{ color: "#D97706" }} />}>Areas of improvement</SectionHeading>
+            <p style={{ fontSize: 13, lineHeight: 1.6, margin: 0, color: "#374151" }}>{report.areasOfImprovement}</p>
+          </SectionCard>
+        )}
+      </div>
 
       {report.roadmap && (
-        <Card>
-          <p className="font-semibold uppercase" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 8px", color: "#9CA3AF" }}>
-            Roadmap
-          </p>
-          <p style={{ fontSize: 14, lineHeight: 1.7, margin: 0, color: "#374151" }}>{report.roadmap}</p>
-        </Card>
+        <SectionCard>
+          <SectionHeading icon={<Compass size={16} style={{ color: "#D97706" }} />}>Roadmap</SectionHeading>
+          <p style={{ fontSize: 13, lineHeight: 1.65, margin: 0, color: "#374151" }}>{report.roadmap}</p>
+        </SectionCard>
       )}
     </div>
   );
