@@ -66,7 +66,7 @@ export default function ExportPreviewModal({
               className="flex items-center bg-[#ed1a24] hover:bg-[#d3141d] transition-colors font-[family-name:var(--font-poppins)] font-semibold text-white"
               style={{ gap: 6, fontSize: 12.5, borderRadius: 50, padding: "8px 16px" }}
             >
-              <Download size={13} strokeWidth={2} /> Download PDF
+              <Download size={13} strokeWidth={2} /> Download
             </a>
             <button
               type="button"

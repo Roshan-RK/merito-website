@@ -218,7 +218,7 @@ export default function GenerateReportModal({
                 marginBottom: 20,
               }}
             >
-              Download PDF
+              Download
             </a>
 
             <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>
