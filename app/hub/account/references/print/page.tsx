@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Manrope } from "next/font/google";
+import { Quote } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { getReferenceCheckStatus, computeReferenceReport, type RefereeRole } from "@/lib/referenceChecks";
 
@@ -9,10 +10,11 @@ const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700
 
 export const metadata: Metadata = { title: "Reference checks" };
 
-// Printable/PDF-export target for the reference check report -- mirrors
-// app/hub/account/report/print/page.tsx and .../personality/print/page.tsx's
-// pattern (light theme, single continuous page, screenshotted by
-// app/api/hub/references/export/route.tsx via headless Chromium).
+// Printable/PDF-export target for the reference check report. Rebuilt to
+// mirror the mockup's dedicated `u9` testimonial-wall PDF template
+// (mockups/merito-dashboard-v34.html) rather than the generic
+// fitment-report-style layout the first pass used -- see
+// app/api/hub/references/export/route.tsx for the headless-Chromium caller.
 
 const ROLE_LABEL: Record<RefereeRole, string> = {
   faculty: "Faculty",
@@ -26,21 +28,34 @@ const ROLE_LABEL: Record<RefereeRole, string> = {
   other: "Other",
 };
 
-function toneFor(score: number): { label: string; background: string; color: string } {
-  if (score >= 4) return { label: "Strong", background: "#DCFCE7", color: "#15803D" };
-  if (score >= 3) return { label: "Positive", background: "#FEF3C7", color: "#92400E" };
-  if (score > 0) return { label: "Mixed", background: "#FEE2E2", color: "#B91C1C" };
-  return { label: "No data", background: "#F1F5F9", color: "#475569" };
+// Cycles per referee index, matching the mockup's u4 avatar palette.
+const AVATAR_COLORS = ["#EC1B25", "#2563EB", "#D97706"];
+
+function toneFor(score: number): string {
+  if (score >= 4) return "#15803D";
+  if (score >= 3) return "#B45309";
+  if (score > 0) return "#B91C1C";
+  return "#9CA3AF";
 }
 
-function MeritoMark() {
-  return <Image src="/logo.png" alt="Merito" width={128} height={36} style={{ height: 26, width: "auto" }} />;
+function initialsFor(name: string): string {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
-function Card({ children }: { children: React.ReactNode }) {
+function StarRating({ value }: { value: number }) {
+  const rounded = Math.round(value);
   return (
-    <div className="border" style={{ background: "#fff", borderColor: "#F1E3E5", borderRadius: 16, padding: 20, marginBottom: 16 }}>
-      {children}
+    <div className="flex" style={{ gap: 2 }}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <svg key={star} viewBox="0 0 20 20" className="h-4 w-4" fill={star <= rounded ? "#D97706" : "#E5E7EB"}>
+          <path d="M10 1.5l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6z" />
+        </svg>
+      ))}
     </div>
   );
 }
@@ -71,116 +86,104 @@ export default async function ReferencesPrintPage() {
 
   const report = computeReferenceReport(status.referees);
   const displayName = current?.name || "Candidate";
-  const overallTone = toneFor(report.overallScore);
-  const formattedDate = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-  const sortedCategories = [...report.categoryScores].sort((a, b) => b.value - a.value);
+
+  // report.categoryScores[c].values[i] lines up with report.referees[i] --
+  // computeReferenceReport builds both from the same filtered/ordered
+  // `completed` list, so pivoting per-category values back into a
+  // per-referee scores[] array (matching the mockup's referee.scores shape)
+  // is safe here.
+  const refereeScores = report.referees.map((_, i) => report.categoryScores.map((c) => c.values[i]));
 
   return (
-    <div className={`${manrope.variable} sm:p-8`} style={{ background: "#FBF3F4", color: "#111827", fontFamily: "var(--font-manrope), system-ui, sans-serif", minHeight: "100vh", padding: "24px" }}>
-      <div className="flex items-start justify-between flex-wrap" style={{ gap: 12, marginBottom: 20 }}>
-        <div>
-          <div className="flex items-center flex-wrap" style={{ gap: 10 }}>
-            <h1 className="font-bold" style={{ fontSize: 24, margin: 0, color: "#111827" }}>
-              {displayName}
-            </h1>
-            {current?.role_title && (
-              <span className="font-semibold text-white" style={{ fontSize: 12, borderRadius: 50, padding: "4px 12px", background: "#EC1B25" }}>
-                {current.role_title}
-              </span>
-            )}
-          </div>
-          <p style={{ fontSize: 14, margin: "4px 0 0", color: "#6B7280" }}>{formattedDate}</p>
+    <div
+      className={`${manrope.variable} p-6 sm:p-8`}
+      style={{ background: "#FEFCF8", color: "#111827", fontFamily: "var(--font-manrope), system-ui, sans-serif" }}
+    >
+      <div className="mb-5 flex items-center justify-between flex-wrap" style={{ gap: 10 }}>
+        <div className="flex items-center font-bold" style={{ gap: 6, fontSize: 18, color: "#EC1B25" }}>
+          <Image src="/logo.png" alt="Merito" width={128} height={36} style={{ height: 22, width: "auto" }} />
         </div>
-        <MeritoMark />
+        {current?.role_title && (
+          <span className="font-semibold" style={{ fontSize: 12, borderRadius: 50, padding: "4px 12px", background: "#DBEAFE", color: "#1D4ED8" }}>
+            {current.role_title}
+          </span>
+        )}
       </div>
 
-      <Card>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between" style={{ gap: 20 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="font-semibold uppercase" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px", color: "#9CA3AF" }}>
-              Reference check summary
-            </p>
-            <p style={{ fontSize: 14, lineHeight: 1.65, margin: 0, color: "#374151" }}>
-              Based on {report.referees.length} completed reference{report.referees.length === 1 ? "" : "s"}, averaged across {sortedCategories.length} work-quality categories.
-            </p>
-          </div>
-          <div className="shrink-0 flex flex-col items-center" style={{ gap: 8 }}>
-            <span className="font-semibold" style={{ fontSize: 12, borderRadius: 50, padding: "4px 12px", background: overallTone.background, color: overallTone.color }}>
-              {overallTone.label}
-            </span>
-            <div className="relative" style={{ width: 96, height: 96 }}>
-              <svg width={96} height={96} viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)" }}>
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#F1F5F9" strokeWidth={9} />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="none"
-                  stroke={overallTone.color}
-                  strokeWidth={9}
-                  strokeLinecap="round"
-                  strokeDasharray={2 * Math.PI * 42}
-                  strokeDashoffset={2 * Math.PI * 42 * (1 - report.overallScore / 5)}
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="font-bold" style={{ fontSize: 20, color: "#111827" }}>
-                  {report.overallScore.toFixed(1)}
-                </span>
-              </div>
-            </div>
-            <span style={{ fontSize: 12, color: "#9CA3AF" }}>Out of 5</span>
+      <div className="mb-6 text-center">
+        <div className="font-semibold uppercase" style={{ fontSize: 11, letterSpacing: "0.02em", color: "#9CA3AF" }}>
+          What people say working with
+        </div>
+        <h1 className="font-bold" style={{ marginTop: 4, fontSize: 24, color: "#111827" }}>
+          {displayName}
+        </h1>
+        <div className="flex flex-col items-center" style={{ marginTop: 12, gap: 6 }}>
+          <StarRating value={report.overallScore} />
+          <div style={{ fontSize: 14, color: "#6B7280" }}>
+            <span className="font-bold" style={{ color: "#111827" }}>
+              {report.overallScore} / 5
+            </span>{" "}
+            from {report.referees.length} references
           </div>
         </div>
-      </Card>
-
-      <h2 className="font-bold" style={{ fontSize: 18, margin: "0 0 10px", color: "#111827" }}>
-        Category scores
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 12, marginBottom: 16 }}>
-        {sortedCategories.map((category) => {
-          const tone = toneFor(category.value);
-          return (
-            <div key={category.category} className="border" style={{ background: "#fff", borderColor: "#F1E3E5", borderRadius: 16, padding: 16, breakInside: "avoid" }}>
-              <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
-                <span className="font-semibold" style={{ fontSize: 14, color: "#111827" }}>
-                  {category.label}
-                </span>
-                <span style={{ fontSize: 14 }}>
-                  <span className="font-bold" style={{ color: tone.color }}>
-                    {category.value > 0 ? category.value.toFixed(1) : "—"}
-                  </span>
-                  {category.values.length > 0 && <span style={{ color: "#9CA3AF" }}> ({category.values.join(", ")})</span>}
-                </span>
-              </div>
-              <div style={{ height: 6, borderRadius: 6, overflow: "hidden", background: "#E5E7EB" }}>
-                <div style={{ height: "100%", borderRadius: 6, width: `${(category.value / 5) * 100}%`, background: tone.color }} />
-              </div>
-            </div>
-          );
-        })}
       </div>
 
-      <h2 className="font-bold" style={{ fontSize: 18, margin: "0 0 10px", color: "#111827" }}>
-        Referees
-      </h2>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-2" style={{ gap: 16 }}>
         {report.referees.map((referee, i) => (
-          <div key={i} className="border" style={{ background: "#fff", borderColor: "#F1E3E5", borderRadius: 16, padding: 16, breakInside: "avoid" }}>
-            <div className="flex items-center justify-between flex-wrap" style={{ gap: 8, marginBottom: referee.overallFeedback ? 8 : 0 }}>
-              <span className="font-semibold" style={{ fontSize: 14, color: "#111827" }}>
-                {referee.name}
-              </span>
-              <span style={{ fontSize: 12, color: "#9CA3AF" }}>
-                {ROLE_LABEL[referee.role]}
-                {referee.organization ? ` · ${referee.organization}` : ""}
-              </span>
+          <div key={i} className="relative border" style={{ background: "#fff", borderColor: "#F1E9DC", borderRadius: 16, padding: 20, breakInside: "avoid" }}>
+            <Quote className="mb-2 h-6 w-6" style={{ color: "#F3E4C8" }} fill="#F3E4C8" />
+            <p className="italic leading-relaxed" style={{ marginBottom: 16, fontSize: 13.5, color: "#374151" }}>
+              {referee.overallFeedback}
+            </p>
+            <div className="flex items-center" style={{ gap: 10 }}>
+              <div
+                className="grid shrink-0 place-items-center rounded-full font-bold text-white"
+                style={{ height: 36, width: 36, fontSize: 12, background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
+              >
+                {initialsFor(referee.name)}
+              </div>
+              <div className="min-w-0">
+                <div className="truncate font-semibold" style={{ fontSize: 13, color: "#111827" }}>
+                  {referee.name}
+                </div>
+                <div className="truncate" style={{ fontSize: 11, color: "#9CA3AF" }}>
+                  {ROLE_LABEL[referee.role]}
+                  {referee.organization ? ` · ${referee.organization}` : ""}
+                </div>
+              </div>
             </div>
-            {referee.overallFeedback && (
-              <p style={{ fontSize: 13, lineHeight: 1.65, margin: 0, color: "#4B5563", fontStyle: "italic" }}>&ldquo;{referee.overallFeedback}&rdquo;</p>
-            )}
           </div>
         ))}
+      </div>
+
+      <div className="border" style={{ background: "#fff", borderColor: "#F1E9DC", borderRadius: 16, padding: 20 }}>
+        <div className="font-bold" style={{ marginBottom: 12, fontSize: 16, color: "#111827" }}>
+          Category breakdown
+        </div>
+        <div className="flex flex-col" style={{ gap: 12 }}>
+          {report.categoryScores.map((category, c) => {
+            const color = toneFor(category.value);
+            return (
+              <div key={category.category}>
+                <div className="flex items-center justify-between" style={{ marginBottom: 4, fontSize: 14 }}>
+                  <span style={{ color: "#374151" }}>{category.label}</span>
+                  <span className="font-bold" style={{ color }}>
+                    {category.value > 0 ? category.value.toFixed(1) : "—"}
+                    {refereeScores.length > 0 && (
+                      <span className="font-normal" style={{ color: "#9CA3AF" }}>
+                        {" "}
+                        ({refereeScores.map((scores) => scores[c]).join(", ")})
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div style={{ height: 8, borderRadius: 8, overflow: "hidden", background: "#F5EEDD" }}>
+                  <div style={{ height: "100%", borderRadius: 8, width: `${(category.value / 5) * 100}%`, background: color }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
