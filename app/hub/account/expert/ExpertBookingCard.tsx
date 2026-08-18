@@ -1,14 +1,12 @@
-"use client";
-
-import { useState } from "react";
 import { UserRound } from "lucide-react";
-import CounsellingPaywallModal from "../CounsellingPaywallModal";
+import ExpertBookingButton from "./ExpertBookingButton";
 
 // Booking CTA from the mockup's expert-guidance page (the card below the
 // bio, not the bio card itself) -- reuses the same CounsellingPaywallModal
 // and "requested" copy CounsellingCard.tsx already established on the
 // Overview page, rather than a new modal or the mockup's own "Call booked"
-// wording.
+// wording. Button + modal logic lives in ExpertBookingButton so the closing
+// CTA card further down the page can reuse the same booking flow.
 export default function ExpertBookingCard({
   firstName,
   priceLabel,
@@ -18,9 +16,6 @@ export default function ExpertBookingCard({
   priceLabel: string;
   initialRequested: boolean;
 }) {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [requested, setRequested] = useState(initialRequested);
-
   return (
     <div
       className="bg-[#141416] border border-white/[0.08] flex items-center flex-wrap"
@@ -38,31 +33,8 @@ export default function ExpertBookingCard({
         </p>
       </div>
       <div className="shrink-0">
-        {requested ? (
-          <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13 }}>
-            Request sent. We&apos;ll confirm your slot.
-          </p>
-        ) : (
-          <button
-            onClick={() => setModalOpen(true)}
-            className="font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
-            style={{ border: "none", borderRadius: 8, padding: "12px 20px", fontSize: 13.5, cursor: "pointer", whiteSpace: "nowrap" }}
-          >
-            Book my expert call for {priceLabel}
-          </button>
-        )}
+        <ExpertBookingButton priceLabel={priceLabel} initialRequested={initialRequested} />
       </div>
-
-      {modalOpen && (
-        <CounsellingPaywallModal
-          priceLabel={priceLabel}
-          onClose={() => setModalOpen(false)}
-          onRequested={() => {
-            setModalOpen(false);
-            setRequested(true);
-          }}
-        />
-      )}
     </div>
   );
 }
