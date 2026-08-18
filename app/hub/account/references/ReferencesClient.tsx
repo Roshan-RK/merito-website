@@ -29,7 +29,7 @@ import {
 import ReferenceScoreGauge, { getReferenceScoreBand } from "./ReferenceScoreGauge";
 
 const EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40";
-const CARD = "bg-[#141416] border border-white/[0.08]";
+const CARD = "bg-[rgb(29,25,31)] border border-[rgb(49,47,55)]";
 const INPUT = "bg-white/[0.04] border border-white/[0.1] text-white placeholder:text-white/25 outline-none focus:border-[#ed1a24] transition-colors";
 const LABEL = "font-[family-name:var(--font-poppins)] font-semibold text-white/50";
 
@@ -190,12 +190,12 @@ export default function ReferencesClient({ initialStatus }: { initialStatus: Ref
         <>
           <div className={CARD} style={{ borderRadius: 14, padding: 24 }}>
             <div className="flex items-center justify-between flex-wrap" style={{ gap: 12, marginBottom: 22 }}>
-              <div className="flex items-center" style={{ gap: 12 }}>
-                <div className="flex items-center justify-center bg-[#ed1a24]/15 text-[#ed1a24] shrink-0" style={{ width: 40, height: 40, borderRadius: 10 }}>
-                  <Users size={19} strokeWidth={2} />
+              <div className="flex items-center" style={{ gap: 10 }}>
+                <div className="flex items-center justify-center bg-[#ed1a24]/15 text-[#ed1a24] shrink-0" style={{ width: 36, height: 36, borderRadius: 8 }}>
+                  <Users size={17} strokeWidth={2} />
                 </div>
                 <div>
-                  <p className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.05rem", margin: 0 }}>
+                  <p className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: 15, margin: 0 }}>
                     Reference check report
                   </p>
                   <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 12, margin: "2px 0 0" }}>
@@ -232,7 +232,7 @@ export default function ReferencesClient({ initialStatus }: { initialStatus: Ref
                   >
                     <TrendingUp size={15} strokeWidth={2} style={{ color: "#3FCB8C", flexShrink: 0 }} />
                     <span className="font-[family-name:var(--font-poppins)] text-white/80" style={{ fontSize: 12.5 }}>
-                      <span style={{ fontWeight: 700, color: "#3FCB8C" }}>Strongest:</span> {strongest.label} ({strongest.value.toFixed(1)})
+                      <span style={{ fontWeight: 700, color: "#3FCB8C" }}>Strongest &mdash;</span> {strongest.label} ({strongest.value.toFixed(1)})
                     </span>
                   </div>
                 )}
@@ -246,7 +246,7 @@ export default function ReferencesClient({ initialStatus }: { initialStatus: Ref
                       >
                         <TrendingDown size={15} strokeWidth={2} style={{ color: band.textColor, flexShrink: 0 }} />
                         <span className="font-[family-name:var(--font-poppins)] text-white/80" style={{ fontSize: 12.5 }}>
-                          <span style={{ fontWeight: 700, color: band.textColor }}>Growth area:</span> {growth.label} ({growth.value.toFixed(1)})
+                          <span style={{ fontWeight: 700, color: band.textColor }}>Growth area &mdash;</span> {growth.label} ({growth.value.toFixed(1)})
                         </span>
                       </div>
                     );

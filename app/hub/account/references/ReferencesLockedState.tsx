@@ -7,7 +7,7 @@ import { MIN_REFERENCES, REFERENCE_CATEGORIES } from "@/lib/referenceChecks";
 import { PRODUCT_PRICING, formatPrice, type CandidateLevel } from "@/lib/razorpay/pricing";
 import ReferencesPaywallModal from "../ReferencesPaywallModal";
 
-const CARD = "bg-[#141416] border border-white/[0.08]";
+const CARD = "bg-[rgb(29,25,31)] border border-[rgb(49,47,55)]";
 
 const TEAMWORK_LABEL = REFERENCE_CATEGORIES.find((c) => c.value === "teamwork")?.label ?? "Teamwork";
 
@@ -34,11 +34,11 @@ export default function ReferencesLockedState({
     <div className={CARD} style={{ borderRadius: 14, overflow: "hidden" }}>
       <div style={{ padding: 24 }}>
         <div className="flex items-start justify-between flex-wrap" style={{ gap: 12, marginBottom: 12 }}>
-          <div className="flex items-center" style={{ gap: 12 }}>
-            <div className="flex items-center justify-center bg-[#ed1a24]/15 text-[#ed1a24] shrink-0" style={{ width: 36, height: 36, borderRadius: 10 }}>
+          <div className="flex items-center" style={{ gap: 10 }}>
+            <div className="flex items-center justify-center bg-[#ed1a24]/15 text-[#ed1a24] shrink-0" style={{ width: 36, height: 36, borderRadius: 8 }}>
               <Users size={17} strokeWidth={2} />
             </div>
-            <span className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.05rem" }}>
+            <span className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: 15 }}>
               Reference checks
             </span>
           </div>
@@ -55,12 +55,12 @@ export default function ReferencesLockedState({
           short note. It&apos;s verified feedback, not a self-assessment.
         </p>
 
-        <div className="flex flex-wrap" style={{ gap: 8, marginBottom: 18 }}>
+        <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 18 }}>
           {[`${REFERENCE_CATEGORIES.length} categories`, `${MIN_REFERENCES} referees`, "Verified feedback"].map((b) => (
             <span
               key={b}
-              className="bg-white/[0.05] border border-white/[0.08] font-[family-name:var(--font-poppins)] text-white/60"
-              style={{ fontSize: 12, borderRadius: 999, padding: "6px 13px" }}
+              className="font-[family-name:var(--font-poppins)] text-white/55"
+              style={{ fontSize: 11, borderRadius: 6, padding: "4px 10px", background: "rgba(255,255,255,0.06)" }}
             >
               {b}
             </span>
@@ -72,7 +72,7 @@ export default function ReferencesLockedState({
             <div key={i} className="flex items-start" style={{ gap: 10 }}>
               <span
                 className="flex items-center justify-center shrink-0 bg-[#ed1a24]/15 text-[#ed1a24] font-[family-name:var(--font-poppins)] font-bold"
-                style={{ width: 18, height: 18, borderRadius: "50%", fontSize: 10, marginTop: 1 }}
+                style={{ width: 16, height: 16, borderRadius: "50%", fontSize: 9, marginTop: 1 }}
               >
                 {i + 1}
               </span>
@@ -86,7 +86,7 @@ export default function ReferencesLockedState({
         <button
           onClick={() => setModalOpen(true)}
           className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
-          style={{ gap: 8, height: 48, padding: "0 24px", borderRadius: 8, fontSize: 14.5, border: "none", cursor: "pointer" }}
+          style={{ gap: 8, height: 48, padding: "0 24px", borderRadius: 8, fontSize: 14.5, border: "none", cursor: "pointer", boxShadow: "0 4px 6px rgba(236,34,40,0.3)" }}
         >
           <UserPlus size={15} strokeWidth={2} />
           Start my reference check for {priceLabel}
@@ -95,7 +95,7 @@ export default function ReferencesLockedState({
 
       <div className="border-t border-white/[0.08] bg-white/[0.02]" style={{ padding: 20 }}>
         <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 10.5, letterSpacing: "0.06em", margin: "0 0 12px" }}>
-          Preview: what you&apos;ll get
+          Preview &mdash; what you&apos;ll get
         </p>
         <div className="select-none" style={{ opacity: 0.8, filter: "blur(3px)", display: "flex", flexDirection: "column", gap: 12 }}>
           <div className="bg-white/[0.04]" style={{ borderRadius: 10, padding: 12 }}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Download } from "lucide-react";
 import ExportPreviewButton from "../ExportPreviewButton";
 import {
   TRAITS,
@@ -90,10 +90,20 @@ export default function PersonalityReport({
               fit signal for {roleTitle}
             </p>
           </div>
-          <ExportPreviewButton
-            exportUrl={`/api/hub/personality/export?role=${encodeURIComponent(roleTitle)}`}
-            title="Personality report"
-          />
+          <div className="flex items-center flex-wrap" style={{ gap: 8 }}>
+            <ExportPreviewButton
+              exportUrl={`/api/hub/personality/export?role=${encodeURIComponent(roleTitle)}`}
+              title="Personality report"
+            />
+            <a
+              href={`/api/hub/personality/export?role=${encodeURIComponent(roleTitle)}`}
+              download
+              className="flex items-center hover:bg-white/[0.06] transition-colors font-[family-name:var(--font-poppins)] font-medium text-white"
+              style={{ gap: 6, fontSize: 12, borderRadius: 12, padding: "7px 12px", background: "rgb(21,18,22)", border: "1px solid rgb(49,47,55)" }}
+            >
+              <Download size={13} strokeWidth={2} /> Download
+            </a>
+          </div>
         </div>
 
         <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 16 }}>
