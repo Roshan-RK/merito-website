@@ -1,12 +1,10 @@
 import { redirect } from "next/navigation";
-import { Download } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { getReferenceCheckStatus, MIN_REFERENCES, REFERENCE_CATEGORIES } from "@/lib/referenceChecks";
 import { isProductUnlocked } from "@/lib/productUnlocks";
 import { DEFAULT_LEVEL, type CandidateLevel } from "@/lib/razorpay/pricing";
 import ReferencesClient from "./ReferencesClient";
 import ReferencesLockedState from "./ReferencesLockedState";
-import ExportPreviewButton from "../ExportPreviewButton";
 
 export default async function ReferencesPage() {
   const supabase = await createSupabaseServerClient();
@@ -61,24 +59,6 @@ export default async function ReferencesPage() {
   return (
     <main>
       <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
-        <div className="print:hidden flex items-center justify-end flex-wrap" style={{ gap: 12 }}>
-          {status?.status === "completed" && (
-            <div className="flex items-center flex-wrap" style={{ gap: 8 }}>
-              <ExportPreviewButton
-                exportUrl="/api/hub/references/export"
-                title="Reference check: export preview"
-              />
-              <a
-                href="/api/hub/references/export"
-                download
-                className="flex items-center hover:bg-white/[0.06] transition-colors font-[family-name:var(--font-poppins)] font-medium text-white"
-                style={{ gap: 6, fontSize: 12, borderRadius: 12, padding: "7px 12px", background: "rgb(21,18,22)", border: "1px solid rgb(49,47,55)" }}
-              >
-                <Download size={13} strokeWidth={2} /> Download
-              </a>
-            </div>
-          )}
-        </div>
         <div>
           <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.6rem", margin: "0 0 6px" }}>
             Reference checks

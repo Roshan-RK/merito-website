@@ -14,8 +14,10 @@ import {
   Quote,
   TrendingUp,
   TrendingDown,
+  Download,
 } from "lucide-react";
 import type { ComponentType } from "react";
+import ExportPreviewButton from "../ExportPreviewButton";
 import {
   MAX_REFEREES,
   MAX_REMINDERS,
@@ -201,12 +203,23 @@ export default function ReferencesClient({ initialStatus }: { initialStatus: Ref
                   </p>
                 </div>
               </div>
-              <span
-                className="font-[family-name:var(--font-poppins)] font-semibold"
-                style={{ fontSize: 11, color: "#3FCB8C", background: "rgba(63,203,140,0.12)", borderRadius: 999, padding: "5px 12px" }}
-              >
-                Completed
-              </span>
+              <div className="print:hidden flex items-center flex-wrap" style={{ gap: 10 }}>
+                <span
+                  className="font-[family-name:var(--font-poppins)] font-semibold"
+                  style={{ fontSize: 11, color: "#3FCB8C", background: "rgba(63,203,140,0.12)", borderRadius: 999, padding: "5px 12px" }}
+                >
+                  Completed
+                </span>
+                <ExportPreviewButton exportUrl="/api/hub/references/export" title="Reference check report" />
+                <a
+                  href="/api/hub/references/export"
+                  download
+                  className="flex items-center hover:bg-white/[0.06] transition-colors font-[family-name:var(--font-poppins)] font-medium text-white"
+                  style={{ gap: 6, fontSize: 12, borderRadius: 12, padding: "7px 12px", background: "rgb(21,18,22)", border: "1px solid rgb(49,47,55)" }}
+                >
+                  <Download size={13} strokeWidth={2} /> Download
+                </a>
+              </div>
             </div>
 
             <div className="flex flex-col items-center sm:flex-row sm:items-start" style={{ gap: 28 }}>
