@@ -2,11 +2,14 @@ import { redirect } from "next/navigation";
 import { Download, CheckCircle2, XCircle } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { isReportUnlocked } from "@/lib/reportUnlocks";
+import { isProductUnlocked } from "@/lib/productUnlocks";
+import { DEFAULT_LEVEL, type CandidateLevel } from "@/lib/razorpay/pricing";
 import { getCandidateResumeDetails, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import ResumeMatchCategoryCard from "./ResumeMatchCategoryCard";
 import ResumeMatchGauge, { getMatchBandDark } from "./ResumeMatchGauge";
 import CandidateStatsCard from "./CandidateStatsCard";
 import CandidateProfile from "./CandidateProfile";
+import ReportLockedState from "./ReportLockedState";
 import ExportPreviewButton from "../ExportPreviewButton";
 
 const EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40";
@@ -23,7 +26,7 @@ export default async function FullReportPage() {
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("id, role_title, score, name, resume_match_status, resume_match_raw, ib_applied_job_id")
+    .select("id, role_title, score, name, resume_match_status, resume_match_raw, ib_applied_job_id, candidate_level")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -32,10 +35,54 @@ export default async function FullReportPage() {
   }
 
   const current = leads[0];
+  const level = (current.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
   const unlocked = await isReportUnlocked(user.id, current.role_title);
 
   if (!unlocked) {
-    redirect("/hub/account");
+    const [personalityUnlocked, referencesUnlocked] = await Promise.all([
+      isProductUnlocked(user.id, "personality"),
+      isProductUnlocked(user.id, "references"),
+    ]);
+    const bundleEligible = !personalityUnlocked && !referencesUnlocked;
+
+    const lockedReport =
+      current.resume_match_status === "READY" && current.resume_match_raw
+        ? (current.resume_match_raw as ResumeMatchReportReady)
+        : null;
+    const topCategory = lockedReport
+      ? [...lockedReport.categories].sort((a, b) => b.score - a.score)[0] ?? null
+      : null;
+
+    const candidateDetails = current.ib_applied_job_id
+      ? await getCandidateResumeDetails(current.ib_applied_job_id).catch((err) => {
+          console.error("getCandidateResumeDetails failed, rendering locked report without skill tags", err);
+          return null;
+        })
+      : null;
+
+    return (
+      <main>
+        <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+          <div>
+            <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.6rem", margin: "0 0 6px" }}>
+              Fitment report
+            </h1>
+            <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 14, margin: 0 }}>
+              A dimension-by-dimension breakdown of your CV against the {current.role_title} JD.
+            </p>
+          </div>
+          <ReportLockedState
+            leadId={current.id}
+            roleTitle={current.role_title}
+            level={level}
+            bundleEligible={bundleEligible}
+            skillTags={candidateDetails?.skills ?? []}
+            previewSummary={lockedReport?.summary ?? null}
+            previewCategory={topCategory ? { label: topCategory.label, score: topCategory.score } : null}
+          />
+        </div>
+      </main>
+    );
   }
 
   if (current.resume_match_status !== "READY" || !current.resume_match_raw) {
