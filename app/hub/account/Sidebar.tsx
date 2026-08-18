@@ -96,7 +96,7 @@ export default function Sidebar() {
                   {isActive && (
                     <span
                       className="absolute rounded-full"
-                      style={{ top: 4, bottom: 4, left: 0, width: 3, background: "#ed1a24", boxShadow: "0 0 8px rgba(237,29,39,0.6)" }}
+                      style={{ top: 4, bottom: 4, left: 0, width: 3, background: "#ed1a24", boxShadow: "0 0 6px rgba(237,29,39,0.9), 0 0 14px rgba(237,29,39,0.5)" }}
                     />
                   )}
                   <Icon size={16} strokeWidth={2} />
