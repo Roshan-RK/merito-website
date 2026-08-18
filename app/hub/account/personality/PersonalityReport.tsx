@@ -76,7 +76,7 @@ export default function PersonalityReport({
 
   return (
     <div>
-      <div className="bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 14, padding: 24 }}>
+      <div style={{ background: "rgb(29,25,31)", border: "1px solid rgb(49,47,55)", borderRadius: 14, padding: 24 }}>
         <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 11, letterSpacing: "0.08em", margin: "0 0 6px" }}>
           Personality Profile · Big Five (OCEAN)
         </p>
@@ -108,7 +108,7 @@ export default function PersonalityReport({
         const s = scores[t];
         const level = traitLevel(s.pct);
         return (
-          <div key={t} className="bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 14, padding: 22, marginTop: 16 }}>
+          <div key={t} style={{ background: "rgb(29,25,31)", border: "1px solid rgb(49,47,55)", borderRadius: 14, padding: 22, marginTop: 16 }}>
             <div className="flex items-start justify-between flex-wrap" style={{ gap: 12, marginBottom: 12 }}>
               <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.15rem", margin: 0 }}>
                 {TRAIT_NAME[t]}
@@ -134,7 +134,7 @@ export default function PersonalityReport({
         );
       })}
 
-      <div className="bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 14, padding: 22, marginTop: 16 }}>
+      <div style={{ background: "rgb(29,25,31)", border: "1px solid rgb(49,47,55)", borderRadius: 14, padding: 22, marginTop: 16 }}>
         <div className="flex items-center" style={{ gap: 8, marginBottom: 4 }}>
           <ShieldCheck size={16} strokeWidth={2} className="text-[#ed1a24]" />
           <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.1rem", margin: 0 }}>

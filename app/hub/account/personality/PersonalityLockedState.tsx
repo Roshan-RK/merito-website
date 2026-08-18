@@ -7,7 +7,7 @@ import { ITEMS, IMPRESSION_ITEMS } from "@/lib/personality";
 import { PRODUCT_PRICING, formatPrice, type CandidateLevel } from "@/lib/razorpay/pricing";
 import PersonalityPaywallModal from "../PersonalityPaywallModal";
 
-const CARD = "bg-[#141416] border border-white/[0.08]";
+const CARD_STYLE = { background: "rgb(29,25,31)", border: "1px solid rgb(49,47,55)" };
 
 const TOTAL_STATEMENTS = ITEMS.length + IMPRESSION_ITEMS.length;
 
@@ -41,14 +41,14 @@ export default function PersonalityLockedState({
   const priceLabel = formatPrice(PRODUCT_PRICING.personality[level]);
 
   return (
-    <div className={CARD} style={{ borderRadius: 14, overflow: "hidden" }}>
+    <div style={{ ...CARD_STYLE, borderRadius: 14, overflow: "hidden" }}>
       <div style={{ padding: 24 }}>
         <div className="flex items-start justify-between flex-wrap" style={{ gap: 12, marginBottom: 12 }}>
-          <div className="flex items-center" style={{ gap: 12 }}>
-            <div className="flex items-center justify-center bg-[#ed1a24]/15 text-[#ed1a24] shrink-0" style={{ width: 36, height: 36, borderRadius: 10 }}>
+          <div className="flex items-center" style={{ gap: 10 }}>
+            <div className="flex items-center justify-center bg-[#ed1a24]/15 text-[#ed1a24] shrink-0" style={{ width: 36, height: 36, borderRadius: 8 }}>
               <ClipboardList size={17} strokeWidth={2} />
             </div>
-            <span className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.05rem" }}>
+            <span className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: 15 }}>
               Personality test
             </span>
           </div>
@@ -58,19 +58,19 @@ export default function PersonalityLockedState({
         </div>
 
         <p className="font-[family-name:var(--font-poppins)] font-semibold text-white/85" style={{ fontSize: 14, margin: "0 0 6px" }}>
-          Recruiters ask about your style. This answers it before they do.
+          Recruiters ask about your style &mdash; this answers it before they do.
         </p>
         <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 13, lineHeight: 1.65, margin: "0 0 16px" }}>
           A Big Five (OCEAN) assessment mapping how you think, work and relate to others, with what each score means
           for you at work.
         </p>
 
-        <div className="flex flex-wrap" style={{ gap: 8, marginBottom: 18 }}>
+        <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 18 }}>
           {[`${TOTAL_STATEMENTS} statements`, "~11 minutes", "Instant results"].map((b) => (
             <span
               key={b}
-              className="bg-white/[0.05] border border-white/[0.08] font-[family-name:var(--font-poppins)] text-white/60"
-              style={{ fontSize: 12, borderRadius: 999, padding: "6px 13px" }}
+              className="font-[family-name:var(--font-poppins)] text-white/55"
+              style={{ fontSize: 11, borderRadius: 6, padding: "4px 10px", background: "rgba(255,255,255,0.06)" }}
             >
               {b}
             </span>
@@ -82,7 +82,7 @@ export default function PersonalityLockedState({
             <div key={i} className="flex items-start" style={{ gap: 10 }}>
               <span
                 className="flex items-center justify-center shrink-0 bg-[#ed1a24]/15 text-[#ed1a24] font-[family-name:var(--font-poppins)] font-bold"
-                style={{ width: 18, height: 18, borderRadius: "50%", fontSize: 10, marginTop: 1 }}
+                style={{ width: 16, height: 16, borderRadius: "50%", fontSize: 9, marginTop: 1 }}
               >
                 {i + 1}
               </span>
@@ -96,7 +96,7 @@ export default function PersonalityLockedState({
         <button
           onClick={() => setModalOpen(true)}
           className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
-          style={{ gap: 8, height: 48, padding: "0 24px", borderRadius: 8, fontSize: 14.5, border: "none", cursor: "pointer" }}
+          style={{ gap: 8, height: 48, padding: "0 24px", borderRadius: 8, fontSize: 14.5, border: "none", cursor: "pointer", boxShadow: "0 4px 6px rgba(236,34,40,0.3)" }}
         >
           <Play size={15} strokeWidth={2} fill="currentColor" />
           Start my personality test for {priceLabel}
@@ -105,7 +105,7 @@ export default function PersonalityLockedState({
 
       <div className="border-t border-white/[0.08] bg-white/[0.02]" style={{ padding: 20 }}>
         <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 10.5, letterSpacing: "0.06em", margin: "0 0 12px" }}>
-          Preview: what you&apos;ll get
+          Preview &mdash; what you&apos;ll get
         </p>
         <div className="select-none" style={{ opacity: 0.8, filter: "blur(3px)", display: "flex", flexDirection: "column", gap: 10 }}>
           {PREVIEW_TRAITS.map((t) => (
