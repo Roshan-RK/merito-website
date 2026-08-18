@@ -19,7 +19,16 @@ export default function AppShell({
   const [showChangeRole, setShowChangeRole] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div
+      className="min-h-screen"
+      style={{
+        background:
+          "radial-gradient(ellipse 900px 560px at 74% -8%, rgba(237,26,36,0.13), transparent 62%), " +
+          "radial-gradient(ellipse 700px 460px at -8% 28%, rgba(237,26,36,0.05), transparent 60%), " +
+          "rgb(21,18,22)",
+        backgroundAttachment: "fixed",
+      }}
+    >
       <TopBar roleTitle={roleTitle} userName={userName} userEmail={userEmail} onChangeRole={() => setShowChangeRole(true)} />
       <div className="flex items-start mx-auto" style={{ maxWidth: 1360 }}>
         <Sidebar />

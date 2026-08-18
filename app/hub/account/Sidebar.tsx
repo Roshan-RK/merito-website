@@ -54,7 +54,7 @@ export default function Sidebar() {
   return (
     <nav
       aria-label="Account navigation"
-      className="print:hidden hidden md:flex flex-col shrink-0 sticky overflow-y-auto bg-[#0a0a0a]"
+      className="print:hidden hidden md:flex flex-col shrink-0 sticky overflow-y-auto"
       style={{ width: 250, top: 64, height: "calc(100vh - 64px)", padding: "20px 12px", borderRight: "1px solid rgb(49,47,55)" }}
     >
       {GROUPS.map((group) => (
