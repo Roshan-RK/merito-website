@@ -6,6 +6,7 @@ import { Phone, Mail, MapPin, Sparkles, ShieldCheck, ShieldAlert, ListChecks, Th
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import { getCandidateResumeDetails } from "@/lib/intervuebox/reports";
+import { parseRoadmap } from "@/lib/intervuebox/parseRoadmap";
 
 const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"], variable: "--font-manrope" });
 
@@ -147,6 +148,13 @@ export default async function InterviewPrintPage({
 
   const conductFlagged = report.flagForSuspiciousActivity;
   const conductDetails = report.integrityCheck ?? (conductFlagged ? "Flagged for review." : "No issues detected during this interview.");
+
+  // report.roadmap is IntervueBox's own AI-generated markdown (### Strengths
+  // to Leverage / #### Phase (duration) / **Goal:** / numbered topics), the
+  // same shape RoadmapTimeline.tsx already parses for other light PDFs --
+  // not a flat sentence. parseRoadmap returns null on anything that doesn't
+  // match, in which case the raw string is shown as-is below.
+  const parsedRoadmap = report.roadmap ? parseRoadmap(report.roadmap) : null;
 
   return (
     <div
@@ -338,11 +346,78 @@ export default async function InterviewPrintPage({
         )}
       </div>
 
-      {report.roadmap && (
+      {report.roadmap && !parsedRoadmap && (
         <SectionCard>
           <SectionHeading icon={<Compass size={16} style={{ color: "#D97706" }} />}>Roadmap</SectionHeading>
           <p style={{ fontSize: 13, lineHeight: 1.65, margin: 0, color: "#374151" }}>{report.roadmap}</p>
         </SectionCard>
+      )}
+
+      {parsedRoadmap && (
+        <>
+          <SectionCard>
+            <SectionHeading icon={<CheckCircle2 size={16} style={{ color: "#16A34A" }} />}>Strengths to leverage</SectionHeading>
+            <div className="flex flex-col" style={{ gap: 8 }}>
+              {parsedRoadmap.strengthsToLeverage.map((point, i) => (
+                <div key={i} className="flex items-start" style={{ gap: 8, fontSize: 13, lineHeight: 1.6, color: "#374151" }}>
+                  <CheckCircle2 size={13} strokeWidth={2} style={{ marginTop: 3, flexShrink: 0, color: "#16A34A" }} />
+                  {point}
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard>
+            <SectionHeading icon={<Compass size={16} style={{ color: "#D97706" }} />}>Roadmap</SectionHeading>
+            <div className="flex flex-col" style={{ gap: 14 }}>
+              {parsedRoadmap.phases.map((phase, i) => (
+                <div key={i} className="rounded-xl" style={{ background: "#F9FAFB", padding: 14, breakInside: "avoid" }}>
+                  <div className="flex items-center justify-between" style={{ marginBottom: 8, gap: 10 }}>
+                    <span className="font-bold" style={{ fontSize: 14, color: "#111827" }}>
+                      {phase.term}
+                    </span>
+                    <span className="font-bold" style={{ fontSize: 11, borderRadius: 50, padding: "3px 10px", background: "#FEF3C7", color: "#92400E", whiteSpace: "nowrap" }}>
+                      {phase.duration}
+                    </span>
+                  </div>
+                  {phase.goal && (
+                    <p style={{ fontSize: 13, lineHeight: 1.6, margin: "0 0 10px", color: "#374151" }}>
+                      <span className="font-semibold uppercase" style={{ fontSize: 10, letterSpacing: "0.04em", color: "#9CA3AF" }}>
+                        Goal:{" "}
+                      </span>
+                      {phase.goal}
+                    </p>
+                  )}
+                  <div className="flex flex-col" style={{ gap: 10 }}>
+                    {phase.topics.map((topic, j) => (
+                      <div key={j} style={{ paddingLeft: 12, borderLeft: "2px solid #F0E4C8" }}>
+                        <p className="font-semibold" style={{ fontSize: 13, margin: "0 0 4px", color: "#111827" }}>
+                          {topic.name}
+                        </p>
+                        {topic.whatToDo && (
+                          <p style={{ fontSize: 12.5, lineHeight: 1.6, margin: "0 0 4px", color: "#4B5563" }}>
+                            <span className="font-medium" style={{ color: "#111827" }}>
+                              What to do:{" "}
+                            </span>
+                            {topic.whatToDo}
+                          </p>
+                        )}
+                        {topic.resources && (
+                          <p style={{ fontSize: 12.5, lineHeight: 1.6, margin: 0, color: "#4B5563" }}>
+                            <span className="font-medium" style={{ color: "#111827" }}>
+                              Resources:{" "}
+                            </span>
+                            {topic.resources}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </>
       )}
     </div>
   );
