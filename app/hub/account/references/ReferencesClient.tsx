@@ -1,7 +1,6 @@
 "use client";
 
 import { useId, useState } from "react";
-import Link from "next/link";
 import {
   Users,
   UserPlus,
@@ -222,41 +221,53 @@ export default function ReferencesClient({ initialStatus }: { initialStatus: Ref
               </div>
             </div>
 
-            <div className="flex flex-col items-center sm:flex-row sm:items-start" style={{ gap: 28 }}>
+            <div className="flex flex-col items-start sm:flex-row sm:items-center" style={{ gap: 20 }}>
               <ReferenceScoreGauge score={report.overallScore} />
-              <div style={{ flex: 1, width: "100%", display: "flex", flexDirection: "column", gap: 10 }}>
-                {strongest && (
-                  <div
-                    className="flex items-center"
-                    style={{ gap: 10, borderRadius: 10, padding: "12px 14px", border: "1px solid rgba(63,203,140,0.25)", background: "rgba(63,203,140,0.08)" }}
-                  >
-                    <TrendingUp size={15} strokeWidth={2} style={{ color: "#3FCB8C", flexShrink: 0 }} />
-                    <span className="font-[family-name:var(--font-poppins)] text-white/80" style={{ fontSize: 12.5 }}>
-                      <span style={{ fontWeight: 700, color: "#3FCB8C" }}>Strongest &mdash;</span> {strongest.label} ({strongest.value.toFixed(1)})
-                    </span>
-                  </div>
-                )}
-                {growth &&
-                  (() => {
-                    const band = getReferenceScoreBand(growth.value);
-                    return (
-                      <div
-                        className="flex items-center"
-                        style={{ gap: 10, borderRadius: 10, padding: "12px 14px", border: `1px solid ${band.textColor}40`, background: `${band.textColor}14` }}
-                      >
-                        <TrendingDown size={15} strokeWidth={2} style={{ color: band.textColor, flexShrink: 0 }} />
-                        <span className="font-[family-name:var(--font-poppins)] text-white/80" style={{ fontSize: 12.5 }}>
-                          <span style={{ fontWeight: 700, color: band.textColor }}>Growth area &mdash;</span> {growth.label} ({growth.value.toFixed(1)})
-                        </span>
-                      </div>
-                    );
-                  })()}
+              <div style={{ flex: 1 }}>
+                <p
+                  className="font-[family-name:var(--font-poppins)] font-semibold uppercase text-white/40"
+                  style={{ fontSize: 11, letterSpacing: "0.04em", margin: "0 0 4px" }}
+                >
+                  Overall, from {report.referees.length} completed reference{report.referees.length === 1 ? "" : "s"}
+                </p>
+                <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                  Averaged across {report.categoryScores.length} categories rated by everyone who responded. Individual scores per category are shown below each bar.
+                </p>
               </div>
             </div>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 10 }}>
+            {strongest && (
+              <div
+                className="flex items-center"
+                style={{ gap: 10, borderRadius: 10, padding: "12px 14px", border: "1px solid rgba(63,203,140,0.25)", background: "rgba(63,203,140,0.08)" }}
+              >
+                <TrendingUp size={15} strokeWidth={2} style={{ color: "#3FCB8C", flexShrink: 0 }} />
+                <span className="font-[family-name:var(--font-poppins)] text-white/80" style={{ fontSize: 12.5 }}>
+                  <span style={{ fontWeight: 700, color: "#3FCB8C" }}>Strongest &mdash;</span> {strongest.label} ({strongest.value.toFixed(1)})
+                </span>
+              </div>
+            )}
+            {growth &&
+              (() => {
+                const band = getReferenceScoreBand(growth.value);
+                return (
+                  <div
+                    className="flex items-center"
+                    style={{ gap: 10, borderRadius: 10, padding: "12px 14px", border: `1px solid ${band.textColor}40`, background: `${band.textColor}14` }}
+                  >
+                    <TrendingDown size={15} strokeWidth={2} style={{ color: band.textColor, flexShrink: 0 }} />
+                    <span className="font-[family-name:var(--font-poppins)] text-white/80" style={{ fontSize: 12.5 }}>
+                      <span style={{ fontWeight: 700, color: band.textColor }}>Growth area &mdash;</span> {growth.label} ({growth.value.toFixed(1)})
+                    </span>
+                  </div>
+                );
+              })()}
+          </div>
+
           <div className={CARD} style={{ borderRadius: 14, padding: 22 }}>
-            <p className={EYEBROW} style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 16px" }}>
+            <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13.5, margin: "0 0 16px" }}>
               Category breakdown
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -329,14 +340,6 @@ export default function ReferencesClient({ initialStatus }: { initialStatus: Ref
               ))}
             </div>
           </div>
-
-          <Link
-            href="/hub/account"
-            className="inline-flex items-center justify-center self-start font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
-            style={{ height: 46, padding: "0 24px", borderRadius: 8, fontSize: 14, textDecoration: "none" }}
-          >
-            Done, back to dashboard
-          </Link>
         </>
       )}
 
