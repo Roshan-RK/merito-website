@@ -1,10 +1,13 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Quote } from "lucide-react";
+import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
+import { DEFAULT_LEVEL, PRODUCT_PRICING, formatPrice, type CandidateLevel } from "@/lib/razorpay/pricing";
+import ExpertBookingCard from "./ExpertBookingCard";
 
 // Static bio content, verbatim from mockups/merito-dashboard-v34.html's
 // expert-guidance page (constants `ti`, `tc`, and the bio/testimonial copy
-// inside component `fz`). No live data -- this is a trust/credibility page,
-// booking itself still happens from the Overview guidance card.
+// inside component `fz`). No live data for the bio itself -- only the
+// booking card below it (ExpertBookingCard) is wired to real state.
 const NAME = "Rushikesh Humbe";
 const TITLE = "Strategy & Growth Advisor";
 const CREDENTIALS = "20+ years in strategy consulting & workforce development · COEP & IIM Ahmedabad";
@@ -21,10 +24,36 @@ const TESTIMONIAL_ATTRIBUTION = "Priya S., hired as DevOps Engineer";
 
 const EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40";
 
-export default function ExpertBioPage() {
+export default async function ExpertBioPage() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/hub/login");
+  }
+
+  const { data: leads } = await supabase
+    .from("fitment_leads")
+    .select("candidate_level")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  const level = (leads?.[0]?.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
+  const priceLabel = formatPrice(PRODUCT_PRICING.counselling[level]);
+
+  const { data: counsellingRequest } = await supabase
+    .from("counselling_requests")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
   const initials = NAME.split(" ")
     .map((part) => part[0])
     .join("");
+  const firstName = NAME.split(" ")[0];
 
   return (
     <main>
@@ -90,13 +119,7 @@ export default function ExpertBioPage() {
           </div>
         </div>
 
-        <Link
-          href="/hub/account#guidance"
-          className="flex items-center justify-center font-[family-name:var(--font-poppins)] font-semibold text-white"
-          style={{ background: "#ed1a24", borderRadius: 10, padding: "13px 20px", fontSize: 13.5 }}
-        >
-          Book my expert call
-        </Link>
+        <ExpertBookingCard firstName={firstName} priceLabel={priceLabel} initialRequested={Boolean(counsellingRequest)} />
       </div>
     </main>
   );
