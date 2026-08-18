@@ -55,10 +55,10 @@ export default function Sidebar() {
     <nav
       aria-label="Account navigation"
       className="print:hidden hidden md:flex flex-col shrink-0 sticky overflow-y-auto bg-[#0a0a0a] border-r border-white/[0.08]"
-      style={{ width: 248, top: 66, height: "calc(100vh - 66px)", padding: "22px 14px" }}
+      style={{ width: 248, top: 66, height: "calc(100vh - 66px)", padding: "20px 12px" }}
     >
       {GROUPS.map((group) => (
-        <div key={group.title} style={{ marginBottom: 20 }}>
+        <div key={group.title} style={{ marginBottom: 4 }}>
           <p
             className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40"
             style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 8px", padding: "0 10px" }}
@@ -87,7 +87,7 @@ export default function Sidebar() {
                   style={{
                     gap: 10,
                     padding: "9px 10px",
-                    borderRadius: 10,
+                    borderRadius: 14,
                     fontSize: 13.5,
                     borderLeft: isActive ? "3px solid #ed1a24" : "3px solid transparent",
                   }}

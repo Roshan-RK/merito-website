@@ -56,7 +56,7 @@ export default function CounsellingCard({
           className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24] hover:text-white transition-colors"
           style={{ display: "inline-block", fontSize: 12, margin: "8px 0 0" }}
         >
-          Meet Rushikesh & see her track record →
+          Meet Rushikesh & see his track record →
         </Link>
       </div>
 

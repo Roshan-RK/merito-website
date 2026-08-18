@@ -1,5 +1,7 @@
 "use client";
 
+import { getMatchBandDark } from "./report/ResumeMatchGauge";
+
 export default function ScoreCard({
   roleTitle,
   score,
@@ -10,6 +12,7 @@ export default function ScoreCard({
   verdict: string;
 }) {
   const percent = Math.max(0, Math.min(100, (score / 10) * 100));
+  const band = getMatchBandDark(percent);
   const radius = 54;
   const circumference = 2 * Math.PI * radius;
   const dashoffset = circumference - (percent / 100) * circumference;
@@ -19,13 +22,13 @@ export default function ScoreCard({
       <div className="flex items-start flex-wrap" style={{ gap: 24 }}>
         <div className="relative shrink-0" style={{ width: 132, height: 132 }}>
           <svg width="132" height="132" viewBox="0 0 132 132">
-            <circle cx="66" cy="66" r={radius} fill="none" stroke="rgba(237,26,36,0.15)" strokeWidth="10" />
+            <circle cx="66" cy="66" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
             <circle
               cx="66"
               cy="66"
               r={radius}
               fill="none"
-              stroke="#ed1a24"
+              stroke={band.textColor}
               strokeWidth="10"
               strokeDasharray={circumference}
               strokeDashoffset={dashoffset}
@@ -35,7 +38,7 @@ export default function ScoreCard({
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="font-[family-name:var(--font-gabarito)] font-bold text-[#ed1a24]" style={{ fontSize: "1.9rem", lineHeight: 1 }}>
+            <span className="font-[family-name:var(--font-gabarito)] font-bold" style={{ fontSize: "1.9rem", lineHeight: 1, color: band.textColor }}>
               {score.toFixed(1)}
             </span>
             <span className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 11 }}>
