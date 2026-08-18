@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 
+const CALENDLY_URL = "https://calendly.com/rhumbe-merito/30min";
+
 export default function CounsellingCard({
   priceLabel,
   requested,
@@ -60,9 +62,15 @@ export default function CounsellingCard({
 
       <div className="shrink-0">
         {requested ? (
-          <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13 }}>
-            Request sent. We&apos;ll confirm your slot.
-          </p>
+          <a
+            href={CALENDLY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-[family-name:var(--font-poppins)] font-semibold"
+            style={{ background: "#fff", color: "#0a0a0a", borderRadius: 8, padding: "12px 18px", fontSize: 13.5, cursor: "pointer", whiteSpace: "nowrap", display: "inline-block", textDecoration: "none" }}
+          >
+            Schedule your call →
+          </a>
         ) : (
           <button
             onClick={onOpenPaywall}

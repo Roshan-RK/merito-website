@@ -3,6 +3,8 @@
 import { useState } from "react";
 import CounsellingPaywallModal from "../CounsellingPaywallModal";
 
+const CALENDLY_URL = "https://calendly.com/rhumbe-merito/30min";
+
 // Shared button + paywall-modal trigger for the expert-guidance page's two
 // booking CTAs (the card under the bio, and the closing gradient CTA card).
 // Extracted from ExpertBookingCard so both placements share one booking flow
@@ -19,9 +21,15 @@ export default function ExpertBookingButton({
 
   if (requested) {
     return (
-      <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13 }}>
-        Request sent. We&apos;ll confirm your slot.
-      </p>
+      <a
+        href={CALENDLY_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
+        style={{ borderRadius: 8, padding: "12px 20px", fontSize: 13.5, cursor: "pointer", whiteSpace: "nowrap", display: "inline-block", textDecoration: "none" }}
+      >
+        Schedule your call →
+      </a>
     );
   }
 
