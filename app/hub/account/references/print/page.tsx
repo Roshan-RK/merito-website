@@ -146,8 +146,11 @@ export default async function ReferencesPrintPage() {
                 <span className="font-semibold" style={{ fontSize: 14, color: "#111827" }}>
                   {category.label}
                 </span>
-                <span className="font-bold" style={{ fontSize: 14, color: tone.color }}>
-                  {category.value > 0 ? category.value.toFixed(1) : "—"}
+                <span style={{ fontSize: 14 }}>
+                  <span className="font-bold" style={{ color: tone.color }}>
+                    {category.value > 0 ? category.value.toFixed(1) : "—"}
+                  </span>
+                  {category.values.length > 0 && <span style={{ color: "#9CA3AF" }}> ({category.values.join(", ")})</span>}
                 </span>
               </div>
               <div style={{ height: 6, borderRadius: 6, overflow: "hidden", background: "#E5E7EB" }}>

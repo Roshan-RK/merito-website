@@ -51,7 +51,7 @@ export const REFERENCE_CATEGORIES: { value: string; label: string }[] = [
 
 export type ReferenceReport = {
   overallScore: number;
-  categoryScores: { category: string; label: string; value: number }[];
+  categoryScores: { category: string; label: string; value: number; values: number[] }[];
   referees: {
     name: string;
     role: RefereeRole;
@@ -69,7 +69,7 @@ export function computeReferenceReport(referees: RefereeRow[]): ReferenceReport 
       .filter((r) => r.category === value)
       .map((r) => r.value);
     const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
-    return { category: value, label, value: Math.round(avg * 10) / 10 };
+    return { category: value, label, value: Math.round(avg * 10) / 10, values };
   });
 
   const scoredCategories = categoryScores.filter((c) => c.value > 0);

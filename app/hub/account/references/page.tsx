@@ -58,7 +58,7 @@ export default async function ReferencesPage() {
 
   return (
     <main>
-      <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+      <div className="mx-auto" style={{ padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
         <div>
           <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.6rem", margin: "0 0 6px" }}>
             Reference checks

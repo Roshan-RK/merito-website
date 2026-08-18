@@ -268,11 +268,11 @@ export default function ReferencesClient({ initialStatus }: { initialStatus: Ref
                       <span className="font-[family-name:var(--font-poppins)] text-white/75" style={{ fontSize: 13 }}>
                         {cat.label}
                       </span>
-                      <span
-                        className="font-[family-name:var(--font-poppins)] font-semibold"
-                        style={{ fontSize: 13, color: cat.value > 0 ? band.textColor : "rgba(255,255,255,0.3)" }}
-                      >
-                        {cat.value > 0 ? cat.value.toFixed(1) : "-"}
+                      <span className="font-[family-name:var(--font-poppins)]" style={{ fontSize: 13 }}>
+                        <span className="font-semibold" style={{ color: cat.value > 0 ? band.textColor : "rgba(255,255,255,0.3)" }}>
+                          {cat.value > 0 ? cat.value.toFixed(1) : "-"}
+                        </span>
+                        {cat.values.length > 0 && <span className="text-white/35"> ({cat.values.join(", ")})</span>}
                       </span>
                     </div>
                     <div className="bg-white/[0.08] overflow-hidden" style={{ height: 8, borderRadius: 6 }}>
