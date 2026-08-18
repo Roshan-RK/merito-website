@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Script from "next/script";
 import ClientAnalytics from "@/components/ClientAnalytics";
+import SalesIqWidget from "@/components/SalesIqWidget";
 import { siteUrl } from "@/lib/site";
 
 const poppins = Poppins({
@@ -88,18 +89,6 @@ export default function RootLayout({
           'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
           })(window,document,'script','dataLayer','${process.env.NEXT_PUBLIC_GTM_ID}');`}
         </Script>
-        {/* Zoho SalesIQ */}
-        <Script id="zoho-init" strategy="afterInteractive">
-          {`
-            window.$zoho=window.$zoho || {};
-            $zoho.salesiq=$zoho.salesiq||{ready:function(){}}
-          `}
-        </Script>
-        <Script
-          id="zsiqscript"
-          src="https://salesiq.zohopublic.in/widget?wc=siq60bd6a01da5298e0b5a2257627058c32ba59a589f85784499b5013bfa2af42fc"
-          strategy="afterInteractive"
-        />
         {/* JSON-LD Schema Markup */}
         <script
           type="application/ld+json"
@@ -194,6 +183,7 @@ export default function RootLayout({
         </noscript>
         <Navbar />
           <ClientAnalytics />
+          <SalesIqWidget />
           {children}
           <Footer />
       </body>
