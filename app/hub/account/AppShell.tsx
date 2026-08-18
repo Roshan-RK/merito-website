@@ -21,7 +21,7 @@ export default function AppShell({
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       <TopBar roleTitle={roleTitle} userName={userName} userEmail={userEmail} onChangeRole={() => setShowChangeRole(true)} />
-      <div className="flex items-start">
+      <div className="flex items-start mx-auto" style={{ maxWidth: 1360 }}>
         <Sidebar />
         <div className="min-w-0 flex-1">{children}</div>
       </div>
