@@ -124,15 +124,15 @@ export default function TopBar({
 
   return (
     <header
-      className="print:hidden sticky top-0 border-b border-white/[0.08] flex items-center justify-between backdrop-blur-md"
-      style={{ height: 64, padding: "0 28px", zIndex: 30, gap: 16, background: "rgba(20,18,22,0.85)" }}
+      className="print:hidden sticky top-0 flex items-center justify-between backdrop-blur-md"
+      style={{ height: 64, padding: "0 28px", zIndex: 30, gap: 16, background: "rgba(20,18,22,0.85)", borderBottom: "1px solid rgb(49,47,55)" }}
     >
-      <div className="flex items-center shrink-0" style={{ gap: 10 }}>
-        <Link href="/hub/account" className="flex items-center" style={{ gap: 10 }}>
+      <div className="flex items-center shrink-0" style={{ gap: 8 }}>
+        <Link href="/hub/account" className="flex items-center" style={{ gap: 8 }}>
           <Image src="/logo-white.png" alt="Merito" width={128} height={36} style={{ height: 30, width: "auto" }} />
           <span
             className="bg-[#ed1a24] text-white font-[family-name:var(--font-poppins)] font-bold"
-            style={{ fontSize: 10, letterSpacing: "0.06em", borderRadius: 50, padding: "3px 9px" }}
+            style={{ fontSize: 10, letterSpacing: "0.06em", borderRadius: 50, padding: "2px 8px" }}
           >
             HUB
           </span>
@@ -143,28 +143,34 @@ export default function TopBar({
           it. Rendered disabled rather than omitted so the header keeps the
           mockup's proportions; wire it up when search ships. */}
       <div
-        className="hidden md:flex items-center flex-1 bg-white/[0.05] border border-white/[0.08] text-white/35"
-        style={{ maxWidth: 380, height: 38, borderRadius: 10, padding: "0 12px", gap: 8, cursor: "not-allowed" }}
+        className="hidden md:flex items-center flex-1"
+        style={{ maxWidth: 320, height: 43, borderRadius: 14, padding: "8px 12px", gap: 8, cursor: "not-allowed", background: "rgba(39,37,45,0.6)", border: "1px solid rgb(49,47,55)", color: "rgb(156,153,163)" }}
         title="Search is not available yet"
       >
-        <Search size={15} strokeWidth={2} />
-        <span className="font-[family-name:var(--font-poppins)]" style={{ fontSize: 13 }}>
+        <Search size={16} strokeWidth={2} />
+        <span className="font-[family-name:var(--font-poppins)]" style={{ fontSize: 14 }}>
           Search or jump to...
         </span>
+        <kbd
+          className="hidden sm:inline-block"
+          style={{ marginLeft: "auto", background: "rgb(20,18,22)", borderRadius: 4, padding: "2px 6px", fontSize: 10, fontWeight: 500 }}
+        >
+          &#8984;K
+        </kbd>
       </div>
 
-      <div className="flex items-center shrink-0" style={{ gap: 10 }}>
+      <div className="flex items-center shrink-0" style={{ gap: 8 }}>
         {/* Single-application model: today's data is always "the latest role
             you checked fitment for", so this is a static label (+ the real
             Change-role flow) rather than the mockup's multi-app switcher,
             which needs a ?lead= selector this app doesn't have yet. */}
         <button
           onClick={onChangeRole}
-          className="hidden sm:flex items-center bg-white/[0.06] hover:bg-white/[0.1] transition-colors font-[family-name:var(--font-poppins)] font-semibold text-white"
-          style={{ borderRadius: 50, padding: "6px 6px 6px 14px", fontSize: 12.5, border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", gap: 8 }}
+          className="hidden sm:flex items-center transition-colors font-[family-name:var(--font-poppins)] font-medium"
+          style={{ borderRadius: 50, padding: "6px 12px", fontSize: 14, background: "rgba(39,37,45,0.6)", border: "1px solid rgb(49,47,55)", color: "rgb(236,235,233)", cursor: "pointer", gap: 8 }}
         >
           <span>{roleTitle}</span>
-          <span className="bg-[#ed1a24] text-white" style={{ borderRadius: 50, padding: "4px 10px", fontSize: 11, fontWeight: 700 }}>
+          <span style={{ color: "#ed1a24", fontSize: 11, fontWeight: 700 }}>
             Change
           </span>
         </button>
@@ -176,14 +182,14 @@ export default function TopBar({
             aria-label="Notifications"
             aria-expanded={openMenu === "notifications"}
             aria-haspopup="dialog"
-            className="relative flex items-center justify-center bg-white/[0.06] hover:bg-white/[0.1] transition-colors text-white"
-            style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer" }}
+            className="relative flex items-center justify-center hover:bg-white/[0.06] transition-colors text-white"
+            style={{ width: 36, height: 36, borderRadius: 12, border: "1px solid rgb(49,47,55)", background: "rgb(27,25,31)", cursor: "pointer" }}
           >
             <Bell size={16} strokeWidth={2} />
             {unreadCount > 0 && (
               <span
                 className="absolute bg-[#ed1a24] text-white font-[family-name:var(--font-poppins)] font-bold flex items-center justify-center"
-                style={{ top: -2, right: -2, minWidth: 16, height: 16, borderRadius: 50, fontSize: 9.5, padding: "0 3px", border: "1.5px solid #0a0a0a" }}
+                style={{ top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 50, fontSize: 9.5, padding: "0 3px", border: "2px solid rgb(20,18,22)" }}
               >
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
@@ -269,8 +275,8 @@ export default function TopBar({
             aria-label="Help"
             aria-expanded={openMenu === "help"}
             aria-haspopup="dialog"
-            className="hidden sm:flex items-center justify-center bg-white/[0.06] hover:bg-white/[0.1] transition-colors text-white"
-            style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer" }}
+            className="hidden sm:flex items-center justify-center hover:bg-white/[0.06] transition-colors text-white"
+            style={{ width: 36, height: 36, borderRadius: 12, border: "1px solid rgb(49,47,55)", background: "rgb(27,25,31)", cursor: "pointer" }}
           >
             <HelpCircle size={16} strokeWidth={2} />
           </button>
@@ -315,8 +321,8 @@ export default function TopBar({
             aria-expanded={openMenu === "avatar"}
             aria-haspopup="dialog"
             title={userName}
-            className="flex items-center justify-center bg-[#ed1a24]/15 hover:bg-[#ed1a24]/25 transition-colors font-[family-name:var(--font-poppins)] font-bold text-[#ed1a24]"
-            style={{ width: 36, height: 36, borderRadius: "50%", fontSize: 13, border: "1px solid rgba(237,26,36,0.3)", cursor: "pointer" }}
+            className="flex items-center justify-center hover:bg-white/[0.06] transition-colors font-[family-name:var(--font-poppins)] font-semibold text-white"
+            style={{ width: 32, height: 32, borderRadius: "50%", fontSize: 12, background: "rgb(39,37,45)", border: "1px solid #ed1a24", cursor: "pointer" }}
           >
             {userName.charAt(0).toUpperCase()}
           </button>
