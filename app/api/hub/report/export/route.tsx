@@ -39,7 +39,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const pageCookies = requestCookiesFor(request, url.hostname);
 
-  const buffer = await renderPageToPdf(`${url.origin}/hub/account/report`, pageCookies);
+  const buffer = await renderPageToPdf(`${url.origin}/hub/account/report/print`, pageCookies);
   // ?inline=1 is used by ExportPreviewModal's <iframe> -- an "attachment"
   // disposition makes the browser try to download instead of rendering the
   // PDF in the frame, which is why the preview modal showed nothing.
