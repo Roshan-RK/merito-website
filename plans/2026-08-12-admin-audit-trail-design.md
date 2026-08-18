@@ -1,6 +1,6 @@
 # Admin Audit Trail — Design
 
-**Status:** Approved design, not yet planned/implemented.
+**Status:** Approved design, not yet planned/implemented. **Updated 2026-08-13:** table merged into `admin_audit_log` (shared, specced in `plans/2026-08-13-admin-account-management-design.md`) — do not create a separate `admin_actions` table. Field names below adjusted to match.
 
 ## Context
 
@@ -10,9 +10,9 @@ Depends on sub-project A's `Table` component and B1's `Pagination` component for
 
 ## Decisions
 
-1. **New `admin_actions` table**, not reuse of an existing table or a generic events table — this is the first write-audit surface in the schema, no existing table fits.
-2. **`target_id` is `text`, not `uuid`.** Three of the four logged actions have UUID targets (`counselling_requests.id`, `fitment_interviews.id` ×2), but the share-link revoke route targets by raw token string, not a UUID — a `uuid` column would reject that row. `text` accepts both without a lossy cast.
-3. **RLS enabled, zero public policies** — matches every other table's pattern confirmed in the backend audit (RLS on, service-role client bypasses by design, no client-side access path exists or should exist). Only `lib/adminActions.ts` (service-role) ever touches this table.
+1. **Reuses `admin_audit_log`** (built by the account-management spec, not a new `admin_actions` table) — that table was made deliberately generic so this doc's 4 routes write to it instead of a second migration. Column names: `admin_email`, `action`, `target_type`, `target_id`, `prior_value`, `new_value`, `created_at`.
+2. **`target_id` is `text`, not `uuid`.** Three of the four logged actions have UUID targets (`counselling_requests.id`, `fitment_interviews.id` ×2), but the share-link revoke route targets by raw token string, not a UUID — a `uuid` column would reject that row. `text` accepts both without a lossy cast. (Already true of `admin_audit_log`.)
+3. **RLS enabled, zero public policies** — matches every other table's pattern confirmed in the backend audit (RLS on, service-role client bypasses by design, no client-side access path exists or should exist). Only `lib/adminAuditLog.ts` (service-role) ever touches this table.
 4. **Best-effort write, not transactional with the mutation.** The log insert happens after the real mutation succeeds. Supabase's service-role JS client has no simple multi-statement transaction primitive without writing a Postgres RPC function — disproportionate infrastructure for a single-admin internal tool's nice-to-have audit trail. Accepted risk: a mutation can succeed with no corresponding log row if the log insert itself fails. A failed log write is logged to `console.error`, not silently swallowed (consistent with the "no more swallowed errors" direction from sub-project C).
 5. **No filters on the v1 viewer page** — plain reverse-chronological list. Add filtering (`?action_type=`, `?target_table=`) later if the list actually grows long enough to need it; premature at 4 action types and today's mutation volume.
 
@@ -20,12 +20,9 @@ Depends on sub-project A's `Table` component and B1's `Pagination` component for
 
 ```
 supabase/migrations/
-  00NN_admin_actions.sql        # next available migration number at implementation time
-    -- admin_actions(id uuid pk, action_type text, target_table text, target_id text,
-    --   actor_email text, prior_value jsonb, new_value jsonb, created_at timestamptz default now())
-    -- RLS enabled, no policies (service-role only)
+  (none — admin_audit_log created by account-management spec's migration)
 lib/
-  adminActions.ts                # logAdminAction({ actionType, targetTable, targetId, actorEmail, priorValue, newValue }), listAdminActions({ page })
+  adminAuditLog.ts                # logAdminAction({ action, targetType, targetId, adminEmail, priorValue, newValue }), listAdminActions({ page })
 app/api/admin/
   counselling/[id]/route.ts      # after successful updateCounsellingStatus(), call logAdminAction(...)
   share-links/[token]/route.ts   # after successful setShareLinkRevokedByToken(), call logAdminAction(...)

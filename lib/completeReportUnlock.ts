@@ -60,11 +60,14 @@ export async function completeReportUnlock(
   };
 
   const admin = getSupabaseServerClient();
+  // IntervueBox can return a null summary on an otherwise-READY report
+  // (live-confirmed) -- verdict is NOT NULL, so a bare pass-through 500s
+  // this update even though the score itself is valid.
   const { error: updateError } = await admin
     .from("fitment_leads")
     .update({
       score: scoreOutOfTen(report.overallScore),
-      verdict: report.summary,
+      verdict: report.summary || "No summary available.",
       resume_match_status: "READY",
       resume_match_score: report.overallScore,
       resume_match_raw: resumeMatchRaw,

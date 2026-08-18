@@ -1,4 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
+import { getSupabaseServerClient } from "@/lib/supabase";
+import { getInterviewReport, getInterviewCandidateStatus, generateInterviewReport } from "@/lib/intervuebox/interviewReports";
 
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
@@ -18,7 +20,7 @@ export async function GET(request: Request) {
 
   const { data } = await supabase
     .from("fitment_interviews")
-    .select("status")
+    .select("id, status, ib_agent_id, ib_candidate_id, report_generation_requested_at")
     .eq("user_id", user.id)
     .eq("role_title", role)
     .order("updated_at", { ascending: false })
@@ -29,5 +31,60 @@ export async function GET(request: Request) {
     return Response.json({ status: "not_started" });
   }
 
-  return Response.json({ status: data.status === "ready" ? "ready" : "invited" });
+  if (data.status === "ready") {
+    return Response.json({ status: "ready" });
+  }
+
+  // Same self-heal as the dashboard's own SSR read -- this poll is the
+  // fallback path for "still on the page waiting," so it should catch a
+  // missed webhook just as reliably as a fresh page load would.
+  try {
+    const interviewReport = await getInterviewReport(data.ib_agent_id, data.ib_candidate_id);
+    if (interviewReport.status === "READY") {
+      const admin = getSupabaseServerClient();
+      await admin
+        .from("fitment_interviews")
+        .update({
+          status: "ready",
+          report_raw: {
+            overallScore: interviewReport.overallScore,
+            skillMetrics: interviewReport.skillMetrics,
+            overallSummary: interviewReport.overallSummary,
+            strengths: interviewReport.strengths,
+            areasOfImprovement: interviewReport.areasOfImprovement,
+            shareableReportLink: interviewReport.shareableReportLink,
+            approxDurationMinutes: interviewReport.approxDurationMinutes,
+            flagForSuspiciousActivity: interviewReport.flagForSuspiciousActivity,
+            integrityCheck: interviewReport.integrityCheck,
+            videoReport: interviewReport.videoReport,
+            feedbackToInterviewer: interviewReport.feedbackToInterviewer,
+            roadmap: interviewReport.roadmap,
+            criteriaEvaluationTable: interviewReport.criteriaEvaluationTable,
+            interviewTitle: interviewReport.interviewTitle,
+            skillReport: interviewReport.skillReport,
+            overallSkillScore: interviewReport.overallSkillScore,
+            answers: interviewReport.answers,
+            knowledgeAnswers: interviewReport.knowledgeAnswers,
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", data.id);
+      return Response.json({ status: "ready" });
+    } else if (!data.report_generation_requested_at) {
+      // Same TERMINATED-only generate trigger as the dashboard's SSR read.
+      const candidateStatus = await getInterviewCandidateStatus(data.ib_agent_id, data.ib_candidate_id);
+      if (candidateStatus === "TERMINATED") {
+        await generateInterviewReport(data.ib_agent_id, [data.ib_candidate_id]);
+        const admin = getSupabaseServerClient();
+        await admin
+          .from("fitment_interviews")
+          .update({ report_generation_requested_at: new Date().toISOString() })
+          .eq("id", data.id);
+      }
+    }
+  } catch (err) {
+    console.error("Interview self-heal check failed, leaving status as invited", err);
+  }
+
+  return Response.json({ status: "invited" });
 }

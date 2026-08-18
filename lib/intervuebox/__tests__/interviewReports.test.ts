@@ -342,3 +342,28 @@ describe("getInterviewReport", () => {
     await expect(getInterviewReport("INT_123", "USR_123")).rejects.toThrow("bad key");
   });
 });
+
+describe("generateInterviewReport", () => {
+  it("posts interviewId and candidateIds to the generate endpoint", async () => {
+    respond = (_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ success: true }));
+    };
+    const { generateInterviewReport } = await import("../interviewReports");
+
+    await generateInterviewReport("INT_123", ["USR_123", "USR_456"]);
+
+    expect(lastRequest?.method).toBe("POST");
+    expect(JSON.parse(lastRequest!.body)).toEqual({ interviewId: "INT_123", candidateIds: ["USR_123", "USR_456"] });
+  });
+
+  it("throws with the vendor's message on failure", async () => {
+    respond = (_req, res) => {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ message: "Interview is still in progress." }));
+    };
+    const { generateInterviewReport } = await import("../interviewReports");
+
+    await expect(generateInterviewReport("INT_123", ["USR_123"])).rejects.toThrow("Interview is still in progress.");
+  });
+});
