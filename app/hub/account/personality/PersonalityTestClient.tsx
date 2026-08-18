@@ -177,60 +177,51 @@ export default function PersonalityTestClient({
 
         <div
           className="hidden sm:grid font-[family-name:var(--font-poppins)] text-white/35"
-          style={{ gridTemplateColumns: "1fr repeat(5,44px)", gap: 8, fontSize: 9, textAlign: "center", marginBottom: 6, padding: "0 4px" }}
+          style={{ gridTemplateColumns: "repeat(5,1fr)", gap: 8, fontSize: 10, textAlign: "center", marginBottom: 6 }}
         >
-          <div />
           {SCALE_LABELS.map((l) => (
-            <div key={l} style={{ whiteSpace: "pre-line", lineHeight: 1.2 }}>
-              {l.replace(" ", "\n")}
-            </div>
+            <div key={l}>{l}</div>
           ))}
         </div>
 
         <div>
-          {pageItems.map((it) => (
-            <div
-              key={it.id}
-              className="border-b border-white/[0.08] flex flex-col sm:flex-row sm:items-center sm:justify-between"
-              style={{ gap: 10, padding: "12px 0" }}
-            >
-              <div id={`q-${it.id}-label`} className="font-[family-name:var(--font-poppins)] text-white/85 sm:flex-1" style={{ fontSize: 13.5 }}>
-                <span className="font-semibold text-[#ed1a24]" style={{ marginRight: 6 }}>
-                  {it.id}.
-                </span>
-                {it.s}
+          {pageItems.map((it, i) => {
+            const qNum = page * PER_PAGE + i + 1;
+            return (
+              <div key={it.id} className="border-b border-white/[0.08]" style={{ padding: "16px 0" }}>
+                <p id={`q-${it.id}-label`} className="font-[family-name:var(--font-poppins)] text-white/85" style={{ fontSize: 14, margin: "0 0 10px" }}>
+                  <span className="font-semibold text-[#ed1a24]" style={{ marginRight: 6 }}>
+                    {qNum}.
+                  </span>
+                  {it.s}
+                </p>
+                <div role="radiogroup" aria-labelledby={`q-${it.id}-label`} className="grid" style={{ gridTemplateColumns: "repeat(5,1fr)", gap: 8 }}>
+                  {[1, 2, 3, 4, 5].map((v) => {
+                    const selected = answers[it.id] === v;
+                    return (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setAnswer(it.id, v)}
+                        role="radio"
+                        aria-checked={selected}
+                        aria-label={`${v}: ${SCALE_LABELS[v - 1]}`}
+                        className={
+                          "font-[family-name:var(--font-poppins)] font-medium border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#ed1a24] focus-visible:ring-offset-2 focus-visible:ring-offset-[#141416] " +
+                          (selected
+                            ? "border-[#ed1a24] bg-[#ed1a24]/15 text-[#ed1a24]"
+                            : "border-white/[0.12] text-white/50 hover:border-[#ed1a24]/40")
+                        }
+                        style={{ height: 42, borderRadius: 8, fontSize: 14, cursor: "pointer" }}
+                      >
+                        {v}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div
-                role="radiogroup"
-                aria-labelledby={`q-${it.id}-label`}
-                className="grid grid-cols-5 shrink-0 w-full sm:w-auto sm:grid-cols-[repeat(5,44px)]"
-                style={{ gap: 8 }}
-              >
-                {[1, 2, 3, 4, 5].map((v) => {
-                  const selected = answers[it.id] === v;
-                  return (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setAnswer(it.id, v)}
-                      role="radio"
-                      aria-checked={selected}
-                      aria-label={`${v}: ${SCALE_LABELS[v - 1]}`}
-                      className={
-                        "font-[family-name:var(--font-poppins)] font-medium border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#ed1a24] focus-visible:ring-offset-2 focus-visible:ring-offset-[#141416] " +
-                        (selected
-                          ? "border-[#ed1a24] bg-[#ed1a24]/15 text-[#ed1a24]"
-                          : "border-white/[0.12] text-white/50 hover:border-[#ed1a24]/40")
-                      }
-                      style={{ padding: "8px 0", borderRadius: 8, fontSize: 13.5, cursor: "pointer" }}
-                    >
-                      {v}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {hint && (
