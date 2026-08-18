@@ -1,6 +1,7 @@
 "use client";
 
 import { ShieldCheck } from "lucide-react";
+import ExportPreviewButton from "../ExportPreviewButton";
 import {
   TRAITS,
   TRAIT_NAME,
@@ -77,15 +78,23 @@ export default function PersonalityReport({
   return (
     <div>
       <div style={{ background: "rgb(29,25,31)", border: "1px solid rgb(49,47,55)", borderRadius: 14, padding: 24 }}>
-        <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 11, letterSpacing: "0.08em", margin: "0 0 6px" }}>
-          Personality Profile · Big Five (OCEAN)
-        </p>
-        <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.6rem", margin: "0 0 4px" }}>
-          {candidateName}
-        </h1>
-        <p className="font-[family-name:var(--font-poppins)] text-[#ed1a24]" style={{ fontSize: 13, margin: 0 }}>
-          fit signal for {roleTitle}
-        </p>
+        <div className="print:hidden flex items-start justify-between flex-wrap" style={{ gap: 12, marginBottom: 4 }}>
+          <div>
+            <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 11, letterSpacing: "0.08em", margin: "0 0 6px" }}>
+              Personality Profile · Big Five (OCEAN)
+            </p>
+            <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.6rem", margin: "0 0 4px" }}>
+              {candidateName}
+            </h1>
+            <p className="font-[family-name:var(--font-poppins)] text-[#ed1a24]" style={{ fontSize: 13, margin: 0 }}>
+              fit signal for {roleTitle}
+            </p>
+          </div>
+          <ExportPreviewButton
+            exportUrl={`/api/hub/personality/export?role=${encodeURIComponent(roleTitle)}`}
+            title="Personality report"
+          />
+        </div>
 
         <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 16 }}>
           {TRAITS.map((t) => (
