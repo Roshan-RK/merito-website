@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Quote } from "lucide-react";
+import { Quote } from "lucide-react";
 
 // Static bio content, verbatim from mockups/merito-dashboard-v34.html's
 // expert-guidance page (constants `ti`, `tc`, and the bio/testimonial copy
@@ -29,14 +29,6 @@ export default function ExpertBioPage() {
   return (
     <main>
       <div className="mx-auto" style={{ maxWidth: 720, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
-        <Link
-          href="/hub/account"
-          className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white/55 hover:text-white transition-colors"
-          style={{ gap: 6, fontSize: 13 }}
-        >
-          <ArrowLeft size={14} strokeWidth={2} /> Back to dashboard
-        </Link>
-
         <div>
           <p className={EYEBROW} style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>
             Expert guidance

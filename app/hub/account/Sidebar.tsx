@@ -33,13 +33,13 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { label: "Personality test", href: "/hub/account/personality", icon: Brain },
       { label: "Mock interview", href: "/hub/account/interview", icon: Mic },
       { label: "Reference checks", href: "/hub/account/references", icon: Users },
-      { label: "Expert guidance", href: "/hub/account#guidance", icon: UserCheck },
+      { label: "Consolidated report", href: "/hub/account/combined-report", icon: FileStack, tourId: "nav-consolidated" },
+      { label: "Expert guidance", href: "/hub/account/expert", icon: UserCheck },
     ],
   },
   {
     title: "Account",
     items: [
-      { label: "Consolidated report", href: "/hub/account/combined-report", icon: FileStack, tourId: "nav-consolidated" },
       { label: "Applications & history", href: "/hub/account/applications", icon: Briefcase },
       { label: "Recruiter preview", href: "/hub/account/recruiter-preview", icon: Eye },
       { label: "Pricing", href: "/hub/account/pricing", icon: Tag },

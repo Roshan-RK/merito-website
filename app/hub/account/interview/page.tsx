@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft, Download, ListChecks, ChartColumn, ShieldCheck, ShieldAlert, Clock } from "lucide-react";
+import { Download, ListChecks, ChartColumn, ShieldCheck, ShieldAlert, Clock } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import { getCandidateResumeDetails } from "@/lib/intervuebox/reports";
@@ -41,23 +40,34 @@ export default async function InterviewReportPage({
   if (!user) {
     redirect("/hub/login");
   }
+  const userId = user.id;
 
   const { role } = await searchParams;
   const roleTitle = typeof role === "string" ? role : null;
 
-  let query = supabase
-    .from("fitment_interviews")
-    .select("role_title, status, report_raw, updated_at")
-    .eq("user_id", user.id);
-
-  if (roleTitle) {
-    query = query.eq("role_title", roleTitle);
+  async function latestReadyInterview(scopedToRole: string | null) {
+    let query = supabase
+      .from("fitment_interviews")
+      .select("role_title, status, report_raw, updated_at")
+      .eq("user_id", userId);
+    if (scopedToRole) {
+      query = query.eq("role_title", scopedToRole);
+    }
+    const { data } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
+    return data;
   }
 
-  const { data: interview } = await query
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // ProgressRail links here with the *current lead's* role_title, but
+  // fitment_interviews is matched by free-text role_title with no lead_id --
+  // if the candidate's most recent fitment check is for a role they haven't
+  // interviewed for yet (interview taken for an older/different role_title),
+  // an exact-match lookup finds nothing even though a real "ready" interview
+  // exists. Fall back to the most-recent-ready-interview-overall in that
+  // case, matching what happens when no ?role= is passed at all.
+  let interview = await latestReadyInterview(roleTitle);
+  if ((!interview || interview.status !== "ready" || !interview.report_raw) && roleTitle) {
+    interview = await latestReadyInterview(null);
+  }
 
   if (!interview || interview.status !== "ready" || !interview.report_raw) {
     redirect("/hub/account");
@@ -114,14 +124,7 @@ export default async function InterviewReportPage({
   return (
     <main>
       <div className="mx-auto" style={{ maxWidth: 880, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
-        <div className="print:hidden flex items-center justify-between flex-wrap" style={{ gap: 12 }}>
-          <Link
-            href="/hub/account"
-            className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white/55 hover:text-white transition-colors"
-            style={{ gap: 6, fontSize: 13 }}
-          >
-            <ArrowLeft size={14} strokeWidth={2} /> Back to dashboard
-          </Link>
+        <div className="print:hidden flex items-center justify-end flex-wrap" style={{ gap: 12 }}>
           <a
             href={`/api/hub/interview/export?role=${encodeURIComponent(interview.role_title)}`}
             download

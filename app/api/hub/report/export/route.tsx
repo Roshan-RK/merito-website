@@ -40,12 +40,16 @@ export async function GET(request: Request) {
   const pageCookies = requestCookiesFor(request, url.hostname);
 
   const buffer = await renderPageToPdf(`${url.origin}/hub/account/report`, pageCookies);
+  // ?inline=1 is used by ExportPreviewModal's <iframe> -- an "attachment"
+  // disposition makes the browser try to download instead of rendering the
+  // PDF in the frame, which is why the preview modal showed nothing.
+  const disposition = url.searchParams.get("inline") === "1" ? "inline" : "attachment";
 
   return new Response(new Uint8Array(buffer), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="fitment-report.pdf"`,
+      "Content-Disposition": `${disposition}; filename="fitment-report.pdf"`,
     },
   });
 }

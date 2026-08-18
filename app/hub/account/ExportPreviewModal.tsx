@@ -96,7 +96,7 @@ export default function ExportPreviewModal({
             </div>
           )}
           <iframe
-            src={exportUrl}
+            src={`${exportUrl}${exportUrl.includes("?") ? "&" : "?"}inline=1`}
             title={`${title} preview`}
             onLoad={() => setLoaded(true)}
             style={{ width: "100%", height: "100%", border: "none" }}

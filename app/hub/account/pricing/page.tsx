@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { ComponentType } from "react";
-import { ArrowLeft, FileText, Brain, Users, Mic, UserRound, Package } from "lucide-react";
+import { FileText, Brain, Users, Mic, UserRound, Package } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { DEFAULT_LEVEL, type CandidateLevel } from "@/lib/razorpay/pricing";
 import { buildPricingCards, buildBundleSummary, type PricingCardKey } from "./pricingCatalog";
@@ -47,14 +47,6 @@ export default async function PricingPage() {
   return (
     <main>
       <div className="mx-auto" style={{ maxWidth: 1040, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
-        <Link
-          href="/hub/account"
-          className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white/55 hover:text-white transition-colors"
-          style={{ gap: 6, fontSize: 13 }}
-        >
-          <ArrowLeft size={14} strokeWidth={2} /> Back to dashboard
-        </Link>
-
         <div>
           <p className={EYEBROW} style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>
             Account

@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { nameFromEmail, type Scores, type Validity } from "@/lib/personality";
 import PersonalityTestClient from "./PersonalityTestClient";
@@ -54,14 +53,7 @@ export default async function PersonalityTestPage({
   return (
     <main>
       <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
-        <div className="print:hidden flex items-center justify-between flex-wrap" style={{ gap: 12 }}>
-          <Link
-            href="/hub/account"
-            className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white/55 hover:text-white transition-colors"
-            style={{ gap: 6, fontSize: 13 }}
-          >
-            <ArrowLeft size={14} strokeWidth={2} /> Back to dashboard
-          </Link>
+        <div className="print:hidden flex items-center justify-end flex-wrap" style={{ gap: 12 }}>
           <a
             href={`/api/hub/personality/export?role=${encodeURIComponent(roleTitle)}`}
             download
