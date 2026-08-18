@@ -47,7 +47,7 @@ export default async function ReferencesPage() {
               Reference checks
             </h1>
             <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 14, margin: 0 }}>
-              Part of your profile — done once, applies to every application.
+              Part of your profile. Done once, applies to every application.
             </p>
           </div>
           <ReferencesLockedState leadId={current.id} level={level} bundleEligible={bundleEligible} />
@@ -67,7 +67,7 @@ export default async function ReferencesPage() {
               <ExportPreviewButton
                 exportUrl="/api/hub/references/export"
                 downloadFilename="reference-check-report.pdf"
-                title="Reference check — export preview"
+                title="Reference check: export preview"
               />
               <a
                 href="/api/hub/references/export"

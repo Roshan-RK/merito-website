@@ -137,7 +137,7 @@ export default async function FullReportPage() {
             <ExportPreviewButton
               exportUrl="/api/hub/report/export"
               downloadFilename="fitment-report.pdf"
-              title="Fitment report — export preview"
+              title="Fitment report: export preview"
             />
             <a
               href="/api/hub/report/export"
@@ -227,7 +227,7 @@ export default async function FullReportPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 10, marginBottom: 12 }}>
               <div className="flex items-center bg-[#16803c]/10 border border-[#16803c]/25" style={{ gap: 8, borderRadius: 10, padding: "10px 14px" }}>
                 <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#3FCB8C]" style={{ fontSize: 12 }}>
-                  Strongest —
+                  Strongest:
                 </span>
                 <span className="font-[family-name:var(--font-poppins)] text-white/70" style={{ fontSize: 12 }}>
                   {strongest.label} ({strongest.score}%)
@@ -238,7 +238,7 @@ export default async function FullReportPage() {
                 style={{ gap: 8, borderRadius: 10, padding: "10px 14px", background: weakestBand.trackColor, border: `1px solid ${weakestBand.textColor}40` }}
               >
                 <span className="font-[family-name:var(--font-poppins)] font-semibold" style={{ fontSize: 12, color: weakestBand.textColor }}>
-                  Focus area —
+                  Focus area:
                 </span>
                 <span className="font-[family-name:var(--font-poppins)] text-white/70" style={{ fontSize: 12 }}>
                   {weakest.label} ({weakest.score}%)

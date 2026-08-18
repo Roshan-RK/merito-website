@@ -84,11 +84,11 @@ export default function RecruiterPreviewClient({
         savedPulseTimer.current = setTimeout(() => setSaveState("idle"), 2200);
       } else {
         const body = await response.json().catch(() => null);
-        setErrorMessage(body?.error ?? "Something went wrong saving — please try again.");
+        setErrorMessage(body?.error ?? "Something went wrong saving. Please try again.");
         setSaveState("error");
       }
     } catch {
-      setErrorMessage("Something went wrong saving — please try again.");
+      setErrorMessage("Something went wrong saving. Please try again.");
       setSaveState("error");
     }
   }
@@ -100,7 +100,7 @@ export default function RecruiterPreviewClient({
           Recruiter Preview
         </h1>
         <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 15, margin: "10px 0 0", lineHeight: 1.6 }}>
-          Complete at least one report — fitment, personality, AI interview, or reference checks — before you can make
+          Complete at least one report (fitment, personality, AI interview, or reference checks) before you can make
           your profile visible to recruiters.
         </p>
       </main>
@@ -152,7 +152,7 @@ export default function RecruiterPreviewClient({
                 style={{ padding: "11px 14px", fontSize: 14, borderRadius: 7 }}
               />
               <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ margin: "8px 0 0", fontSize: 12.5, lineHeight: 1.5 }}>
-                Must be your own LinkedIn profile — this is what recruiters&apos; extension will match against.
+                Must be your own LinkedIn profile. This is what recruiters&apos; extension will match against.
               </p>
             </div>
 

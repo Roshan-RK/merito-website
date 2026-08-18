@@ -12,8 +12,8 @@ const CARD = "bg-[#141416] border border-white/[0.08]";
 const TEAMWORK_LABEL = REFERENCE_CATEGORIES.find((c) => c.value === "teamwork")?.label ?? "Teamwork";
 
 const STEPS = [
-  `Add ${MIN_REFERENCES} people who've worked with you — a manager, teammate, or client`,
-  "We email each of them a private, one-time link — no login needed",
+  `Add ${MIN_REFERENCES} people who've worked with you: a manager, teammate, or client`,
+  "We email each of them a private, one-time link. No login needed",
   `See their ratings and quotes here as soon as all ${MIN_REFERENCES} respond`,
 ];
 
@@ -52,7 +52,7 @@ export default function ReferencesLockedState({
         </p>
         <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 13, lineHeight: 1.65, margin: "0 0 16px" }}>
           Invite {MIN_REFERENCES} people who&apos;ve worked with you to rate you across {REFERENCE_CATEGORIES.length} categories and leave a
-          short note — verified feedback, not a self-assessment.
+          short note. It&apos;s verified feedback, not a self-assessment.
         </p>
 
         <div className="flex flex-wrap" style={{ gap: 8, marginBottom: 18 }}>
@@ -89,22 +89,22 @@ export default function ReferencesLockedState({
           style={{ gap: 8, height: 48, padding: "0 24px", borderRadius: 8, fontSize: 14.5, border: "none", cursor: "pointer" }}
         >
           <UserPlus size={15} strokeWidth={2} />
-          Start my reference check — {priceLabel}
+          Start my reference check for {priceLabel}
         </button>
       </div>
 
       <div className="border-t border-white/[0.08] bg-white/[0.02]" style={{ padding: 20 }}>
         <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 10.5, letterSpacing: "0.06em", margin: "0 0 12px" }}>
-          Preview — what you&apos;ll get
+          Preview: what you&apos;ll get
         </p>
         <div className="select-none" style={{ opacity: 0.8, filter: "blur(3px)", display: "flex", flexDirection: "column", gap: 12 }}>
           <div className="bg-white/[0.04]" style={{ borderRadius: 10, padding: 12 }}>
             <p className="flex items-start font-[family-name:var(--font-poppins)] text-white/70" style={{ gap: 6, fontSize: 12, fontStyle: "italic", lineHeight: 1.6, margin: 0 }}>
               <Quote size={12} strokeWidth={2} className="text-white/25 shrink-0" style={{ marginTop: 2 }} />
-              &quot;The person you want on-call during a bad outage — calm, methodical, and keeps the team...&quot;
+              &quot;The person you want on-call during a bad outage. Calm, methodical, and keeps the team...&quot;
             </p>
             <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 11, margin: "6px 0 0" }}>
-              — Manager, Nimbus Systems
+              Manager, Nimbus Systems
             </p>
           </div>
           <div className="flex items-center" style={{ gap: 12 }}>

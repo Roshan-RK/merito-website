@@ -31,7 +31,7 @@ export function buildApplicationRows(leads: FitmentLeadRow[]): ApplicationRow[] 
       return {
         id: lead.id,
         roleTitle: lead.role_title,
-        scoreLabel: isReady ? lead.score.toFixed(1) : "—",
+        scoreLabel: isReady ? lead.score.toFixed(1) : "-",
         statusLabel: STATUS_LABELS[lead.resume_match_status ?? ""] ?? "Processing",
         dateLabel: new Date(lead.created_at).toLocaleDateString("en-IN", {
           day: "numeric",

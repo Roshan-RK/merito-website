@@ -205,7 +205,7 @@ export default async function CombinedReportPrintPage({
             Assessed for <strong style={{ color: "#fff", fontWeight: 600 }}>{primaryRole}</strong>
           </p>
           <p className="font-[family-name:var(--font-inter)]" style={{ maxWidth: "56ch", color: "#B8B3C8", fontSize: 14.5, lineHeight: 1.65, margin: "0 0 36px" }}>
-            Four independent assessments — role fitment, personality, a proctored AI interview and peer references — consolidated by Merito HUB into one verifiable, shareable profile.
+            Four independent assessments (role fitment, personality, a proctored AI interview and peer references) consolidated by Merito HUB into one verifiable, shareable profile.
           </p>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 14 }}>
@@ -366,7 +366,7 @@ export default async function CombinedReportPrintPage({
 
         {personality && (
           <>
-            <SectionHeading index="02 · Personality" title="Big Five (OCEAN) working-style profile" blurb="Five research-backed traits describing working style, self-reported against a validated questionnaire. No score here is inherently good or bad — these describe tendencies, not ability." eyebrowColor="#4B4894" />
+            <SectionHeading index="02 · Personality" title="Big Five (OCEAN) working-style profile" blurb="Five research-backed traits describing working style, self-reported against a validated questionnaire. No score here is inherently good or bad. These describe tendencies, not ability." eyebrowColor="#4B4894" />
             <CondensedPersonalitySection candidateName={displayName} scores={personality.scores} />
           </>
         )}
@@ -577,7 +577,7 @@ export default async function CombinedReportPrintPage({
                     <div key={i} className="bg-white" style={{ borderRadius: "0 16px 16px 0", border: "1px solid #E6E1ED", borderLeftWidth: 3, borderLeftColor: "#DE3A2C", padding: "20px 20px 16px" }}>
                       <span className="font-[family-name:var(--font-fraunces)]" style={{ fontSize: 30, color: "#DE3A2C", lineHeight: 1, display: "block", marginBottom: 4 }}>&ldquo;</span>
                       <p className="font-[family-name:var(--font-inter)] text-black" style={{ fontSize: 13.5, lineHeight: 1.6, fontStyle: "italic", margin: "0 0 10px" }}>{r.overallFeedback}</p>
-                      <footer className="font-[family-name:var(--font-ibm-plex-mono)] text-[#6C6779]" style={{ fontSize: 10.5, letterSpacing: "0.04em" }}>— Reference {i + 1} · Verified</footer>
+                      <footer className="font-[family-name:var(--font-ibm-plex-mono)] text-[#6C6779]" style={{ fontSize: 10.5, letterSpacing: "0.04em" }}>Reference {i + 1} · Verified</footer>
                     </div>
                   ))}
               </div>

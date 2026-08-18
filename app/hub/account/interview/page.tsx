@@ -227,7 +227,7 @@ export default async function InterviewReportPage({
               value={report.flagForSuspiciousActivity ? "Flagged" : "All clear"}
               label="Integrity"
             />
-            <StatTile icon={Clock} value={report.approxDurationMinutes != null ? `${report.approxDurationMinutes}m` : "—"} label="Duration" />
+            <StatTile icon={Clock} value={report.approxDurationMinutes != null ? `${report.approxDurationMinutes}m` : "-"} label="Duration" />
           </div>
         </div>
 

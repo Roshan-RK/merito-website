@@ -21,14 +21,14 @@ describe("buildApplicationRows", () => {
 
   it("shows a placeholder score and 'Processing' status for a PENDING lead", () => {
     const rows = buildApplicationRows([lead({ score: 0, resume_match_status: "PENDING" })]);
-    expect(rows[0].scoreLabel).toBe("—");
+    expect(rows[0].scoreLabel).toBe("-");
     expect(rows[0].statusLabel).toBe("Processing");
   });
 
   it("treats a null resume_match_status as still processing", () => {
     const rows = buildApplicationRows([lead({ resume_match_status: null })]);
     expect(rows[0].statusLabel).toBe("Processing");
-    expect(rows[0].scoreLabel).toBe("—");
+    expect(rows[0].scoreLabel).toBe("-");
   });
 
   it("formats the date as day/short-month/year", () => {

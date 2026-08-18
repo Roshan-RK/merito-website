@@ -80,7 +80,7 @@ export default function InterviewPaywallModal({
     const data = await res.json();
     setPaying(false);
     if (!res.ok) {
-      setError(data.error || "Payment succeeded but starting the interview failed — please contact support.");
+      setError(data.error || "Payment succeeded, but starting the interview failed. Please contact support.");
       return;
     }
     setInvitedStatus(data.status as InterviewStatus);
@@ -109,7 +109,7 @@ export default function InterviewPaywallModal({
       const data = await res.json();
       if (!res.ok) {
         setPaying(false);
-        setError(data.error || "Something went wrong — please try again.");
+        setError(data.error || "Something went wrong. Please try again.");
         return;
       }
 
@@ -117,12 +117,12 @@ export default function InterviewPaywallModal({
         await loadRazorpayCheckoutScript();
       } catch {
         setPaying(false);
-        setError("Could not load the payment form — please try again.");
+        setError("Could not load the payment form. Please try again.");
         return;
       }
       if (!window.Razorpay) {
         setPaying(false);
-        setError("Could not load the payment form — please try again.");
+        setError("Could not load the payment form. Please try again.");
         return;
       }
 
@@ -148,13 +148,13 @@ export default function InterviewPaywallModal({
             const verifyData = await verifyRes.json();
             if (!verifyRes.ok) {
               setPaying(false);
-              setError(verifyData.error || "Payment succeeded but verification failed — please contact support.");
+              setError(verifyData.error || "Payment succeeded, but verification failed. Please contact support.");
               return;
             }
             await startInterview();
           } catch {
             setPaying(false);
-            setError("Payment succeeded but verification failed — please refresh.");
+            setError("Payment succeeded, but verification failed. Please refresh.");
           }
         },
         modal: {
@@ -164,7 +164,7 @@ export default function InterviewPaywallModal({
       rzp.open();
     } catch {
       setPaying(false);
-      setError("Something went wrong — please try again.");
+      setError("Something went wrong. Please try again.");
     }
   };
 

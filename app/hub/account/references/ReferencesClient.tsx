@@ -142,7 +142,7 @@ export default function ReferencesClient({ initialStatus }: { initialStatus: Ref
           </h1>
         </div>
         <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 14, lineHeight: 1.65, margin: "0 0 16px" }}>
-          Invite people who&apos;ve worked with you to rate you across {REFERENCE_CATEGORIES.length} categories — independent, verified
+          Invite people who&apos;ve worked with you to rate you across {REFERENCE_CATEGORIES.length} categories, for independent, verified
           feedback rather than a self-assessment.
         </p>
         <div className="flex flex-wrap" style={{ gap: 8, marginBottom: 20 }}>
@@ -219,7 +219,7 @@ export default function ReferencesClient({ initialStatus }: { initialStatus: Ref
                   >
                     <TrendingUp size={15} strokeWidth={2} style={{ color: "#3FCB8C", flexShrink: 0 }} />
                     <span className="font-[family-name:var(--font-poppins)] text-white/80" style={{ fontSize: 12.5 }}>
-                      <span style={{ fontWeight: 700, color: "#3FCB8C" }}>Strongest —</span> {strongest.label} ({strongest.value.toFixed(1)})
+                      <span style={{ fontWeight: 700, color: "#3FCB8C" }}>Strongest:</span> {strongest.label} ({strongest.value.toFixed(1)})
                     </span>
                   </div>
                 )}
@@ -233,7 +233,7 @@ export default function ReferencesClient({ initialStatus }: { initialStatus: Ref
                       >
                         <TrendingDown size={15} strokeWidth={2} style={{ color: band.textColor, flexShrink: 0 }} />
                         <span className="font-[family-name:var(--font-poppins)] text-white/80" style={{ fontSize: 12.5 }}>
-                          <span style={{ fontWeight: 700, color: band.textColor }}>Growth area —</span> {growth.label} ({growth.value.toFixed(1)})
+                          <span style={{ fontWeight: 700, color: band.textColor }}>Growth area:</span> {growth.label} ({growth.value.toFixed(1)})
                         </span>
                       </div>
                     );
@@ -259,7 +259,7 @@ export default function ReferencesClient({ initialStatus }: { initialStatus: Ref
                         className="font-[family-name:var(--font-poppins)] font-semibold"
                         style={{ fontSize: 13, color: cat.value > 0 ? band.textColor : "rgba(255,255,255,0.3)" }}
                       >
-                        {cat.value > 0 ? cat.value.toFixed(1) : "—"}
+                        {cat.value > 0 ? cat.value.toFixed(1) : "-"}
                       </span>
                     </div>
                     <div className="bg-white/[0.08] overflow-hidden" style={{ height: 8, borderRadius: 6 }}>
@@ -322,7 +322,7 @@ export default function ReferencesClient({ initialStatus }: { initialStatus: Ref
             className="inline-flex items-center justify-center self-start font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
             style={{ height: 46, padding: "0 24px", borderRadius: 8, fontSize: 14, textDecoration: "none" }}
           >
-            Done — back to dashboard
+            Done, back to dashboard
           </Link>
         </>
       )}

@@ -171,7 +171,7 @@ export default async function CombinedReportPage({
             Everything about you, in one document
           </h1>
           <p className="font-[family-name:var(--font-poppins)] text-white/45" style={{ fontSize: 12.5, margin: "6px 0 0" }}>
-            {includedCount} of 4 sections included right now — updates automatically as you complete more.
+            {includedCount} of 4 sections included right now. Updates automatically as you complete more.
           </p>
         </div>
 
@@ -201,7 +201,7 @@ export default async function CombinedReportPage({
             )}
             <div>
               <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 14, margin: 0 }}>
-                {displayName} — {primaryRole}
+                {displayName}, {primaryRole}
               </p>
               <p className="font-[family-name:var(--font-poppins)] text-white/45" style={{ fontSize: 12, margin: "3px 0 0" }}>
                 Updates automatically as you complete more

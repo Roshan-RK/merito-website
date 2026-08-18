@@ -23,7 +23,7 @@ export default function BundlePromoCard({ level, onOpenPaywall }: { level: Candi
           Bundle: Report + Personality + References
         </p>
         <p className="text-white/50" style={{ fontSize: 12.5, margin: 0 }}>
-          Save {formatPrice(savings)} vs buying separately — {formatPrice(bundlePrice)}
+          Save {formatPrice(savings)} vs buying separately, for just {formatPrice(bundlePrice)}
         </p>
       </div>
 
@@ -32,7 +32,7 @@ export default function BundlePromoCard({ level, onOpenPaywall }: { level: Candi
         className="font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors shrink-0"
         style={{ border: "none", borderRadius: 8, padding: "11px 18px", fontSize: 13.5, cursor: "pointer" }}
       >
-        Get bundle — {formatPrice(bundlePrice)}
+        Get bundle for {formatPrice(bundlePrice)}
       </button>
     </div>
   );

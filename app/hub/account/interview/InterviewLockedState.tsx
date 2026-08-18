@@ -105,13 +105,13 @@ export default function InterviewLockedState({
           style={{ gap: 8, height: 48, padding: "0 24px", borderRadius: 8, fontSize: 14.5, border: "none", cursor: "pointer" }}
         >
           <Play size={15} strokeWidth={2} />
-          Start my mock interview — {priceLabel}
+          Start my mock interview for {priceLabel}
         </button>
       </div>
 
       <div className="border-t border-white/[0.08] bg-white/[0.02]" style={{ padding: 20 }}>
         <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 10.5, letterSpacing: "0.06em", margin: "0 0 12px" }}>
-          Preview — what you&apos;ll get
+          Preview: what you&apos;ll get
         </p>
         <div className="select-none" style={{ opacity: 0.8, filter: "blur(3px)", display: "flex", flexDirection: "column", gap: 8 }}>
           {SAMPLE_QUESTIONS.map(({ q, color }) => (

@@ -94,7 +94,7 @@ export async function PUT(request: Request) {
   if (upsertError) {
     console.error("recruiter_preview_settings upsert failed", { user_id: user.id, error: upsertError });
     return Response.json(
-      { error: "Something went wrong saving your preview settings — please try again." },
+      { error: "Something went wrong saving your preview settings. Please try again." },
       { status: 500 }
     );
   }

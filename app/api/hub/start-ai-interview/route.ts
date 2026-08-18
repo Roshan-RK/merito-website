@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         error:
-          "You've already completed an AI interview for this role. Each role can only be interviewed once — change your target role to interview again.",
+          "You've already completed an AI interview for this role. Each role can only be interviewed once. Change your target role to interview again.",
       },
       { status: 409 }
     );
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 
     if (!credit) {
       return Response.json(
-        { error: "Payment required to start a mock interview — please pay first." },
+        { error: "Payment required to start a mock interview. Please pay first." },
         { status: 402 }
       );
     }
@@ -137,14 +137,14 @@ export async function POST(request: Request) {
         error: "sendInterviewInvitation reported zero invited",
       });
       return Response.json(
-        { error: "Something went wrong starting your AI interview — please try again." },
+        { error: "Something went wrong starting your AI interview. Please try again." },
         { status: 500 }
       );
     }
   } catch (err) {
     console.error("IntervueBox interview-invite chain failed", { jobId: ibJobId, error: err });
     return Response.json(
-      { error: "Something went wrong starting your AI interview — please try again." },
+      { error: "Something went wrong starting your AI interview. Please try again." },
       { status: 500 }
     );
   }
@@ -195,7 +195,7 @@ export async function POST(request: Request) {
       detail: { roleTitle, ibJobId, ibAgentId, ibCandidateId: candidateId, error: insertError.message },
     });
     return Response.json(
-      { error: "Invitation sent, but we couldn't save the status — please refresh." },
+      { error: "Invitation sent, but we couldn't save the status. Please refresh." },
       { status: 500 }
     );
   }

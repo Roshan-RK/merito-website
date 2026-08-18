@@ -58,7 +58,7 @@ export default async function PersonalityTestPage({
               Personality test
             </h1>
             <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 14, margin: 0 }}>
-              Part of your profile — done once, applies to every application.
+              Part of your profile. Done once, applies to every application.
             </p>
           </div>
           <PersonalityLockedState leadId={current.id} roleTitle={roleTitle} level={level} bundleEligible={bundleEligible} />

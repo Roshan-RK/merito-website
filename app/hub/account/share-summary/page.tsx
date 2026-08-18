@@ -39,7 +39,7 @@ export default async function ShareSummaryPage({
     .order("created_at", { ascending: false })
     .limit(1);
   const currentLead = leads?.[0];
-  const roleTitle = currentLead?.role_title ?? "—";
+  const roleTitle = currentLead?.role_title ?? "-";
   const displayName = currentLead?.name || nameFromEmail(user.email ?? "");
 
   let fitmentDone = false;
@@ -134,7 +134,7 @@ export default async function ShareSummaryPage({
           </div>
         ))}
         <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 13, marginTop: 30, fontStyle: "italic" }}>
-          Every claim backed by evidence — not just a CV.
+          Every claim backed by evidence, not just a CV.
         </p>
       </section>
 

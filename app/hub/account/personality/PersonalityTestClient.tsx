@@ -80,7 +80,7 @@ export default function PersonalityTestClient({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Something went wrong — please try again.");
+        setError(data.error || "Something went wrong. Please try again.");
         setSaving(false);
         return;
       }
@@ -89,7 +89,7 @@ export default function PersonalityTestClient({
       setPhase("report");
       window.scrollTo(0, 0);
     } catch {
-      setError("Something went wrong — please try again.");
+      setError("Something went wrong. Please try again.");
       setSaving(false);
     }
   };
@@ -129,7 +129,7 @@ export default function PersonalityTestClient({
           </h1>
         </div>
         <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 14, lineHeight: 1.65, margin: "0 0 16px" }}>
-          A short questionnaire that maps how you tend to think, work and relate to others across five broad dimensions of personality — for {roleTitle}.
+          A short questionnaire for {roleTitle} that maps how you tend to think, work and relate to others across five broad dimensions of personality.
         </p>
         <div className="flex flex-wrap" style={{ gap: 8, marginBottom: 20 }}>
           {[`${ALL.length} scored statements`, "~11 minutes", "No right or wrong answers"].map((b) => (
@@ -144,7 +144,7 @@ export default function PersonalityTestClient({
         </div>
         <ul className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 13.5, lineHeight: 1.8, margin: "0 0 22px", paddingLeft: 18 }}>
           <li>Rate how accurately each statement describes you, from 1 (very inaccurate) to 5 (very accurate).</li>
-          <li>Answer for how you actually are — not how you think you should be.</li>
+          <li>Answer for how you actually are, not how you think you should be.</li>
           <li>Try not to sit on the fence: pick the side that fits you better.</li>
           <li>A few statements are worded in reverse, so read each one carefully.</li>
         </ul>
@@ -222,7 +222,7 @@ export default function PersonalityTestClient({
                       onClick={() => setAnswer(it.id, v)}
                       role="radio"
                       aria-checked={selected}
-                      aria-label={`${v} — ${SCALE_LABELS[v - 1]}`}
+                      aria-label={`${v}: ${SCALE_LABELS[v - 1]}`}
                       className={
                         "font-[family-name:var(--font-poppins)] font-semibold border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#ed1a24] focus-visible:ring-offset-2 focus-visible:ring-offset-[#141416] " +
                         (selected

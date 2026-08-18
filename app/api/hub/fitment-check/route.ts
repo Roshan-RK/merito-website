@@ -255,7 +255,7 @@ export async function POST(request: Request) {
   }
   if (cv.size > MAX_CV_SIZE_BYTES) {
     return Response.json(
-      { error: "CV file is too large — please upload a file under 5MB." },
+      { error: "CV file is too large. Please upload a file under 5MB." },
       { status: 400 }
     );
   }
@@ -273,7 +273,7 @@ export async function POST(request: Request) {
 
   if (!checkEmailRateLimit(email) || !checkIpRateLimit(ip)) {
     return Response.json(
-      { error: "You've checked your fitment recently — please try again later." },
+      { error: "You've checked your fitment recently. Please try again later." },
       { status: 429 }
     );
   }
@@ -347,7 +347,7 @@ export async function POST(request: Request) {
         detail: { email, roleTitle: role, ibJobId, ibResumeId, error: err instanceof Error ? err.message : String(err) },
       });
     }
-    return Response.json({ error: "Something went wrong — please try again." }, { status: 502 });
+    return Response.json({ error: "Something went wrong. Please try again." }, { status: 502 });
   }
 
   const report = await getResumeMatchReport(ibAppliedJobId).catch((err) => {

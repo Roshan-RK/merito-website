@@ -173,7 +173,7 @@ export default async function PricingPage() {
         </div>
 
         <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 12, lineHeight: 1.6, maxWidth: 640, margin: 0 }}>
-          Only the personality test is discounted inside the bundle — report and reference pricing stay identical either
+          Only the personality test is discounted inside the bundle. Report and reference pricing stay identical either
           way, so bundling never costs more than buying separately.
         </p>
       </div>

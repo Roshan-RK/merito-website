@@ -43,7 +43,7 @@ export default function ChangeRoleModal({
       const data = await res.json();
       if (!res.ok) {
         setBusy(false);
-        setError(data.error || "Something went wrong — please try again.");
+        setError(data.error || "Something went wrong. Please try again.");
         return;
       }
       setBusy(false);
@@ -51,7 +51,7 @@ export default function ChangeRoleModal({
       router.refresh();
     } catch {
       setBusy(false);
-      setError("Something went wrong — please try again.");
+      setError("Something went wrong. Please try again.");
     }
   };
 

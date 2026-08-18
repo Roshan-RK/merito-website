@@ -33,7 +33,7 @@ export default function PriceOptionTiles({
           className="w-full font-[family-name:var(--font-poppins)] font-semibold text-white"
           style={{ height: 50, borderRadius: 8, fontSize: 15, background: submitting ? "#dcdcdc" : "#ed1a24", border: "none", cursor: submitting ? "default" : "pointer", boxShadow: submitting ? "none" : "0 4px 6px rgba(236,34,40,0.3)" }}
         >
-          {submitting ? "Redirecting…" : `Continue to payment — ${formatPrice(soloPrice)}`}
+          {submitting ? "Redirecting…" : `Continue to payment for ${formatPrice(soloPrice)}`}
         </button>
         <p className="text-[#9c9c9c]" style={{ fontSize: 11.5, textAlign: "center", margin: "10px 0 0" }}>
           One-time payment · No subscription · UPI, card & netbanking
@@ -55,7 +55,7 @@ export default function PriceOptionTiles({
           Recommended · Save {formatPrice(savings)}
         </span>
         <p className="font-[family-name:var(--font-gabarito)] font-bold text-white" style={{ fontSize: "1.4rem", margin: "6px 0 4px" }}>
-          Full Bundle — {formatPrice(bundlePrice)}
+          Full Bundle for {formatPrice(bundlePrice)}
         </p>
         <p style={{ color: "#c7c7cf", fontSize: 11.5, margin: "0 0 12px" }}>
           Includes: Detailed Report + Personality Test + Reference Checks

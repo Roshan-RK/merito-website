@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
   if (!isRazorpayBypassed() && !(await isProductUnlocked(user.id, "personality"))) {
     return Response.json(
-      { error: "Payment required to unlock the personality test — please pay first." },
+      { error: "Payment required to unlock the personality test. Please pay first." },
       { status: 402 }
     );
   }
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
 
   if (upsertError) {
     console.error("personality_tests upsert failed", { user_id: user.id, role_title: roleTitle, error: upsertError });
-    return Response.json({ error: "Something went wrong saving your results — please try again." }, { status: 500 });
+    return Response.json({ error: "Something went wrong saving your results. Please try again." }, { status: 500 });
   }
 
   return Response.json({ scores, validity });

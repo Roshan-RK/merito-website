@@ -17,9 +17,9 @@ const STATS = [
   { label: "Years experience", value: "20" },
 ];
 const BIO =
-  "Rushikesh spent two decades in strategy consulting and workforce development — including employability programs adopted nationwide — before bringing that lens to individual candidates. He reads your fitment report, personality results, and mock interview the way he'd assess talent for a growth strategy: where's the real leverage, and what's the fastest path to it.";
+  "Rushikesh spent two decades in strategy consulting and workforce development, including employability programs adopted nationwide, before bringing that lens to individual candidates. He reads your fitment report, personality results, and mock interview the way he'd assess talent for a growth strategy: where's the real leverage, and what's the fastest path to it.";
 const TESTIMONIAL =
-  "Rushikesh didn't just point out what was wrong with my resume — he explained why it mattered from a hiring manager's perspective. That reframing got me two callbacks the next week.";
+  "Rushikesh didn't just point out what was wrong with my resume. He explained why it mattered from a hiring manager's perspective. That reframing got me two callbacks the next week.";
 const TESTIMONIAL_ATTRIBUTION = "Priya S., hired as DevOps Engineer";
 
 const EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40";
@@ -114,7 +114,7 @@ export default async function ExpertBioPage() {
               &quot;{TESTIMONIAL}&quot;
             </p>
             <p className="font-[family-name:var(--font-poppins)] font-semibold text-white/40" style={{ fontSize: 11.5, margin: "8px 0 0" }}>
-              — {TESTIMONIAL_ATTRIBUTION}
+              {TESTIMONIAL_ATTRIBUTION}
             </p>
           </div>
         </div>

@@ -217,7 +217,7 @@ export default function TopBar({
                 </p>
               ) : notifications.length === 0 ? (
                 <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 12.5, padding: "6px 10px 12px" }}>
-                  You&apos;re all caught up — check the Overview page for your latest activity.
+                  You&apos;re all caught up. Check the Overview page for your latest activity.
                 </p>
               ) : (
                 <div style={{ maxHeight: 320, overflowY: "auto" }}>

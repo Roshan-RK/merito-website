@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     // rewrite it for this context instead of forwarding it verbatim.
     if (checkData.duplicate) {
       return Response.json(
-        { ...checkData, error: "You've already checked your fitment for this exact role and CV — refresh the page to see the existing report." },
+        { ...checkData, error: "You've already checked your fitment for this exact role and CV. Refresh the page to see the existing report." },
         { status: checkResponse.status }
       );
     }

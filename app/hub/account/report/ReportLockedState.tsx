@@ -10,9 +10,9 @@ const CARD = "bg-[#141416] border border-white/[0.08]";
 
 const WHAT_YOU_GET = [
   "Assessment summary in plain language",
-  "6-dimension breakdown — skills, education, experience, location, domain, role fit",
+  "6-dimension breakdown: skills, education, experience, location, domain, role fit",
   "Strong points and gaps, each explained",
-  "Full candidate profile — education and experience timeline",
+  "Full candidate profile: education and experience timeline",
 ];
 
 export default function ReportLockedState({
@@ -59,7 +59,7 @@ export default function ReportLockedState({
           Know exactly where you stand before a recruiter does.
         </p>
         <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 13, lineHeight: 1.65, margin: "0 0 16px" }}>
-          Already generated from your CV and the {roleTitle} JD — unlock the full breakdown: your strengths, your gaps, and exactly how
+          Already generated from your CV and the {roleTitle} JD. Unlock the full breakdown: your strengths, your gaps, and exactly how
           to fix your CV.
         </p>
 
@@ -107,13 +107,13 @@ export default function ReportLockedState({
           style={{ gap: 8, height: 48, padding: "0 24px", borderRadius: 8, fontSize: 14.5, border: "none", cursor: "pointer" }}
         >
           <Unlock size={15} strokeWidth={2} />
-          Unlock full report — {priceLabel}
+          Unlock full report for {priceLabel}
         </button>
       </div>
 
       <div className="border-t border-white/[0.08] bg-white/[0.02]" style={{ padding: 20 }}>
         <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 10.5, letterSpacing: "0.06em", margin: "0 0 12px" }}>
-          Preview — what you&apos;ll get
+          Preview: what you&apos;ll get
         </p>
         <div className="select-none" style={{ opacity: 0.8, filter: "blur(3px)", display: "flex", flexDirection: "column", gap: 12 }}>
           <div className="bg-white/[0.04]" style={{ borderRadius: 10, padding: 12 }}>

@@ -293,7 +293,7 @@ export default function GenerateReportModal({
               Open LinkedIn
             </a>
             <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, lineHeight: 1.6, margin: 0 }}>
-              On LinkedIn: start a post, paste the caption, click &ldquo;Add a document&rdquo; and upload the PDF you downloaded above — or paste the public link instead.
+              On LinkedIn: start a post, paste the caption, click &ldquo;Add a document&rdquo; and upload the PDF you downloaded above, or paste the public link instead.
             </p>
 
             <button

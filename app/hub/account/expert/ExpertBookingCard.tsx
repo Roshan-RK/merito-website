@@ -40,7 +40,7 @@ export default function ExpertBookingCard({
       <div className="shrink-0">
         {requested ? (
           <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13 }}>
-            Request sent — we&apos;ll confirm your slot.
+            Request sent. We&apos;ll confirm your slot.
           </p>
         ) : (
           <button
@@ -48,7 +48,7 @@ export default function ExpertBookingCard({
             className="font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
             style={{ border: "none", borderRadius: 8, padding: "12px 20px", fontSize: 13.5, cursor: "pointer", whiteSpace: "nowrap" }}
           >
-            Book my expert call — {priceLabel}
+            Book my expert call for {priceLabel}
           </button>
         )}
       </div>

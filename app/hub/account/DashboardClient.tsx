@@ -106,10 +106,10 @@ export default function DashboardClient({
       <div className="mx-auto" style={{ maxWidth: 1040, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 18 }}>
         <div>
           <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.7rem", letterSpacing: "-0.02em", margin: "0 0 6px" }}>
-            Hi {userName} — here&apos;s how you stand for {roleTitle}
+            Hi {userName}, here&apos;s how you stand for {roleTitle}
           </h1>
           <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 13.5, margin: 0 }}>
-            {doneCount} of {totalSteps} steps complete — each one strengthens the case a recruiter sees.
+            {doneCount} of {totalSteps} steps complete. Each one strengthens the case a recruiter sees.
           </p>
         </div>
 

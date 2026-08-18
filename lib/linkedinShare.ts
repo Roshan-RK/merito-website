@@ -29,8 +29,8 @@ export function buildLinkedInCaption({
   const assessmentList = joinWithAnd(orderedPhrases);
 
   return [
-    `Just completed my verified candidate profile on Merito HUB — ${roleTitle} readiness assessed through ${assessmentList}, all in one place.`,
-    `Merito HUB turns scattered credentials into a single, evidence-backed profile recruiters can actually trust — no more just a CV and a hope.`,
+    `Just completed my verified candidate profile on Merito HUB: ${roleTitle} readiness assessed through ${assessmentList}, all in one place.`,
+    `Merito HUB turns scattered credentials into a single, evidence-backed profile recruiters can actually trust. No more just a CV and a hope.`,
     `Check it out and see how it works: ${hubUrl}`,
   ].join("\n\n");
 }

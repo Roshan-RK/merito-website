@@ -83,7 +83,7 @@ export async function GET(request: Request) {
       errorMessage: err instanceof Error ? err.message : String(err),
       stack: err instanceof Error ? err.stack : undefined,
     });
-    return Response.json({ error: "Could not generate the PDF — please try again." }, { status: 502 });
+    return Response.json({ error: "Could not generate the PDF. Please try again." }, { status: 502 });
   }
 
   return new Response(new Uint8Array(buffer), {

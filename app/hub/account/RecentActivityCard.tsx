@@ -28,7 +28,7 @@ export default function RecentActivityCard({ applications }: { applications: App
             </div>
             <div>
               <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13, margin: 0, lineHeight: 1.4 }}>
-                Your fitment score for {app.roleTitle} is ready — {app.score.toFixed(1)}/10
+                Your fitment score for {app.roleTitle} is ready: {app.score.toFixed(1)}/10
               </p>
               <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 11.5, margin: "2px 0 0" }}>
                 {formatRelativeTime(app.createdAt)}

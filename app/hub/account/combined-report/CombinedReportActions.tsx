@@ -86,7 +86,7 @@ export default function CombinedReportActions({
       </button>
       {error && (
         <span className="w-full font-[family-name:var(--font-poppins)] text-[#ed1a24]" style={{ fontSize: 11.5 }}>
-          Couldn&apos;t create a share link — please try again.
+          Couldn&apos;t create a share link. Please try again.
         </span>
       )}
     </>

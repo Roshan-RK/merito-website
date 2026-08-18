@@ -61,7 +61,7 @@ export default function PersonalityReport({
     {
       label: "Consistency",
       value: `${validity.incon.toFixed(2)} avg gap`,
-      verdict: validity.incon >= 1.5 ? "High — possibly careless" : validity.incon >= 1.0 ? "Moderate" : "Consistent",
+      verdict: validity.incon >= 1.5 ? "High, possibly careless" : validity.incon >= 1.0 ? "Moderate" : "Consistent",
       ok: validity.incon < 1.5,
       note: "Agreement across similar item pairs · lower = consistent",
     },
@@ -142,7 +142,7 @@ export default function PersonalityReport({
           </h2>
         </div>
         <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 12.5, margin: "0 0 18px" }}>
-          Automated checks on how the questionnaire was answered — not part of the personality result itself.
+          Automated checks on how the questionnaire was answered. Not part of the personality result itself.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 12 }}>
           {validityCells.map((c) => (
@@ -173,8 +173,8 @@ export default function PersonalityReport({
         >
           <p style={{ color: flags.length === 0 ? "#3FCB8C" : "#BD7E12", margin: 0, lineHeight: 1.6 }}>
             {flags.length === 0
-              ? "Validity checks passed — the response pattern looks honest and attentive, so the scores can be read at face value."
-              : `Interpret with some caution — the response pattern shows signs of ${flags.join(", ")}. Treat the trait scores as indicative and confirm anything important in a structured interview.`}
+              ? "Validity checks passed. The response pattern looks honest and attentive, so the scores can be read at face value."
+              : `Interpret with some caution. The response pattern shows signs of ${flags.join(", ")}. Treat the trait scores as indicative and confirm anything important in a structured interview.`}
           </p>
         </div>
       </div>

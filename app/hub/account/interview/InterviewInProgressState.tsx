@@ -15,13 +15,13 @@ export default function InterviewInProgressState({ roleTitle }: { roleTitle: str
           <Mic size={17} strokeWidth={2} />
         </div>
         <span className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.05rem" }}>
-          Mock AI interview — {roleTitle}
+          Mock AI interview for {roleTitle}
         </span>
       </div>
       <div className="flex items-start bg-white/[0.04]" style={{ gap: 10, borderRadius: 10, padding: 14 }}>
         <Clock size={15} strokeWidth={2} className="text-white/40 shrink-0" style={{ marginTop: 1 }} />
         <p className="font-[family-name:var(--font-poppins)] text-white/60" style={{ fontSize: 13, lineHeight: 1.65, margin: 0 }}>
-          We&apos;ve sent your AI interview invite for {roleTitle} — open it from your email to complete it on IntervueBox whenever you&apos;re
+          We&apos;ve sent your AI interview invite for {roleTitle}. Open it from your email to complete it on IntervueBox whenever you&apos;re
           ready. This page updates automatically once your scored report is ready.
         </p>
       </div>

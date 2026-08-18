@@ -63,7 +63,7 @@ export default function OnboardingBanner({ roleTitle }: { roleTitle: string }) {
         </p>
         <p className="font-[family-name:var(--font-poppins)] text-white/60" style={{ fontSize: 12.5, lineHeight: 1.6, margin: "4px 0 0" }}>
           Your score and report are specific to {roleTitle || "the role you checked"}. Personality and reference checks live under
-          &quot;Your profile&quot; — do them once, they apply everywhere.
+          &quot;Your profile.&quot; Do them once, they apply everywhere.
         </p>
       </div>
       <button

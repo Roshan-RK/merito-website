@@ -43,7 +43,7 @@ export async function completeReportUnlock(
   try {
     report = await getResumeMatchReport(lead.ib_applied_job_id);
   } catch {
-    return { status: "error", message: "Unlocked, but the report failed to load — please refresh." };
+    return { status: "error", message: "Unlocked, but the report failed to load. Please refresh." };
   }
 
   if (report.status === "PENDING") {
@@ -75,7 +75,7 @@ export async function completeReportUnlock(
     .eq("id", lead.id);
 
   if (updateError) {
-    return { status: "error", message: "Unlocked, but the report failed to save — please refresh." };
+    return { status: "error", message: "Unlocked, but the report failed to save. Please refresh." };
   }
 
   return { status: "unlocked", report: resumeMatchRaw };

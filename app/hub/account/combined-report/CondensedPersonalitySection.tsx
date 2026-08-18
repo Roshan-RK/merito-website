@@ -35,7 +35,7 @@ export default function CondensedPersonalitySection({
             Descriptive, not evaluative
           </span>
           <p className="font-[family-name:var(--font-inter)] text-black" style={{ fontSize: 14.5, lineHeight: 1.7, margin: 0 }}>
-            {candidateName} scores across five Big Five (OCEAN) traits — a working-style profile, not a competency score.
+            {candidateName} scores across five Big Five (OCEAN) traits: a working-style profile, not a competency score.
           </p>
         </div>
       </div>

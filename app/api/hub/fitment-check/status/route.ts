@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     "unknown";
 
   if (!checkIpRateLimit(ip)) {
-    return Response.json({ error: "Too many requests — please try again later." }, { status: 429 });
+    return Response.json({ error: "Too many requests. Please try again later." }, { status: 429 });
   }
 
   const { searchParams } = new URL(request.url);
