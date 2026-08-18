@@ -162,7 +162,6 @@ export default async function FullReportPage() {
             <div className="flex items-center flex-wrap shrink-0" style={{ gap: 8 }}>
               <ExportPreviewButton
                 exportUrl="/api/hub/report/export"
-                downloadFilename="fitment-report.pdf"
                 title="Fitment report: export preview"
               />
               <a

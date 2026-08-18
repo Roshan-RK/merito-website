@@ -66,7 +66,6 @@ export default async function ReferencesPage() {
             <div className="flex items-center flex-wrap" style={{ gap: 8 }}>
               <ExportPreviewButton
                 exportUrl="/api/hub/references/export"
-                downloadFilename="reference-check-report.pdf"
                 title="Reference check: export preview"
               />
               <a

@@ -1,24 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { Download } from "lucide-react";
 
 // Shows exactly what the downloadable PDF will look like by iframe-embedding
 // the same export API route (/api/hub/report/export, /api/hub/references/export)
 // that already screenshots the live dashboard page via headless Chromium
 // (lib/pdf/renderPageToPdf.ts). This intentionally does not re-render the
 // report/reference layout a second time -- the iframe loads the literal PDF
-// bytes the "Download PDF" link would save, so the preview can never drift
-// from the real export.
+// bytes the download link would save, so the preview can never drift from
+// the real export. No download action here -- Chrome's native PDF viewer
+// (rendering the iframed PDF) already has its own download button.
 export default function ExportPreviewModal({
   title,
   exportUrl,
-  downloadFilename,
   onClose,
 }: {
   title: string;
   exportUrl: string;
-  downloadFilename: string;
   onClose: () => void;
 }) {
   const [loaded, setLoaded] = useState(false);
@@ -59,24 +57,14 @@ export default function ExportPreviewModal({
           <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.1rem", margin: 0 }}>
             {title}
           </h2>
-          <div className="flex items-center" style={{ gap: 10 }}>
-            <a
-              href={exportUrl}
-              download={downloadFilename}
-              className="flex items-center bg-[#ed1a24] hover:bg-[#d3141d] transition-colors font-[family-name:var(--font-poppins)] font-semibold text-white"
-              style={{ gap: 6, fontSize: 12.5, borderRadius: 50, padding: "8px 16px" }}
-            >
-              <Download size={13} strokeWidth={2} /> Download
-            </a>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close"
-              style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#9c9c9c", lineHeight: 1 }}
-            >
-              ✕
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#9c9c9c", lineHeight: 1 }}
+          >
+            ✕
+          </button>
         </div>
 
         <div style={{ flex: 1, position: "relative", background: "#f4f1f7" }}>

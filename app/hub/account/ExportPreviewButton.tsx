@@ -11,11 +11,9 @@ import ExportPreviewModal from "./ExportPreviewModal";
 // status === "completed") -- see the gating already in those pages.
 export default function ExportPreviewButton({
   exportUrl,
-  downloadFilename,
   title,
 }: {
   exportUrl: string;
-  downloadFilename: string;
   title: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -34,7 +32,6 @@ export default function ExportPreviewButton({
         <ExportPreviewModal
           title={title}
           exportUrl={exportUrl}
-          downloadFilename={downloadFilename}
           onClose={() => setOpen(false)}
         />
       )}
