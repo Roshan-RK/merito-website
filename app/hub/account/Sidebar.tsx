@@ -30,25 +30,20 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { label: "Overview", href: "/hub/account", icon: LayoutDashboard },
       { label: "Fitment report", href: "/hub/account/report", icon: FileText },
-      { label: "Mock interview", href: "/hub/account/interview", icon: Mic },
-      { label: "Consolidated report", href: "/hub/account/combined-report", icon: FileStack, tourId: "nav-consolidated" },
-    ],
-  },
-  {
-    title: "Your profile",
-    items: [
       { label: "Personality test", href: "/hub/account/personality", icon: Brain },
+      { label: "Mock interview", href: "/hub/account/interview", icon: Mic },
       { label: "Reference checks", href: "/hub/account/references", icon: Users },
+      { label: "Expert guidance", href: "/hub/account#guidance", icon: UserCheck },
     ],
   },
   {
     title: "Account",
     items: [
+      { label: "Consolidated report", href: "/hub/account/combined-report", icon: FileStack, tourId: "nav-consolidated" },
       { label: "Applications & history", href: "/hub/account/applications", icon: Briefcase },
-      { label: "Pricing", href: "/hub/account/pricing", icon: Tag },
       { label: "Recruiter preview", href: "/hub/account/recruiter-preview", icon: Eye },
+      { label: "Pricing", href: "/hub/account/pricing", icon: Tag },
       { label: "Order history", href: "/hub/account/orders", icon: Receipt },
-      { label: "Expert guidance", href: "/hub/account#guidance", icon: UserCheck },
     ],
   },
 ];

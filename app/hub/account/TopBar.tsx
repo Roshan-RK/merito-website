@@ -129,7 +129,7 @@ export default function TopBar({
     >
       <div className="flex items-center shrink-0" style={{ gap: 10 }}>
         <Link href="/hub/account" className="flex items-center" style={{ gap: 10 }}>
-          <Image src="/logo-white.png" alt="Merito" width={100} height={28} style={{ height: 22, width: "auto" }} />
+          <Image src="/logo-white.png" alt="Merito" width={128} height={36} style={{ height: 30, width: "auto" }} />
           <span
             className="bg-[#ed1a24] text-white font-[family-name:var(--font-poppins)] font-bold"
             style={{ fontSize: 10, letterSpacing: "0.06em", borderRadius: 50, padding: "3px 9px" }}
