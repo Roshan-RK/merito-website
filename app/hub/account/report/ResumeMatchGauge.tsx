@@ -17,9 +17,9 @@ export function getMatchBand(percent: number): MatchBand {
 // those values above must never change. This mirrors that same file's DARK
 // remap for this panel's own dark UI instead of inventing new colors.
 const DARK_BAND: Record<string, { textColor: string; trackColor: string }> = {
-  "#16803c": { textColor: "#3FCB8C", trackColor: "rgba(255,255,255,0.12)" },
-  "#4b4b4d": { textColor: "#BD7E12", trackColor: "rgba(255,255,255,0.12)" },
-  "#ed1a24": { textColor: "#E8798F", trackColor: "rgba(255,255,255,0.12)" },
+  "#16803c": { textColor: "#3FCB8C", trackColor: "rgba(53,182,130,0.15)" },
+  "#4b4b4d": { textColor: "#BD7E12", trackColor: "rgba(239,184,57,0.15)" },
+  "#ed1a24": { textColor: "#E8798F", trackColor: "rgba(237,26,36,0.15)" },
 };
 
 export function getMatchBandDark(percent: number): MatchBand {

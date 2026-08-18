@@ -19,10 +19,12 @@ function AccordionSection({
   children: ReactNode;
 }) {
   return (
-    <details open={defaultOpen} className="group bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 14, padding: "0 16px" }}>
+    <details open={defaultOpen} className="group" style={{ borderRadius: 14, padding: "0 16px", background: "rgb(29,25,31)", border: "1px solid rgb(49,47,55)" }}>
       <summary className="flex items-center justify-between" style={{ padding: "14px 0", cursor: "pointer", listStyle: "none" }}>
-        <span className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ gap: 10, fontSize: 13.5 }}>
-          <Icon size={15} strokeWidth={2} className="text-white/45" />
+        <span className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ gap: 10, fontSize: 14 }}>
+          <span className="flex items-center justify-center bg-[#ed1a24]/15 text-[#ed1a24] shrink-0" style={{ width: 36, height: 36, borderRadius: 10 }}>
+            <Icon size={16} strokeWidth={2} />
+          </span>
           {title}
           <span className="font-normal text-white/40" style={{ fontSize: 12 }}>
             ({count})
@@ -57,7 +59,7 @@ export default function CandidateProfile({
         {education.length > 0 && (
           <AccordionSection icon={GraduationCap} title="Education" count={education.length} defaultOpen>
             {education.map((e, i) => (
-              <div key={i} className="bg-white/[0.04]" style={{ borderRadius: 10, padding: 12 }}>
+              <div key={i} style={{ borderRadius: 10, padding: 12, background: "rgba(42,37,45,0.4)" }}>
                 <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13, margin: 0 }}>
                   {e.qualification}
                 </p>
@@ -71,7 +73,7 @@ export default function CandidateProfile({
         {experience.length > 0 && (
           <AccordionSection icon={Briefcase} title="Experience" count={experience.length} defaultOpen>
             {experience.map((e, i) => (
-              <div key={i} className="bg-white/[0.04]" style={{ borderRadius: 10, padding: 12 }}>
+              <div key={i} style={{ borderRadius: 10, padding: 12, background: "rgba(42,37,45,0.4)" }}>
                 <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13, margin: 0 }}>
                   {e.position}
                 </p>
@@ -85,7 +87,7 @@ export default function CandidateProfile({
         {certifications.length > 0 && (
           <AccordionSection icon={Award} title="Certifications" count={certifications.length}>
             {certifications.map((c, i) => (
-              <div key={i} className="bg-white/[0.04]" style={{ borderRadius: 10, padding: 12 }}>
+              <div key={i} style={{ borderRadius: 10, padding: 12, background: "rgba(42,37,45,0.4)" }}>
                 <p className="font-[family-name:var(--font-poppins)] text-white" style={{ fontSize: 13, margin: 0 }}>
                   {c}
                 </p>
@@ -96,7 +98,7 @@ export default function CandidateProfile({
         {projects.length > 0 && (
           <AccordionSection icon={FolderGit2} title="Projects" count={projects.length}>
             {projects.map((p, i) => (
-              <div key={i} className="bg-white/[0.04]" style={{ borderRadius: 10, padding: 12 }}>
+              <div key={i} style={{ borderRadius: 10, padding: 12, background: "rgba(42,37,45,0.4)" }}>
                 <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13, margin: 0 }}>
                   {p.name}
                 </p>

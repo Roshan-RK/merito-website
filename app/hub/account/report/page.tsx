@@ -5,7 +5,7 @@ import { isReportUnlocked } from "@/lib/reportUnlocks";
 import { isProductUnlocked } from "@/lib/productUnlocks";
 import { DEFAULT_LEVEL, type CandidateLevel } from "@/lib/razorpay/pricing";
 import { getCandidateResumeDetails, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
-import ResumeMatchCategoryCard from "./ResumeMatchCategoryCard";
+import ResumeMatchCategoryCard, { CATEGORY_ICONS } from "./ResumeMatchCategoryCard";
 import ResumeMatchGauge, { getMatchBandDark } from "./ResumeMatchGauge";
 import CandidateStatsCard from "./CandidateStatsCard";
 import CandidateProfile from "./CandidateProfile";
@@ -124,7 +124,7 @@ export default async function FullReportPage() {
 
   return (
     <main>
-      <div className="mx-auto" style={{ maxWidth: 880, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+      <div className="px-4 py-6 pb-16 md:px-8 md:py-7" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <div>
           <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.5rem", margin: 0 }}>
             Fitment report
@@ -206,15 +206,15 @@ export default async function FullReportPage() {
             <a
               key={link.id}
               href={`#${link.id}`}
-              className="bg-[#141416] border border-white/[0.08] hover:border-[#ed1a24]/40 hover:text-white transition-colors font-[family-name:var(--font-poppins)] font-medium text-white/55"
-              style={{ fontSize: 12, borderRadius: 50, padding: "6px 14px" }}
+              className="hover:border-[#ed1a24]/40 hover:text-white transition-colors font-[family-name:var(--font-poppins)] font-medium text-white/55"
+              style={{ fontSize: 12, borderRadius: 50, padding: "6px 14px", background: "rgb(29,25,31)", border: "1px solid rgb(49,47,55)" }}
             >
               {link.label}
             </a>
           ))}
         </div>
 
-        <div id="summary" className="bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 14, padding: 20, scrollMarginTop: 24 }}>
+        <div id="summary" style={{ borderRadius: 14, padding: 20, scrollMarginTop: 24, background: "rgb(29,25,31)", border: "1px solid rgb(49,47,55)" }}>
           <p className={EYEBROW} style={{ fontSize: 10.5, letterSpacing: "0.06em", margin: "0 0 8px" }}>
             Assessment summary
           </p>
@@ -229,23 +229,27 @@ export default async function FullReportPage() {
           </p>
           {strongest && weakest && weakestBand && (
             <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 10, marginBottom: 12 }}>
-              <div className="flex items-center bg-[#16803c]/10 border border-[#16803c]/25" style={{ gap: 8, borderRadius: 10, padding: "10px 14px" }}>
-                <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#3FCB8C]" style={{ fontSize: 12 }}>
-                  Strongest:
-                </span>
-                <span className="font-[family-name:var(--font-poppins)] text-white/70" style={{ fontSize: 12 }}>
-                  {strongest.label} ({strongest.score}%)
+              <div className="flex items-center bg-[#16803c]/10 border border-[#16803c]/25" style={{ gap: 10, borderRadius: 14, padding: "10px 14px" }}>
+                {(() => {
+                  const StrongestIcon = CATEGORY_ICONS[strongest.key];
+                  return <StrongestIcon size={16} strokeWidth={2} className="shrink-0 text-[#3FCB8C]" />;
+                })()}
+                <span className="font-[family-name:var(--font-poppins)]" style={{ fontSize: 12 }}>
+                  <span className="font-semibold text-[#3FCB8C]">Strongest —</span>{" "}
+                  <span className="text-white/70">{strongest.label} ({strongest.score}%)</span>
                 </span>
               </div>
               <div
                 className="flex items-center"
-                style={{ gap: 8, borderRadius: 10, padding: "10px 14px", background: weakestBand.trackColor, border: `1px solid ${weakestBand.textColor}40` }}
+                style={{ gap: 10, borderRadius: 14, padding: "10px 14px", background: weakestBand.trackColor, border: `1px solid ${weakestBand.textColor}40` }}
               >
-                <span className="font-[family-name:var(--font-poppins)] font-semibold" style={{ fontSize: 12, color: weakestBand.textColor }}>
-                  Focus area:
-                </span>
-                <span className="font-[family-name:var(--font-poppins)] text-white/70" style={{ fontSize: 12 }}>
-                  {weakest.label} ({weakest.score}%)
+                {(() => {
+                  const FocusIcon = CATEGORY_ICONS[weakest.key];
+                  return <FocusIcon size={16} strokeWidth={2} className="shrink-0" style={{ color: weakestBand.textColor }} />;
+                })()}
+                <span className="font-[family-name:var(--font-poppins)]" style={{ fontSize: 12 }}>
+                  <span className="font-semibold" style={{ color: weakestBand.textColor }}>Focus area —</span>{" "}
+                  <span className="text-white/70">{weakest.label} ({weakest.score}%)</span>
                 </span>
               </div>
             </div>

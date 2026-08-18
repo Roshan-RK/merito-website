@@ -72,9 +72,9 @@ export default function CandidateStatsCard({
   const current = currentRole(experience);
 
   return (
-    <div className="bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 14, padding: 18 }}>
+    <div style={{ borderRadius: 14, padding: 18, background: "rgb(29,25,31)", border: "1px solid rgb(49,47,55)" }}>
       {hasContact && (
-        <div className="flex flex-wrap items-center border-b border-white/[0.08]" style={{ gap: 18, paddingBottom: 14, marginBottom: 14 }}>
+        <div className="flex flex-wrap items-center" style={{ gap: 18, paddingBottom: 14, marginBottom: 14, borderBottom: "1px solid rgb(49,47,55)" }}>
           {phoneNumber && <ContactItem icon={<Phone size={13} strokeWidth={2} />} value={phoneNumber} />}
           {email && <ContactItem icon={<Mail size={13} strokeWidth={2} />} value={email} />}
           {location && <ContactItem icon={<MapPin size={13} strokeWidth={2} />} value={location} />}

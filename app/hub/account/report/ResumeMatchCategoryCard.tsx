@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 import { Target, GraduationCap, Briefcase, MapPin, Building2, Crosshair } from "lucide-react";
 import type { ResumeMatchCategory, ResumeMatchCategoryKey } from "@/lib/intervuebox/reports";
 import { getMatchBandDark } from "./ResumeMatchGauge";
@@ -6,7 +6,7 @@ import { getMatchBandDark } from "./ResumeMatchGauge";
 // Icon-per-dimension mapping matches mockups/merito-dashboard-v34.html's tA
 // lookup exactly (Skills Match -> target, Role Relevance -> crosshair) --
 // verified live in the rendered mockup, not assumed from the label text.
-const CATEGORY_ICONS: Record<ResumeMatchCategoryKey, ComponentType<{ size?: number; strokeWidth?: number; className?: string }>> = {
+export const CATEGORY_ICONS: Record<ResumeMatchCategoryKey, ComponentType<{ size?: number; strokeWidth?: number; className?: string; style?: CSSProperties }>> = {
   skillsMatch: Target,
   educationMatch: GraduationCap,
   experienceMatch: Briefcase,
@@ -19,9 +19,9 @@ export default function ResumeMatchCategoryCard({ category }: { category: Resume
   const band = getMatchBandDark(category.score);
   const Icon = CATEGORY_ICONS[category.key];
   return (
-    <div className="bg-[#141416] border border-white/[0.08]" style={{ borderRadius: 14, padding: "16px 18px", breakInside: "avoid" }}>
+    <div style={{ borderRadius: 14, padding: "16px 18px", breakInside: "avoid", background: "rgb(29,25,31)", border: "1px solid rgb(49,47,55)" }}>
       <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
-        <h3 className="flex items-center font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ gap: 8, fontSize: "1.05rem", margin: 0 }}>
+        <h3 className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ gap: 8, fontSize: 13, margin: 0 }}>
           <Icon size={14} strokeWidth={2} className="text-white/40" />
           {category.label}
         </h3>
