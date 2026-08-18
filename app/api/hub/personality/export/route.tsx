@@ -46,8 +46,9 @@ export async function GET(request: Request) {
   const pageCookies = requestCookiesFor(request, url.hostname);
 
   const buffer = await renderPageToPdf(
-    `${url.origin}/hub/account/personality?role=${encodeURIComponent(roleTitle)}`,
-    pageCookies
+    `${url.origin}/hub/account/personality/print?role=${encodeURIComponent(roleTitle)}`,
+    pageCookies,
+    { singlePage: true }
   );
 
   // ?inline=1 is used by ExportPreviewModal's <iframe> -- an "attachment"
