@@ -55,7 +55,6 @@ export default function ProgressRail({
   onOpenReferencesPaywall,
   onOpenInterviewStart,
   onOpenInterviewCheck,
-  onOpenGenerateReport,
 }: {
   reportUnlocked: boolean;
   interviewStatus: InterviewStatus;
@@ -71,7 +70,6 @@ export default function ProgressRail({
   onOpenReferencesPaywall: () => void;
   onOpenInterviewStart: () => void;
   onOpenInterviewCheck: () => void;
-  onOpenGenerateReport: () => void;
 }) {
   const interviewGenerating = isInterviewGenerating(interviewStatus, interviewInvitedAt, level);
   const referencesDone = referenceCheckStatus === "completed";
@@ -135,38 +133,49 @@ export default function ProgressRail({
           <StatusPill key={pill.key} pill={pill} />
         ))}
       </div>
-
-      <button
-        onClick={onOpenGenerateReport}
-        className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24] hover:text-white hover:bg-[#ed1a24] transition-colors"
-        style={{ marginTop: 14, background: "none", border: "1px solid rgba(237,26,36,0.4)", borderRadius: 8, padding: "9px 16px", fontSize: 12.5, cursor: "pointer" }}
-      >
-        Generate consolidated report
-      </button>
     </div>
   );
 }
 
 function StatusPill({ pill }: { pill: Pill }) {
   const Icon = pill.icon;
-  const dotColor = pill.state === "done" ? "#4ade80" : pill.pulse ? "#ed1a24" : "rgba(255,255,255,0.35)";
-  const textColor = pill.state === "done" ? "text-[#4ade80]" : "text-white/45";
+  // Mirrors the mockup's status-badge tokens: success (done), warning
+  // (in-progress/pending/actionable), neutral secondary (locked/not started).
+  const tone =
+    pill.state === "done"
+      ? { bg: "rgba(53,182,130,0.15)", fg: "rgb(53,182,130)" }
+      : pill.state === "active"
+        ? { bg: "rgba(239,184,57,0.15)", fg: "rgb(239,184,57)" }
+        : { bg: "rgb(39,37,45)", fg: "rgb(156,153,163)" };
+  const compact = pill.state === "locked";
 
   const badge: ReactNode = (
-    <span className="font-[family-name:var(--font-poppins)] font-semibold" style={{ fontSize: 10.5, display: "inline-flex", alignItems: "center", gap: 6, letterSpacing: "0.04em" }}>
+    <span
+      className="font-[family-name:var(--font-poppins)] font-medium"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        borderRadius: 50,
+        padding: compact ? "2px 10px" : "2px 10px",
+        fontSize: compact ? 10 : 12,
+        letterSpacing: compact ? "0.25px" : "normal",
+        textTransform: compact ? "uppercase" : "none",
+        background: tone.bg,
+        color: tone.fg,
+      }}
+    >
       <span
         style={{
           width: 6,
           height: 6,
           borderRadius: "50%",
-          background: dotColor,
+          background: tone.fg,
           animation: pill.pulse ? "merito-pulse 1.4s ease-in-out infinite" : undefined,
           display: "inline-block",
         }}
       />
-      <span className={textColor} style={{ textTransform: "uppercase" }}>
-        {pill.statusText}
-      </span>
+      {pill.statusText}
     </span>
   );
 

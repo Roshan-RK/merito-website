@@ -137,7 +137,6 @@ export default function DashboardClient({
             setInterviewModalAlreadyInvited(true);
             setModal("interview");
           }}
-          onOpenGenerateReport={() => setModal("generate")}
         />
 
         {bundleEligible && <BundlePromoCard level={level} onOpenPaywall={() => setModal("report")} />}
