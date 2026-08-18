@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import { Phone, Mail, MapPin, GraduationCap, Briefcase, CheckCircle2, XCircle } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
@@ -6,6 +7,8 @@ import { isReportUnlocked } from "@/lib/reportUnlocks";
 import { getCandidateResumeDetails, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 
 const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"], variable: "--font-manrope" });
+
+export const metadata: Metadata = { title: "Fitment report" };
 
 // This route is the printable/PDF-export target for the fitment report --
 // app/api/hub/report/export/route.tsx screenshots this exact URL via
