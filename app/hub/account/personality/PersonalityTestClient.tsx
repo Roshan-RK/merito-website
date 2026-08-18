@@ -176,11 +176,14 @@ export default function PersonalityTestClient({
         </div>
 
         <div
-          className="hidden sm:grid font-[family-name:var(--font-poppins)] text-white/35"
-          style={{ gridTemplateColumns: "repeat(5,1fr)", gap: 8, fontSize: 10, textAlign: "center", marginBottom: 6 }}
+          className="hidden sm:flex font-[family-name:var(--font-poppins)] text-white/35"
+          style={{ gap: 8, fontSize: 9, textAlign: "center", marginBottom: 6 }}
         >
+          <div style={{ flex: 1 }} />
           {SCALE_LABELS.map((l) => (
-            <div key={l}>{l}</div>
+            <div key={l} style={{ width: 48, lineHeight: 1.2 }}>
+              {l}
+            </div>
           ))}
         </div>
 
@@ -188,14 +191,18 @@ export default function PersonalityTestClient({
           {pageItems.map((it, i) => {
             const qNum = page * PER_PAGE + i + 1;
             return (
-              <div key={it.id} className="border-b border-white/[0.08]" style={{ padding: "16px 0" }}>
-                <p id={`q-${it.id}-label`} className="font-[family-name:var(--font-poppins)] text-white/85" style={{ fontSize: 14, margin: "0 0 10px" }}>
+              <div
+                key={it.id}
+                className="border-b border-white/[0.08] flex flex-col sm:flex-row sm:items-center"
+                style={{ gap: 12, padding: "14px 0" }}
+              >
+                <p id={`q-${it.id}-label`} className="font-[family-name:var(--font-poppins)] text-white/85" style={{ fontSize: 14, margin: 0, flex: 1, minWidth: 0 }}>
                   <span className="font-semibold text-[#ed1a24]" style={{ marginRight: 6 }}>
                     {qNum}.
                   </span>
                   {it.s}
                 </p>
-                <div role="radiogroup" aria-labelledby={`q-${it.id}-label`} className="grid" style={{ gridTemplateColumns: "repeat(5,1fr)", gap: 8 }}>
+                <div role="radiogroup" aria-labelledby={`q-${it.id}-label`} className="flex shrink-0" style={{ gap: 8 }}>
                   {[1, 2, 3, 4, 5].map((v) => {
                     const selected = answers[it.id] === v;
                     return (
@@ -212,7 +219,7 @@ export default function PersonalityTestClient({
                             ? "border-[#ed1a24] bg-[#ed1a24]/15 text-[#ed1a24]"
                             : "border-white/[0.12] text-white/50 hover:border-[#ed1a24]/40")
                         }
-                        style={{ height: 42, borderRadius: 8, fontSize: 14, cursor: "pointer" }}
+                        style={{ width: 48, height: 40, borderRadius: 8, fontSize: 14, cursor: "pointer" }}
                       >
                         {v}
                       </button>
