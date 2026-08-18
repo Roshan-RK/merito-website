@@ -50,11 +50,15 @@ export async function GET(request: Request) {
     pageCookies
   );
 
+  // ?inline=1 is used by ExportPreviewModal's <iframe> -- an "attachment"
+  // disposition forces a download prompt instead of rendering in the iframe.
+  const disposition = url.searchParams.get("inline") === "1" ? "inline" : "attachment";
+
   return new Response(new Uint8Array(buffer), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="personality-report.pdf"`,
+      "Content-Disposition": `${disposition}; filename="personality-report.pdf"`,
     },
   });
 }
