@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import Image from "next/image";
 import { Manrope } from "next/font/google";
 import { Phone, Mail, MapPin, GraduationCap, Briefcase, CheckCircle2, XCircle } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
@@ -30,14 +31,7 @@ function toneFor(score: number): { label: string; background: string; color: str
 }
 
 function MeritoMark() {
-  return (
-    <div className="flex items-center" style={{ gap: 6, fontSize: 18, fontWeight: 700, color: "#EC1B25" }}>
-      <svg viewBox="0 0 24 24" fill="none" style={{ width: 20, height: 20 }}>
-        <path d="M3 11 L7.5 17.5 L12.5 3.5 L15.5 13 L18.5 6.5 L21 12" stroke="#EC1B25" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      Merito
-    </div>
-  );
+  return <Image src="/logo.png" alt="Merito" width={128} height={36} style={{ height: 26, width: "auto" }} />;
 }
 
 function Card({ children }: { children: React.ReactNode }) {
