@@ -54,14 +54,14 @@ export default function Sidebar() {
   return (
     <nav
       aria-label="Account navigation"
-      className="print:hidden hidden md:flex flex-col shrink-0 sticky overflow-y-auto bg-[#0a0a0a] border-r border-white/[0.08]"
-      style={{ width: 248, top: 64, height: "calc(100vh - 64px)", padding: "20px 12px" }}
+      className="print:hidden hidden md:flex flex-col shrink-0 sticky overflow-y-auto bg-[#0a0a0a]"
+      style={{ width: 250, top: 64, height: "calc(100vh - 64px)", padding: "20px 12px", borderRight: "1px solid rgb(49,47,55)" }}
     >
       {GROUPS.map((group) => (
         <div key={group.title} style={{ marginBottom: 4 }}>
           <p
-            className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40"
-            style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 8px", padding: "0 10px" }}
+            className="font-[family-name:var(--font-poppins)] font-semibold uppercase"
+            style={{ fontSize: 11, letterSpacing: "0.025em", color: "rgb(156,153,163)", margin: "0 0 6px", padding: "4px 12px 0" }}
           >
             {group.title}
           </p>
@@ -81,19 +81,26 @@ export default function Sidebar() {
                   aria-current={isActive ? "page" : undefined}
                   className={
                     isActive
-                      ? "flex items-center bg-[#ed1a24]/15 text-white"
-                      : "flex items-center text-white/60 hover:text-white hover:bg-white/[0.06] transition-colors"
+                      ? "relative flex items-center overflow-hidden text-white"
+                      : "relative flex items-center overflow-hidden text-white/90 hover:bg-white/[0.06] transition-colors"
                   }
                   style={{
                     gap: 10,
-                    padding: "9px 10px",
+                    padding: "8px 12px 8px 16px",
                     borderRadius: 14,
-                    fontSize: 13.5,
-                    borderLeft: isActive ? "3px solid #ed1a24" : "3px solid transparent",
+                    fontSize: 14,
+                    fontWeight: isActive ? 600 : 400,
+                    background: isActive ? "rgba(237,29,39,0.07)" : "transparent",
                   }}
                 >
+                  {isActive && (
+                    <span
+                      className="absolute rounded-full"
+                      style={{ top: 4, bottom: 4, left: 0, width: 3, background: "#ed1a24", boxShadow: "0 0 8px rgba(237,29,39,0.6)" }}
+                    />
+                  )}
                   <Icon size={16} strokeWidth={2} />
-                  <span className="font-[family-name:var(--font-poppins)] font-semibold">{item.label}</span>
+                  <span className="font-[family-name:var(--font-poppins)]">{item.label}</span>
                 </Link>
               );
             })}
