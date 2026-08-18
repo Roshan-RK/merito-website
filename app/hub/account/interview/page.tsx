@@ -10,6 +10,7 @@ import InterviewTabs from "./InterviewTabs";
 import InterviewLockedState from "./InterviewLockedState";
 import InterviewInProgressState from "./InterviewInProgressState";
 import { resolveInterviewViewState } from "./resolveInterviewViewState";
+import ExportPreviewButton from "../ExportPreviewButton";
 
 const EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40";
 
@@ -174,42 +175,47 @@ export default async function InterviewReportPage({
   return (
     <main>
       <div className="mx-auto" style={{ maxWidth: 880, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
-        <div className="print:hidden flex items-center justify-end flex-wrap" style={{ gap: 12 }}>
-          <a
-            href={`/api/hub/interview/export?role=${encodeURIComponent(interview.role_title)}`}
-            download
-            className="flex items-center hover:bg-white/[0.06] transition-colors font-[family-name:var(--font-poppins)] font-medium text-white"
-            style={{ gap: 6, fontSize: 12, borderRadius: 12, padding: "7px 12px", background: "rgb(21,18,22)", border: "1px solid rgb(49,47,55)" }}
-          >
-            <Download size={13} strokeWidth={2} /> Download
-          </a>
-        </div>
-
-        <div>
-          <p className={EYEBROW} style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>
-            Mock AI interview
-          </p>
-          <div className="flex items-center flex-wrap" style={{ gap: 10 }}>
-            <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.7rem", margin: 0 }}>
-              {displayName}
-            </h1>
-            <span
-              className="bg-[#ed1a24] font-[family-name:var(--font-poppins)] font-semibold text-white"
-              style={{ fontSize: 11.5, borderRadius: 50, padding: "4px 12px" }}
-            >
-              {interview.role_title}
-            </span>
+        <div className="flex items-start justify-between flex-wrap" style={{ gap: 12 }}>
+          <div>
+            <p className={EYEBROW} style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>
+              Mock AI interview
+            </p>
+            <div className="flex items-center flex-wrap" style={{ gap: 10 }}>
+              <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.7rem", margin: 0 }}>
+                {displayName}
+              </h1>
+              <span
+                className="bg-[#ed1a24] font-[family-name:var(--font-poppins)] font-semibold text-white"
+                style={{ fontSize: 11.5, borderRadius: 50, padding: "4px 12px" }}
+              >
+                {interview.role_title}
+              </span>
+            </div>
+            {report.interviewTitle && (
+              <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 12, margin: "6px 0 0" }}>
+                {report.interviewTitle}
+              </p>
+            )}
+            {infoBarParts.length > 0 && (
+              <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 12.5, margin: "6px 0 0" }}>
+                {infoBarParts.join(" · ")}
+              </p>
+            )}
           </div>
-          {report.interviewTitle && (
-            <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 12, margin: "6px 0 0" }}>
-              {report.interviewTitle}
-            </p>
-          )}
-          {infoBarParts.length > 0 && (
-            <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 12.5, margin: "6px 0 0" }}>
-              {infoBarParts.join(" · ")}
-            </p>
-          )}
+          <div className="print:hidden flex items-center flex-wrap shrink-0" style={{ gap: 8 }}>
+            <ExportPreviewButton
+              exportUrl={`/api/hub/interview/export?role=${encodeURIComponent(interview.role_title)}`}
+              title="Mock interview report"
+            />
+            <a
+              href={`/api/hub/interview/export?role=${encodeURIComponent(interview.role_title)}`}
+              download
+              className="flex items-center hover:bg-white/[0.06] transition-colors font-[family-name:var(--font-poppins)] font-medium text-white"
+              style={{ gap: 6, fontSize: 12, borderRadius: 12, padding: "7px 12px", background: "rgb(21,18,22)", border: "1px solid rgb(49,47,55)" }}
+            >
+              <Download size={13} strokeWidth={2} /> Download
+            </a>
+          </div>
         </div>
 
         <div
