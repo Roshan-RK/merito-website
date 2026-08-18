@@ -57,7 +57,7 @@ export default async function PersonalityTestPage({
               Personality test
             </h1>
             <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 14, margin: 0 }}>
-              Part of your profile. Done once, applies to every application.
+              Part of your profile &mdash; done once, applies to every application.
             </p>
           </div>
           <PersonalityLockedState leadId={current.id} roleTitle={roleTitle} level={level} bundleEligible={bundleEligible} />
@@ -82,13 +82,13 @@ export default async function PersonalityTestPage({
 
   return (
     <main>
-      <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+      <div className="mx-auto" style={{ padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
         <div>
           <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.6rem", margin: "0 0 6px" }}>
             Personality test
           </h1>
           <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 14, margin: 0 }}>
-            Part of your profile. Done once, applies to every application.
+            Part of your profile &mdash; done once, applies to every application.
           </p>
         </div>
         <PersonalityTestClient roleTitle={roleTitle} candidateName={candidateName} initialResult={initialResult} />

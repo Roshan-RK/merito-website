@@ -93,14 +93,6 @@ export default function PersonalityTestClient({
     }
   };
 
-  const handleRetake = () => {
-    setAnswers({});
-    setPage(0);
-    setResult(null);
-    setPhase("intro");
-    window.scrollTo(0, 0);
-  };
-
   if (phase === "report" && result) {
     return (
       <PersonalityReport
@@ -108,7 +100,6 @@ export default function PersonalityTestClient({
         roleTitle={roleTitle}
         scores={result.scores}
         validity={result.validity}
-        onRetake={handleRetake}
       />
     );
   }

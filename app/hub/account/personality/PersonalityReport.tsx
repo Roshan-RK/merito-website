@@ -33,13 +33,11 @@ export default function PersonalityReport({
   roleTitle,
   scores,
   validity,
-  onRetake,
 }: {
   candidateName: string;
   roleTitle: string;
   scores: Scores;
   validity: Validity;
-  onRetake?: () => void;
 }) {
   const firstName = candidateName.split(/\s+/)[0] || candidateName;
   const flags = validityFlags(validity);
@@ -197,16 +195,6 @@ export default function PersonalityReport({
           </p>
         </div>
       </div>
-
-      {onRetake && (
-        <button
-          onClick={onRetake}
-          className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24] hover:text-white transition-colors"
-          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, marginTop: 20 }}
-        >
-          Retake test
-        </button>
-      )}
     </div>
   );
 }
