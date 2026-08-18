@@ -170,7 +170,7 @@ export default async function ExpertBioPage() {
 
   return (
     <main>
-      <div className="mx-auto" style={{ maxWidth: 720, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 40 }}>
+      <div className="mx-auto" style={{ maxWidth: 1040, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 40 }}>
         <div>
           <p className={EYEBROW} style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>
             Expert guidance
