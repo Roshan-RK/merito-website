@@ -46,6 +46,11 @@ export async function GET(request: Request) {
         .from("fitment_interviews")
         .update({
           status: "ready",
+          // A row that self-resolves here may have had stuck_at set by a
+          // doomed resume/launch call racing the report's real arrival --
+          // clear it so the admin "Interview stuck" count doesn't keep
+          // counting a row that no longer needs help.
+          stuck_at: null,
           report_raw: {
             overallScore: interviewReport.overallScore,
             skillMetrics: interviewReport.skillMetrics,
@@ -72,7 +77,7 @@ export async function GET(request: Request) {
       return Response.json({ status: "ready" });
     }
   } catch (err) {
-    console.error("Interview self-heal check failed, leaving status as invited", err);
+    console.error("Interview self-heal check failed, leaving status as-is", err);
   }
 
   // Surface stuck_at here too -- otherwise a row that goes stuck via
