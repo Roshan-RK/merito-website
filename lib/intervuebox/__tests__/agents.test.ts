@@ -51,6 +51,7 @@ describe("createInterviewAgent", () => {
       isCriteriaMatch: false,
       complexity: "medium",
       isQuickApplyEnabled: true,
+      voice: "en-IN-KavyaNeural",
     });
   });
 
@@ -75,6 +76,7 @@ describe("createInterviewAgent", () => {
       isCriteriaMatch: false,
       complexity: "medium",
       isQuickApplyEnabled: true,
+      voice: "en-IN-KavyaNeural",
     });
   });
 
@@ -94,6 +96,23 @@ describe("createInterviewAgent", () => {
     const sentBody = JSON.parse(intervueBoxFetchMock.mock.calls[0][1].body);
     expect(sentBody.maxInterviewMinutes).toBe(45);
   });
+
+  it("always sends the Kavya voice", async () => {
+    intervueBoxFetchMock.mockResolvedValue({
+      interviewId: "INT_1",
+      title: "t",
+      status: "active",
+      maxInterviewMinutes: 30,
+      interviewType: "technical",
+      isCriteriaMatch: false,
+    });
+    const { createInterviewAgent } = await import("../agents");
+
+    await createInterviewAgent("JOB_1", "Backend Engineer", "mid");
+
+    const sentBody = JSON.parse(intervueBoxFetchMock.mock.calls[0][1].body);
+    expect(sentBody.voice).toBe("en-IN-KavyaNeural");
+  });
 });
 
 describe("inferInterviewType", () => {
@@ -109,15 +128,15 @@ describe("inferInterviewType", () => {
     expect(inferInterviewType("Director of Operations")).toBe("managerial");
   });
 
-  it("maps non-technical individual-contributor titles to behavioral", async () => {
-    const { inferInterviewType } = await import("../agents");
-    expect(inferInterviewType("Sales Executive")).toBe("behavioral");
-    expect(inferInterviewType("Content Writer")).toBe("behavioral");
-  });
-
   it("falls back to technical for engineering-flavored titles", async () => {
     const { inferInterviewType } = await import("../agents");
     expect(inferInterviewType("Backend Developer")).toBe("technical");
     expect(inferInterviewType("Data Scientist")).toBe("technical");
+  });
+
+  it("falls back to technical for non-technical individual-contributor titles (behavioral is not a valid skill-interview type)", async () => {
+    const { inferInterviewType } = await import("../agents");
+    expect(inferInterviewType("Sales Executive")).toBe("technical");
+    expect(inferInterviewType("Content Writer")).toBe("technical");
   });
 });
