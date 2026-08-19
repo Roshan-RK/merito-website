@@ -195,11 +195,10 @@ export default function InterviewPaywallModal({
               <span style={{ color: "#16803c", fontSize: 20, fontWeight: 700 }}>✓</span>
             </div>
             <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.4rem", margin: "0 0 10px" }}>
-              Check your email
+              You&apos;re all set
             </h2>
             <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 13.5, lineHeight: 1.6, margin: "0 0 20px" }}>
-              We&apos;ve sent your AI interview invite for {roleTitle} to{" "}
-              <strong className="text-black">{userEmail}</strong>. Open it whenever you&apos;re ready to start.
+              Your AI interview for {roleTitle} is ready. Come back to this page whenever you&apos;re ready — you&apos;ll be able to launch it right from your dashboard.
             </p>
             <button
               onClick={handleDismiss}
@@ -215,7 +214,7 @@ export default function InterviewPaywallModal({
               Ready for a real AI interview?
             </h2>
             <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 13.5, lineHeight: 1.6, margin: "0 0 20px" }}>
-              We&apos;ll send you an email with a link to start your AI interview for {roleTitle}. Complete it whenever you&apos;re ready.
+              You&apos;ll be able to launch your AI interview for {roleTitle} right from your dashboard, whenever you&apos;re ready.
             </p>
 
             <button
