@@ -21,7 +21,11 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 const getInterviewReportMock = vi.fn();
-vi.mock("@/lib/intervuebox/interviewReports", () => ({ getInterviewReport: getInterviewReportMock }));
+const generateInterviewReportMock = vi.fn();
+vi.mock("@/lib/intervuebox/interviewReports", () => ({
+  getInterviewReport: getInterviewReportMock,
+  generateInterviewReport: generateInterviewReportMock,
+}));
 
 async function importRoute() {
   return await import("../route");
@@ -39,6 +43,7 @@ describe("GET /api/hub/interview/status", () => {
     updateEqMock.mockResolvedValue({ error: null });
     updateMock.mockClear();
     getInterviewReportMock.mockReset();
+    generateInterviewReportMock.mockReset();
   });
 
   it("returns 401 when there is no session", async () => {
@@ -122,6 +127,20 @@ describe("GET /api/hub/interview/status", () => {
     expect(body).toEqual({ status: "ready" });
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ status: "ready" }));
     expect(updateEqMock).toHaveBeenCalledWith("id", "row-1");
+  });
+
+  it("returns terminated status without calling generateInterviewReport", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    maybeSingleMock.mockResolvedValue({
+      data: { id: "row-1", status: "terminated", ib_agent_id: "IV-1", ib_candidate_id: "USR-1", report_generation_requested_at: null },
+    });
+    getInterviewReportMock.mockResolvedValue({ status: "NOT_READY" });
+
+    const { GET } = await importRoute();
+    const response = await GET(requestFor("Backend Engineer"));
+
+    expect(await response.json()).toEqual({ status: "terminated" });
+    expect(generateInterviewReportMock).not.toHaveBeenCalled();
   });
 
   it("IntervueBox check itself fails -- doesn't blow up, just stays invited", async () => {

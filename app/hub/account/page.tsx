@@ -6,7 +6,7 @@ import { getReferenceCheckStatus } from "@/lib/referenceChecks";
 import DashboardClient from "./DashboardClient";
 import type { InterviewStatus, PersonalityStatus } from "./ProgressRail";
 import { getResumeMatchReport, scoreOutOfTen, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
-import { getInterviewReport, getInterviewCandidateStatus, generateInterviewReport } from "@/lib/intervuebox/interviewReports";
+import { getInterviewReport } from "@/lib/intervuebox/interviewReports";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { PRODUCT_PRICING, DEFAULT_LEVEL, formatPrice, type CandidateLevel } from "@/lib/razorpay/pricing";
 import { isProductUnlocked } from "@/lib/productUnlocks";
@@ -115,7 +115,9 @@ export default async function AccountPage() {
     ? "not_started"
     : interviewRow.status === "ready"
       ? "ready"
-      : "invited";
+      : interviewRow.status === "terminated"
+        ? "terminated"
+        : "invited";
 
   // The DB row only flips to "ready" via IntervueBox's webhook -- if that
   // delivery is ever missed, nothing else updates it. Self-heal the same
@@ -154,21 +156,6 @@ export default async function AccountPage() {
           })
           .eq("id", interviewRow.id);
         interviewStatus = "ready";
-      } else if (!interviewRow.report_generation_requested_at) {
-        // IntervueBox only auto-evaluates outcomes reached normally --
-        // TERMINATED never gets a report unless generation is explicitly
-        // requested (vendor-confirmed, Krupal 2026-08-10). Ask for it once;
-        // the generated report still surfaces later via this same self-heal
-        // read (or the webhook), same as a normal completion.
-        const candidateStatus = await getInterviewCandidateStatus(interviewRow.ib_agent_id, interviewRow.ib_candidate_id);
-        if (candidateStatus === "TERMINATED") {
-          await generateInterviewReport(interviewRow.ib_agent_id, [interviewRow.ib_candidate_id]);
-          const admin = getSupabaseServerClient();
-          await admin
-            .from("fitment_interviews")
-            .update({ report_generation_requested_at: new Date().toISOString() })
-            .eq("id", interviewRow.id);
-        }
       }
     } catch (err) {
       console.error("Interview self-heal check failed, leaving status as invited", err);

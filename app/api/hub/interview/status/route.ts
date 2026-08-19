@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { getInterviewReport, getInterviewCandidateStatus, generateInterviewReport } from "@/lib/intervuebox/interviewReports";
+import { getInterviewReport } from "@/lib/intervuebox/interviewReports";
 
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
@@ -70,21 +70,10 @@ export async function GET(request: Request) {
         })
         .eq("id", data.id);
       return Response.json({ status: "ready" });
-    } else if (!data.report_generation_requested_at) {
-      // Same TERMINATED-only generate trigger as the dashboard's SSR read.
-      const candidateStatus = await getInterviewCandidateStatus(data.ib_agent_id, data.ib_candidate_id);
-      if (candidateStatus === "TERMINATED") {
-        await generateInterviewReport(data.ib_agent_id, [data.ib_candidate_id]);
-        const admin = getSupabaseServerClient();
-        await admin
-          .from("fitment_interviews")
-          .update({ report_generation_requested_at: new Date().toISOString() })
-          .eq("id", data.id);
-      }
     }
   } catch (err) {
     console.error("Interview self-heal check failed, leaving status as invited", err);
   }
 
-  return Response.json({ status: "invited" });
+  return Response.json({ status: data.status === "terminated" ? "terminated" : "invited" });
 }
