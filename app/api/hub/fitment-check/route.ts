@@ -10,6 +10,7 @@ import { getResumeMatchReport, scoreOutOfTen } from "@/lib/intervuebox/reports";
 import { IntervueBoxError } from "@/lib/intervuebox/client";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { recordPipelineFailure } from "@/lib/pipelineFailures";
+import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 
 export const runtime = "nodejs";
 
@@ -214,6 +215,11 @@ export async function POST(request: Request) {
     request.headers.get("x-real-ip") ??
     "unknown";
 
+  const supabaseAuth = await createSupabaseServerClient();
+  const {
+    data: { user: sessionUser },
+  } = await supabaseAuth.auth.getUser();
+
   let form: FormData;
   try {
     form = await request.formData();
@@ -222,7 +228,8 @@ export async function POST(request: Request) {
   }
 
   const name = normalize(form.get("name"));
-  const email = normalize(form.get("email"));
+  const submittedEmail = normalize(form.get("email"));
+  const email = sessionUser?.email ?? submittedEmail;
   const role = normalize(form.get("role"));
   const jdText = normalize(form.get("jdText"));
   const jdUrl = normalize(form.get("jdUrl"));
@@ -261,7 +268,7 @@ export async function POST(request: Request) {
   }
 
   const recaptchaSecretKey = process.env.RECAPTCHA_SECRET_KEY;
-  if (recaptchaSecretKey) {
+  if (recaptchaSecretKey && !sessionUser) {
     if (!recaptchaToken) {
       return Response.json({ error: "Captcha verification is required." }, { status: 400 });
     }
@@ -361,6 +368,7 @@ export async function POST(request: Request) {
     .insert({
       name: name || null,
       email,
+      user_id: sessionUser?.id,
       phone,
       candidate_level: validCandidateLevel,
       role_title: role,

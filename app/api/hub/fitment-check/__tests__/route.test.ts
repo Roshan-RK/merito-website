@@ -47,6 +47,11 @@ vi.mock("@/lib/supabase", () => ({
   }),
 }));
 
+const getUserMock = vi.fn().mockResolvedValue({ data: { user: null } });
+vi.mock("@/lib/supabaseAuthServer", () => ({
+  createSupabaseServerClient: async () => ({ auth: { getUser: getUserMock } }),
+}));
+
 async function importRoute() {
   return await import("../route");
 }
@@ -74,8 +79,11 @@ describe("POST /api/hub/fitment-check", () => {
     insertSelectSingleMock.mockClear();
     insertSelectSingleMock.mockResolvedValue({ data: { id: "lead-1" }, error: null });
     extractJdTextMock.mockReset().mockResolvedValue("Sales and partnerships resume text.");
+    getUserMock.mockReset().mockResolvedValue({ data: { user: null } });
     const { addApplicant } = await import("@/lib/intervuebox/applicants");
     vi.mocked(addApplicant).mockReset().mockResolvedValue({ ibAppliedJobId: "APJ_123" });
+    const { verifyRecaptchaToken } = await import("@/lib/recaptcha");
+    vi.mocked(verifyRecaptchaToken).mockReset().mockResolvedValue(true);
     vi.resetModules();
   });
 
@@ -515,5 +523,60 @@ describe("POST /api/hub/fitment-check", () => {
       const body = await response.json();
       expect(body.error).toMatch(/paste the job description instead/i);
     });
+  });
+
+  it("uses the session's email and sets user_id when the request is authenticated, ignoring the submitted email", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "real@example.com" } } });
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm({ email: "spoofed@example.com" }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ email: "real@example.com", user_id: "user-1" })
+    );
+  });
+
+  it("does not require recaptcha when the request is authenticated, even with RECAPTCHA_SECRET_KEY set", async () => {
+    vi.stubEnv("RECAPTCHA_SECRET_KEY", "secret");
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "real@example.com" } } });
+    const { verifyRecaptchaToken } = await import("@/lib/recaptcha");
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm({ recaptchaToken: "" }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    expect(verifyRecaptchaToken).not.toHaveBeenCalled();
+  });
+
+  it("still requires recaptcha for an unauthenticated request when RECAPTCHA_SECRET_KEY is set", async () => {
+    vi.stubEnv("RECAPTCHA_SECRET_KEY", "secret");
+    getUserMock.mockResolvedValue({ data: { user: null } });
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm({ recaptchaToken: "" }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toMatch(/captcha/i);
+  });
+
+  it("does not set user_id for an unauthenticated request", async () => {
+    getUserMock.mockResolvedValue({ data: { user: null } });
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/fitment-check", {
+      method: "POST",
+      body: buildForm(),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    const insertedArg = insertMock.mock.calls.at(-1)![0];
+    expect(insertedArg.user_id).toBeUndefined();
   });
 });
