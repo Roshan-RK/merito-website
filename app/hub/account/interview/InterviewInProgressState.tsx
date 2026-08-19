@@ -50,6 +50,7 @@ export default function InterviewInProgressState({ roleTitle }: { roleTitle: str
         </p>
       </div>
       <button
+        type="button"
         onClick={handleStart}
         disabled={loading}
         className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors disabled:opacity-60"
@@ -59,7 +60,7 @@ export default function InterviewInProgressState({ roleTitle }: { roleTitle: str
         {loading ? "Starting…" : "Start Interview"}
       </button>
       {error && (
-        <p className="font-[family-name:var(--font-poppins)]" style={{ color: "#E8798F", fontSize: 12.5, margin: "10px 0 0" }}>
+        <p role="alert" className="font-[family-name:var(--font-poppins)]" style={{ color: "#E8798F", fontSize: 12.5, margin: "10px 0 0" }}>
           {error}
         </p>
       )}

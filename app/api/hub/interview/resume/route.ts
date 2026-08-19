@@ -66,7 +66,7 @@ export async function POST(request: Request) {
 
   // Reset ib_interview_status to null so a stale cached value doesn't
   // wrongly drive the appeared/invited split until the next sweep resyncs it.
-  await admin
+  const { error: resetError } = await admin
     .from("fitment_interviews")
     .update({
       status: "invited",
@@ -75,6 +75,12 @@ export async function POST(request: Request) {
       ib_interview_status: null,
     })
     .eq("id", row.id);
+  if (resetError) {
+    // The candidate already has a valid vendor resume link -- don't fail the
+    // request over a DB write miss, just log it so a row stuck showing
+    // "terminated" after a real resume isn't a silent mystery later.
+    console.error("Hub resume: failed to reset the row to invited", { roleTitle, error: resetError });
+  }
 
   return Response.json({ url: fresh.magicLink });
 }

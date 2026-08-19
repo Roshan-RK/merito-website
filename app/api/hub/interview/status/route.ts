@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
   const { data } = await supabase
     .from("fitment_interviews")
-    .select("id, status, ib_agent_id, ib_candidate_id, report_generation_requested_at")
+    .select("id, status, ib_agent_id, ib_candidate_id")
     .eq("user_id", user.id)
     .eq("role_title", role)
     .order("updated_at", { ascending: false })

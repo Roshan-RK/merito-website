@@ -9,7 +9,7 @@ export type SweepResult = { ready: number; appeared: number; terminated: number;
 // identifiers -- any validly-signed webhook hit, or any cron tick, re-checks
 // every row we still have as "invited" against the vendor's Reports and
 // Candidates APIs. See specs/2026-07-17-intervuebox-integration-design.md
-// (Open Item #2) and docs/superpowers/specs/2026-08-19-...-design.md.
+// (Open Item #2) and docs/superpowers/specs/2026-08-19-intervuebox-magic-link-resume-voice-design.md.
 export async function sweepPendingInterviews(): Promise<SweepResult> {
   const supabase = getSupabaseServerClient();
   const result: SweepResult = { ready: 0, appeared: 0, terminated: 0, errors: 0 };
@@ -71,12 +71,21 @@ export async function sweepPendingInterviews(): Promise<SweepResult> {
             // the row from "invited" gets rows back, so only that pass
             // inserts the notification -- prevents a duplicate when the
             // webhook and the cron backstop race on the same row.
-            const { data: flipped } = await supabase
+            const { data: flipped, error: flipError } = await supabase
               .from("fitment_interviews")
               .update({ status: "terminated", ib_interview_status: "TERMINATED" })
               .eq("id", row.id)
               .eq("status", "invited")
               .select("id");
+            if (flipError) {
+              // A genuine DB error here is distinct from losing the
+              // conditional-update race (flipped simply comes back empty in
+              // that case) -- surface it as an error instead of silently
+              // treating it the same as "another sweep pass already won".
+              console.error("Sweep: terminated-flip update failed", { row, error: flipError });
+              result.errors += 1;
+              return;
+            }
             if (flipped && flipped.length > 0) {
               await supabase.from("hub_notifications").insert({
                 user_id: row.user_id,

@@ -66,10 +66,16 @@ export async function POST(request: Request) {
     return Response.json({ error: "Couldn't get a fresh interview link. Please try again." }, { status: 502 });
   }
 
-  await admin
+  const { error: cacheError } = await admin
     .from("fitment_interviews")
     .update({ magic_link: fresh.magicLink, magic_link_expires_at: fresh.expiresAt })
     .eq("id", row.id);
+  if (cacheError) {
+    // The candidate already has a valid vendor link -- don't fail the
+    // request over a cache-write miss, just log it so a stale cached link
+    // isn't a silent mystery later.
+    console.error("Hub launch-link: failed to cache the fresh magic link", { roleTitle, error: cacheError });
+  }
 
   return Response.json({ url: fresh.magicLink });
 }

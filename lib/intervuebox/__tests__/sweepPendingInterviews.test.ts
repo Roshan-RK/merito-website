@@ -143,6 +143,22 @@ describe("sweepPendingInterviews", () => {
     expect(insertMock).not.toHaveBeenCalled();
   });
 
+  it("counts a genuine DB error on the terminated-flip update as an error, not a lost race", async () => {
+    selectEqMock.mockResolvedValue({
+      data: [{ id: "row-1", user_id: "user-1", role_title: "Backend Engineer", ib_agent_id: "INT_1", ib_candidate_id: "USR_1" }],
+      error: null,
+    });
+    getInterviewReportMock.mockResolvedValue({ status: "NOT_READY" });
+    getInterviewCandidateStatusMock.mockResolvedValue("TERMINATED");
+    terminatedSelectMock.mockResolvedValue({ data: null, error: { message: "connection reset" } });
+
+    const { sweepPendingInterviews } = await importSweep();
+    const result = await sweepPendingInterviews();
+
+    expect(result).toEqual({ ready: 0, appeared: 0, terminated: 0, errors: 1 });
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
   it("counts a per-row failure as an error and keeps processing the rest of the batch", async () => {
     selectEqMock.mockResolvedValue({
       data: [

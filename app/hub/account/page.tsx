@@ -104,7 +104,7 @@ export default async function AccountPage() {
 
   const { data: interviewRow } = await supabase
     .from("fitment_interviews")
-    .select("id, status, ib_agent_id, ib_candidate_id, invited_at, report_generation_requested_at")
+    .select("id, status, ib_agent_id, ib_candidate_id, invited_at")
     .eq("user_id", user.id)
     .eq("role_title", current.role_title)
     .order("updated_at", { ascending: false })
