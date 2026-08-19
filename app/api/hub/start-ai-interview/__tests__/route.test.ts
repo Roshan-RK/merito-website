@@ -223,7 +223,35 @@ describe("POST /api/hub/start-ai-interview", () => {
     );
   });
 
-  it("returns 500 if the IntervueBox chain fails", async () => {
+  it("stores the magic link and its expiry on the inserted row", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+    leadMaybeSingleMock.mockResolvedValue({
+      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
+      error: null,
+    });
+    getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
+    createInterviewAgentMock.mockResolvedValue({ ibAgentId: "INT_123" });
+    sendInterviewInvitationMock.mockResolvedValue({
+      invited: 1,
+      failed: 0,
+      magicLink: "https://portal/auth/magic?token=abc",
+      magicLinkExpiresAt: "2026-08-20T10:00:00.000Z",
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
+
+    expect(response.status).toBe(200);
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        magic_link: "https://portal/auth/magic?token=abc",
+        magic_link_expires_at: "2026-08-20T10:00:00.000Z",
+      })
+    );
+  });
+
+  it("returns 500 if the IntervueBox chain fails, and records it as interview_invite_failed (not interview_invite_after_payment, since no invite was ever confirmed sent)", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     leadMaybeSingleMock.mockResolvedValue({
@@ -235,9 +263,16 @@ describe("POST /api/hub/start-ai-interview", () => {
     const { POST } = await importRoute();
     const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
     expect(response.status).toBe(500);
+    expect(recordPipelineFailureMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "interview_invite_failed",
+        userId: "user-1",
+        detail: expect.objectContaining({ stage: "getApplicant", error: "boom" }),
+      })
+    );
   });
 
-  it("returns 500 if the invitation was sent but not actually invited", async () => {
+  it("returns 500 if the invitation was sent but not actually invited, and records it as interview_invite_failed", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     leadMaybeSingleMock.mockResolvedValue({
@@ -252,6 +287,39 @@ describe("POST /api/hub/start-ai-interview", () => {
     const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
     expect(response.status).toBe(500);
     expect(insertMock).not.toHaveBeenCalled();
+    expect(recordPipelineFailureMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "interview_invite_failed",
+        userId: "user-1",
+        detail: expect.objectContaining({ stage: "sendInterviewInvitation", ibAgentId: "INT_123", candidateId: "USR_123", invited: 0 }),
+      })
+    );
+  });
+
+  it("un-consumes the payment credit when the IntervueBox chain fails, so the candidate's next attempt is free", async () => {
+    process.env.RAZORPAY_BYPASS = "false";
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+    creditMaybeSingleMock.mockResolvedValue({ data: { order_id: "order_credit_1" }, error: null });
+    leadMaybeSingleMock.mockResolvedValue({
+      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
+      error: null,
+    });
+    getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
+    createInterviewAgentMock.mockResolvedValue({ ibAgentId: "INT_123" });
+    sendInterviewInvitationMock.mockRejectedValue(new Error("vendor 500"));
+
+    const { POST } = await importRoute();
+    const response = await POST(buildRequest({ roleTitle: "Senior Product Manager" }));
+
+    expect(response.status).toBe(500);
+    // First call consumes the credit (existing behavior); second call here un-consumes it on failure.
+    expect(consumeUpdateMock).toHaveBeenNthCalledWith(2, { consumed_at: null });
+    expect(consumeUpdateEqMock).toHaveBeenNthCalledWith(2, "order_id", "order_credit_1");
+    expect(recordPipelineFailureMock).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "interview_invite_failed", orderId: "order_credit_1" })
+    );
+    delete process.env.RAZORPAY_BYPASS;
   });
 
   it("returns 500 with the insert error still surfaced when the insert fails for a non-conflict reason", async () => {
