@@ -119,6 +119,19 @@ describe("POST /api/hub/interview/resume", () => {
     expect(updateMock).not.toHaveBeenCalled();
   });
 
+  it("sets stuck_at when a resumed row's reinvite call throws", async () => {
+    maybeSingleMock.mockResolvedValue({
+      data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", has_resumed: true },
+    });
+    reinviteInterviewCandidatesMock.mockRejectedValue(new Error("IntervueBox 500"));
+
+    const { POST } = await importRoute();
+    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+
+    expect(response.status).toBe(502);
+    expect(updateMock).toHaveBeenCalledWith({ stuck_at: expect.any(String) });
+  });
+
   it("sets stuck_at when a row that's already been resumed once fails again", async () => {
     maybeSingleMock.mockResolvedValue({
       data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", has_resumed: true },

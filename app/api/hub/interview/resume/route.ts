@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { reinviteInterviewCandidates } from "@/lib/intervuebox/invitations";
+import { markInterviewStuck } from "@/lib/interviewStuck";
 
 export const runtime = "nodejs";
 
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
     // self-service path left -- mark it stuck instead of leaving it to
     // silently fall back to the plain "Start Interview" card.
     if (row.has_resumed) {
-      await admin.from("fitment_interviews").update({ stuck_at: new Date().toISOString() }).eq("id", row.id);
+      await markInterviewStuck(admin, row.id);
     }
     return Response.json({ error: "IntervueBox rejected the reinvite request." }, { status: 502 });
   }
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
     // codebase's existing pattern of surfacing real vendor/pipeline errors.
     const message = errors?.[0]?.error ?? "Couldn't resume this interview. Please try again.";
     if (row.has_resumed) {
-      await admin.from("fitment_interviews").update({ stuck_at: new Date().toISOString() }).eq("id", row.id);
+      await markInterviewStuck(admin, row.id);
     }
     return Response.json({ error: message }, { status: 502 });
   }

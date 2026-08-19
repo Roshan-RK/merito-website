@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { reinviteInterviewCandidates } from "@/lib/intervuebox/invitations";
+import { markInterviewStuck } from "@/lib/interviewStuck";
 
 export const runtime = "nodejs";
 
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
     // dedicated card instead of the same "Start Interview" button forever.
     // A first-ever invite failing here is a normal transient error, not stuck.
     if (row.has_resumed) {
-      await admin.from("fitment_interviews").update({ stuck_at: new Date().toISOString() }).eq("id", row.id);
+      await markInterviewStuck(admin, row.id);
     }
     return Response.json({ error: "IntervueBox rejected the reinvite request." }, { status: 502 });
   }
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
     // a real vendor-side rejection behind a generic retry message.
     const message = errors?.[0]?.error ?? "Couldn't get a fresh interview link. Please try again.";
     if (row.has_resumed) {
-      await admin.from("fitment_interviews").update({ stuck_at: new Date().toISOString() }).eq("id", row.id);
+      await markInterviewStuck(admin, row.id);
     }
     return Response.json({ error: message }, { status: 502 });
   }
