@@ -29,6 +29,12 @@ describe("resolveInterviewViewState", () => {
     ).toBe("invited");
   });
 
+  it("is 'ready' even when stuck_at is set, if the report actually arrived", () => {
+    expect(
+      resolveInterviewViewState({ status: "ready", report_raw: { overallScore: 80 }, ib_interview_status: null, stuck_at: "2026-08-19T10:00:00.000Z" })
+    ).toBe("ready");
+  });
+
   it("is 'invited' when ib_interview_status is INVITED explicitly", () => {
     expect(resolveInterviewViewState({ status: "invited", report_raw: null, ib_interview_status: "INVITED" })).toBe("invited");
   });
