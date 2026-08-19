@@ -11,6 +11,7 @@ import InterviewLockedState from "./InterviewLockedState";
 import InterviewInProgressState from "./InterviewInProgressState";
 import InterviewAppearedState from "./InterviewAppearedState";
 import InterviewTerminatedState from "./InterviewTerminatedState";
+import InterviewStuckState from "./InterviewStuckState";
 import { resolveInterviewViewState } from "./resolveInterviewViewState";
 import ExportPreviewButton from "../ExportPreviewButton";
 
@@ -55,7 +56,7 @@ export default async function InterviewReportPage({
   async function latestReadyInterview(scopedToRole: string | null) {
     let query = supabase
       .from("fitment_interviews")
-      .select("role_title, status, report_raw, updated_at, ib_interview_status")
+      .select("role_title, status, report_raw, updated_at, ib_interview_status, stuck_at")
       .eq("user_id", userId);
     if (scopedToRole) {
       query = query.eq("role_title", scopedToRole);
@@ -141,6 +142,16 @@ export default async function InterviewReportPage({
       <main>
         <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
           <InterviewTerminatedState roleTitle={interview.role_title} />
+        </div>
+      </main>
+    );
+  }
+
+  if (viewState === "stuck") {
+    return (
+      <main>
+        <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+          <InterviewStuckState roleTitle={interview.role_title} />
         </div>
       </main>
     );
