@@ -68,6 +68,9 @@ export default function InterviewTabs({ report }: { report: InterviewReportReady
   const skillReportEntries = Object.entries(report.skillReport);
   const strengths = report.strengths ? splitBullets(report.strengths) : [];
   const areasOfImprovement = report.areasOfImprovement ? splitBullets(report.areasOfImprovement) : [];
+  const opportunities = report.opportunities ? splitBullets(report.opportunities) : [];
+  const threats = report.threats ? splitBullets(report.threats) : [];
+  const hasSwot = opportunities.length > 0 || threats.length > 0;
   const hasCoachingContent = Boolean(
     report.feedbackToInterviewer || report.roadmap || report.whatToFocusOnNext || report.trainingFocus
   );
@@ -223,6 +226,48 @@ export default function InterviewTabs({ report }: { report: InterviewReportReady
               </p>
             )}
           </div>
+
+          {hasSwot && (
+            <>
+              <div style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.22)", borderRadius: 14, padding: 16 }}>
+                <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#5B9DF5]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>
+                  Opportunities
+                </p>
+                {opportunities.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {opportunities.map((point, i) => (
+                      <p key={i} className="font-[family-name:var(--font-poppins)] text-white/75" style={{ fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                        {point}
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 12.5, margin: 0 }}>
+                    No opportunities were captured for this interview.
+                  </p>
+                )}
+              </div>
+
+              <div style={{ background: "rgba(232,121,143,0.08)", border: "1px solid rgba(232,121,143,0.25)", borderRadius: 14, padding: 16 }}>
+                <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#E8798F]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>
+                  Threats
+                </p>
+                {threats.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {threats.map((point, i) => (
+                      <p key={i} className="font-[family-name:var(--font-poppins)] text-white/75" style={{ fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                        {point}
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 12.5, margin: 0 }}>
+                    No threats were captured for this interview.
+                  </p>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 

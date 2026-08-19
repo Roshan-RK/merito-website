@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Download, ListChecks, ChartColumn, ShieldCheck, ShieldAlert, Clock } from "lucide-react";
+import { Download, ListChecks, ChartColumn, ShieldCheck, ShieldAlert, Clock, Activity } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import { getCandidateResumeDetails } from "@/lib/intervuebox/reports";
@@ -196,13 +196,13 @@ export default async function InterviewReportPage({
     report.approxDurationMinutes != null ? `~${report.approxDurationMinutes} min` : null,
   ].filter((part): part is string => Boolean(part));
 
-  // Note on the mockup's "Tab changes" / "Camera checks" stat tiles and the
-  // "Practice conduct" tab's dress-code/body-language/environment fields:
-  // report_raw (InterviewReportReady) has no such discrete fields -- only a
-  // flagForSuspiciousActivity boolean, a freeform integrityCheck string, and
-  // a freeform videoReport narrative. This panel surfaces exactly those real
-  // fields (as "Integrity" here, and in the Practice conduct tab) instead of
-  // fabricating tab-change counts or per-trait camera scoring.
+  // Note on the mockup's "Camera checks" stat tile and per-trait camera
+  // scoring: report_raw (InterviewReportReady) carries confidenceLevel/
+  // presentation/bodyLanguage/environmentCheck/responseQuality as freeform
+  // strings (Practice conduct tab), not a discrete pass/fail per trait, plus
+  // flagForSuspiciousActivity/integrityCheck/videoReport for the rest. tabChanges
+  // is real and rendered above when present; none of these fields are ever
+  // fabricated client-side -- they're null until IntervueBox actually sends them.
   const skillsAssessedCount = Object.keys(report.skillReport ?? {}).length;
 
   return (
@@ -258,9 +258,10 @@ export default async function InterviewReportPage({
           <div className="shrink-0" style={{ margin: "0 auto" }}>
             <InterviewScoreGauge score={report.overallScore} />
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4" style={{ flex: 1, minWidth: 0, gap: 10, width: "100%" }}>
+          <div className={`grid grid-cols-2 ${report.tabChanges != null ? "sm:grid-cols-5" : "sm:grid-cols-4"}`} style={{ flex: 1, minWidth: 0, gap: 10, width: "100%" }}>
             <StatTile icon={ListChecks} value={String(report.answers.length)} label="Questions" />
             <StatTile icon={ChartColumn} value={String(skillsAssessedCount)} label="Skills assessed" />
+            {report.tabChanges != null && <StatTile icon={Activity} value={String(report.tabChanges)} label="Tab changes" />}
             <StatTile
               icon={report.flagForSuspiciousActivity ? ShieldAlert : ShieldCheck}
               value={report.flagForSuspiciousActivity ? "Flagged" : "All clear"}

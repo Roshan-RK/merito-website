@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins, Gabarito } from "next/font/google";
+import { Manrope, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -8,16 +8,21 @@ import ClientAnalytics from "@/components/ClientAnalytics";
 import SalesIqWidget from "@/components/SalesIqWidget";
 import { siteUrl } from "@/lib/site";
 
-const poppins = Poppins({
+// Loaded fonts are Manrope/Space Grotesk (matching the hub dashboard mockup),
+// but kept on the --font-poppins/--font-gabarito CSS variable names below --
+// those names are referenced by identifier (not value) in 60+ files across
+// the app, so renaming them would be a repo-wide diff for a font change that
+// only needs the value swapped. Neither font has an italic cut on Google
+// Fonts, unlike the Poppins it replaces.
+const poppins = Manrope({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
+  weight: ["400", "500", "600", "700", "800"],
   variable: "--font-poppins",
 });
 
-const gabarito = Gabarito({
+const gabarito = Space_Grotesk({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["500", "600", "700"],
   variable: "--font-gabarito",
 });
 
