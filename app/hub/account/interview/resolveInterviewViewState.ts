@@ -1,18 +1,16 @@
-// Which of the interview panel's three states page.tsx should render.
-// Pulled out as a pure function (mirrors ProgressRail.tsx's
-// isInterviewGenerating) so the branching is unit-testable without a
-// Supabase-backed server component.
-export type InterviewViewState = "locked" | "in_progress" | "ready";
+// Which of the interview panel's five states page.tsx should render.
+export type InterviewViewState = "locked" | "invited" | "appeared" | "terminated" | "ready";
 
 export function resolveInterviewViewState(
-  interview: { status: string; report_raw: unknown } | null | undefined
+  interview: { status: string; report_raw: unknown; ib_interview_status?: string | null } | null | undefined
 ): InterviewViewState {
   // No row at all -- never paid or started.
   if (!interview) return "locked";
-  // fitment_interviews.status is only ever "invited" or "ready" (db check
-  // constraint) -- anything short of a ready row with its report attached
-  // means payment already happened and the interview is running externally
-  // on IntervueBox, not that it needs a paywall again.
-  if (interview.status !== "ready" || !interview.report_raw) return "in_progress";
+  // A sweep-flipped "terminated" row always shows the resume card, regardless
+  // of whatever raw candidate status happens to be cached alongside it.
+  if (interview.status === "terminated") return "terminated";
+  if (interview.status !== "ready" || !interview.report_raw) {
+    return interview.ib_interview_status === "APPEARED" ? "appeared" : "invited";
+  }
   return "ready";
 }
