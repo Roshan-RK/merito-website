@@ -11,6 +11,24 @@ describe("resolveInterviewViewState", () => {
     expect(resolveInterviewViewState({ status: "invited", report_raw: null, ib_interview_status: null })).toBe("invited");
   });
 
+  it("is 'stuck' when stuck_at is set, taking priority over 'invited'", () => {
+    expect(
+      resolveInterviewViewState({ status: "invited", report_raw: null, ib_interview_status: null, stuck_at: "2026-08-19T10:00:00.000Z" })
+    ).toBe("stuck");
+  });
+
+  it("is 'stuck' when stuck_at is set, taking priority over 'terminated'", () => {
+    expect(
+      resolveInterviewViewState({ status: "terminated", report_raw: null, ib_interview_status: "TERMINATED", stuck_at: "2026-08-19T10:00:00.000Z" })
+    ).toBe("stuck");
+  });
+
+  it("is not 'stuck' when stuck_at is null", () => {
+    expect(
+      resolveInterviewViewState({ status: "invited", report_raw: null, ib_interview_status: null, stuck_at: null })
+    ).toBe("invited");
+  });
+
   it("is 'invited' when ib_interview_status is INVITED explicitly", () => {
     expect(resolveInterviewViewState({ status: "invited", report_raw: null, ib_interview_status: "INVITED" })).toBe("invited");
   });
