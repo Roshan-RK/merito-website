@@ -46,7 +46,7 @@ export default function InterviewInProgressState({ roleTitle }: { roleTitle: str
       <div className="flex items-start bg-white/[0.04]" style={{ gap: 10, borderRadius: 10, padding: 14, marginBottom: 16 }}>
         <Clock size={15} strokeWidth={2} className="text-white/40 shrink-0" style={{ marginTop: 1 }} />
         <p className="font-[family-name:var(--font-poppins)] text-white/60" style={{ fontSize: 13, lineHeight: 1.65, margin: 0 }}>
-          Your AI interview for {roleTitle} is ready whenever you are. This page updates automatically once your scored report is ready.
+          Your AI interview for {roleTitle} is ready whenever you are. This page updates automatically once your scored report is ready. Before you start, make sure your network and power are stable — if you get disconnected you can resume once, but a second interruption may not be recoverable.
         </p>
       </div>
       <button

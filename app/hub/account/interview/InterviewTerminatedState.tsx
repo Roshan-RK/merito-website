@@ -45,7 +45,7 @@ export default function InterviewTerminatedState({ roleTitle }: { roleTitle: str
       </div>
       <div className="flex items-start bg-white/[0.04]" style={{ gap: 10, borderRadius: 10, padding: 14, marginBottom: 16 }}>
         <p className="font-[family-name:var(--font-poppins)] text-white/60" style={{ fontSize: 13, lineHeight: 1.65, margin: 0 }}>
-          Your session for {roleTitle} ended before it finished. Your progress is saved — resume whenever you&apos;re ready.
+          Your session for {roleTitle} ended before it finished. Your progress is saved — resume whenever you&apos;re ready. Before you click Resume, make sure your network and power are stable: if this session gets interrupted again, it may not be recoverable a second time.
         </p>
       </div>
       <button
