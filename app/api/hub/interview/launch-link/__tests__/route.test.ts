@@ -176,4 +176,60 @@ describe("POST /api/hub/interview/launch-link", () => {
     expect(response.status).toBe(200);
     expect(reinviteInterviewCandidatesMock).toHaveBeenCalled();
   });
+
+  it("sets stuck_at when a resumed row's fresh reinvite call throws", async () => {
+    const future = new Date(Date.now() + 60_000).toISOString();
+    maybeSingleMock.mockResolvedValue({
+      data: {
+        id: "row-1",
+        status: "invited",
+        ib_agent_id: "INT_1",
+        ib_candidate_id: "USR_1",
+        magic_link: "https://dead",
+        magic_link_expires_at: future,
+        has_resumed: true,
+      },
+    });
+    reinviteInterviewCandidatesMock.mockRejectedValue(new Error("IntervueBox 500"));
+    const { POST } = await importRoute();
+    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    expect(response.status).toBe(502);
+    expect(updateMock).toHaveBeenCalledWith({ stuck_at: expect.any(String) });
+  });
+
+  it("sets stuck_at when a resumed row's fresh reinvite call returns no magicLinks", async () => {
+    const future = new Date(Date.now() + 60_000).toISOString();
+    maybeSingleMock.mockResolvedValue({
+      data: {
+        id: "row-1",
+        status: "invited",
+        ib_agent_id: "INT_1",
+        ib_candidate_id: "USR_1",
+        magic_link: "https://dead",
+        magic_link_expires_at: future,
+        has_resumed: true,
+      },
+    });
+    reinviteInterviewCandidatesMock.mockResolvedValue({
+      invited: 0,
+      failed: 1,
+      errors: [{ candidateId: "USR_1", error: "Cannot resume an interview in status EVALUATED" }],
+    });
+    const { POST } = await importRoute();
+    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    expect(response.status).toBe(502);
+    expect(updateMock).toHaveBeenCalledWith({ stuck_at: expect.any(String) });
+  });
+
+  it("does not set stuck_at when a never-resumed row's fresh reinvite call fails", async () => {
+    const past = new Date(Date.now() - 60_000).toISOString();
+    maybeSingleMock.mockResolvedValue({
+      data: { id: "row-1", status: "invited", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", magic_link: "https://stale", magic_link_expires_at: past },
+    });
+    reinviteInterviewCandidatesMock.mockRejectedValue(new Error("IntervueBox 500"));
+    const { POST } = await importRoute();
+    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    expect(response.status).toBe(502);
+    expect(updateMock).not.toHaveBeenCalled();
+  });
 });

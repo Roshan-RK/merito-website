@@ -73,6 +73,13 @@ export async function POST(request: Request) {
     );
   } catch (err) {
     console.error("Hub launch-link reinvite request failed", { roleTitle, error: err });
+    // A row that's already used its one resume and still fails has no
+    // self-service path left -- mark it stuck so the dashboard shows the
+    // dedicated card instead of the same "Start Interview" button forever.
+    // A first-ever invite failing here is a normal transient error, not stuck.
+    if (row.has_resumed) {
+      await admin.from("fitment_interviews").update({ stuck_at: new Date().toISOString() }).eq("id", row.id);
+    }
     return Response.json({ error: "IntervueBox rejected the reinvite request." }, { status: 502 });
   }
   const { magicLinks, errors } = reinviteResult;
@@ -82,6 +89,9 @@ export async function POST(request: Request) {
     // pattern in app/api/hub/interview/resume/route.ts) instead of masking
     // a real vendor-side rejection behind a generic retry message.
     const message = errors?.[0]?.error ?? "Couldn't get a fresh interview link. Please try again.";
+    if (row.has_resumed) {
+      await admin.from("fitment_interviews").update({ stuck_at: new Date().toISOString() }).eq("id", row.id);
+    }
     return Response.json({ error: message }, { status: 502 });
   }
 
