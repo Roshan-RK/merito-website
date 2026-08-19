@@ -100,6 +100,19 @@ describe("POST /api/hub/interview/launch-link", () => {
     expect(updateMock).toHaveBeenCalledWith({ magic_link: "https://fresh", magic_link_expires_at: "2026-08-20T10:00:00.000Z" });
   });
 
+  it("returns a 502 JSON error (not a crash) when the vendor reinvite call throws, and doesn't update the row", async () => {
+    const past = new Date(Date.now() - 60_000).toISOString();
+    maybeSingleMock.mockResolvedValue({
+      data: { id: "row-1", status: "invited", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", magic_link: "https://stale", magic_link_expires_at: past },
+    });
+    reinviteInterviewCandidatesMock.mockRejectedValue(new Error("IntervueBox 500"));
+    const { POST } = await importRoute();
+    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: "IntervueBox rejected the reinvite request." });
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
   it("treats a null expiry as expired instead of throwing", async () => {
     maybeSingleMock.mockResolvedValue({
       data: { id: "row-1", status: "invited", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", magic_link: null, magic_link_expires_at: null },

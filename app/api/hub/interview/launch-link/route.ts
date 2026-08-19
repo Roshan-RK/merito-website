@@ -54,8 +54,14 @@ export async function POST(request: Request) {
     return Response.json({ url: row.magic_link });
   }
 
-  const { magicLinks } = await reinviteInterviewCandidates(row.ib_agent_id, [row.ib_candidate_id]);
-  const fresh = magicLinks?.[0];
+  let reinviteResult: Awaited<ReturnType<typeof reinviteInterviewCandidates>>;
+  try {
+    reinviteResult = await reinviteInterviewCandidates(row.ib_agent_id, [row.ib_candidate_id]);
+  } catch (err) {
+    console.error("Hub launch-link reinvite request failed", { roleTitle, error: err });
+    return Response.json({ error: "IntervueBox rejected the reinvite request." }, { status: 502 });
+  }
+  const fresh = reinviteResult.magicLinks?.[0];
   if (!fresh) {
     return Response.json({ error: "Couldn't get a fresh interview link. Please try again." }, { status: 502 });
   }
