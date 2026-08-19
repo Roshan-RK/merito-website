@@ -6,7 +6,7 @@ import { FileText, Brain, Users, Mic } from "lucide-react";
 import type { CandidateLevel } from "@/lib/razorpay/pricing";
 import { durationForLevel } from "@/lib/intervuebox/agents";
 
-export type InterviewStatus = "not_started" | "invited" | "ready";
+export type InterviewStatus = "not_started" | "invited" | "terminated" | "ready";
 export type PersonalityStatus = "not_started" | "ready";
 
 // No real "interview finished, report generating" signal exists from
@@ -106,19 +106,24 @@ export default function ProgressRail({
       key: "interview",
       label: "Mock interview",
       icon: Mic,
-      state: interviewStatus === "ready" ? "done" : interviewStatus === "invited" ? "active" : "locked",
+      state: interviewStatus === "ready" ? "done" : interviewStatus === "invited" || interviewStatus === "terminated" ? "active" : "locked",
       statusText:
         interviewStatus === "ready"
           ? "Ready"
-          : interviewStatus === "invited"
-            ? interviewGenerating
-              ? "Generating"
-              : "Invited"
-            : "Not started",
-      pulse: interviewStatus === "invited",
-      href: interviewStatus === "ready" ? `/hub/account/interview?role=${encodeURIComponent(roleTitle)}` : undefined,
+          : interviewStatus === "terminated"
+            ? "Interrupted"
+            : interviewStatus === "invited"
+              ? interviewGenerating
+                ? "Generating"
+                : "Invited"
+              : "Not started",
+      pulse: interviewStatus === "invited" || interviewStatus === "terminated",
+      href:
+        interviewStatus === "ready" || interviewStatus === "terminated"
+          ? `/hub/account/interview?role=${encodeURIComponent(roleTitle)}`
+          : undefined,
       onClick:
-        interviewStatus === "ready"
+        interviewStatus === "ready" || interviewStatus === "terminated"
           ? undefined
           : interviewStatus === "invited"
             ? onOpenInterviewCheck

@@ -91,6 +91,8 @@ export default function DashboardClient({
         const data = await res.json();
         if (data.status === "ready") {
           setInterviewStatus("ready");
+        } else if (data.status === "terminated") {
+          setInterviewStatus("terminated");
         }
       } catch {
         // Transient network error — next poll retries, nothing to surface.
