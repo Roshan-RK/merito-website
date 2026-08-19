@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { isReportUnlocked } from "@/lib/reportUnlocks";
 import { getReferenceCheckStatus } from "@/lib/referenceChecks";
@@ -12,6 +11,7 @@ import { PRODUCT_PRICING, DEFAULT_LEVEL, formatPrice, type CandidateLevel } from
 import { isProductUnlocked } from "@/lib/productUnlocks";
 import { getRecruiterViewCount } from "@/lib/recruiterActivity";
 import RecruiterActivityPanel from "./RecruiterActivityPanel";
+import AuthenticatedFitmentChecker from "./AuthenticatedFitmentChecker";
 
 export default async function AccountPage() {
   const supabase = await createSupabaseServerClient();
@@ -38,13 +38,7 @@ export default async function AccountPage() {
         <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 14 }}>
           Head back to the HUB to check your fit for a role.
         </p>
-        <Link
-          href="/hub#fit-checker"
-          className="inline-block font-[family-name:var(--font-poppins)] font-semibold text-white text-center"
-          style={{ marginTop: 18, padding: "12px 22px", borderRadius: 8, fontSize: 14, background: "#ed1a24" }}
-        >
-          Check my fitment
-        </Link>
+        <AuthenticatedFitmentChecker />
       </main>
     );
   }
