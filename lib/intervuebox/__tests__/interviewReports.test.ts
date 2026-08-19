@@ -106,6 +106,13 @@ describe("getInterviewReport", () => {
         { question: undefined, transcript: undefined, timestamp: "00:03:27", metrics: { score: undefined, evaluation: undefined, dynamicSkills: [] } },
       ],
       knowledgeAnswers: [],
+      whatToFocusOnNext: null,
+      trainingFocus: null,
+      confidenceLevel: null,
+      presentation: null,
+      bodyLanguage: null,
+      environmentCheck: null,
+      responseQuality: null,
     });
   });
 

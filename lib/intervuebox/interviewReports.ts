@@ -50,6 +50,18 @@ export type InterviewReportReady = {
   overallSkillScore: number | null;
   answers: AnswerDetail[];
   knowledgeAnswers: unknown[];
+  // Not present on any real IntervueBox response seen to date (see
+  // RawInterviewReportResponse below) -- kept as forward-compatible optional
+  // fields so the Coaching plan / Practice conduct UI can show these sections
+  // the moment real data exists, without another round of plumbing. Always
+  // null today; never fabricate a value for these client-side.
+  whatToFocusOnNext: string | null;
+  trainingFocus: string | null;
+  confidenceLevel: string | null;
+  presentation: string | null;
+  bodyLanguage: string | null;
+  environmentCheck: string | null;
+  responseQuality: string | null;
 };
 
 export type InterviewReport = { status: "NOT_READY" } | ({ status: "READY" } & InterviewReportReady);
@@ -85,6 +97,14 @@ type RawInterviewReportResponse = {
     skillReport?: Record<string, { score: number; comment: string }>;
     overallSkillScore?: number;
     knowledgeAnswers?: unknown[];
+    // Discrete camera/delivery fields the mockup's Practice conduct tab
+    // shows -- not seen on any real response yet, mapped defensively in case
+    // IntervueBox adds them later (see InterviewReportReady's comment).
+    confidenceLevel?: string;
+    presentation?: string;
+    bodyLanguage?: string;
+    environmentCheck?: string;
+    responseQuality?: string;
     overallReport: {
       score: number;
       metrics: Record<string, number>;
@@ -94,6 +114,9 @@ type RawInterviewReportResponse = {
       feedbackToInterviewer?: string;
       roadmap?: string;
       criteriaEvaluationTable?: CriteriaEvaluationEntry[];
+      // Same forward-compatible treatment as the conduct fields above.
+      whatToFocusOnNext?: string;
+      trainingFocus?: string;
     };
   };
 };
@@ -251,6 +274,13 @@ export async function getInterviewReport(interviewId: string, candidateId: strin
       skillReport: response.sessionDetails.skillReport ?? {},
       overallSkillScore: response.sessionDetails.overallSkillScore ?? null,
       knowledgeAnswers: response.sessionDetails.knowledgeAnswers ?? [],
+      whatToFocusOnNext: overallReport.whatToFocusOnNext ?? null,
+      trainingFocus: overallReport.trainingFocus ?? null,
+      confidenceLevel: response.sessionDetails.confidenceLevel ?? null,
+      presentation: response.sessionDetails.presentation ?? null,
+      bodyLanguage: response.sessionDetails.bodyLanguage ?? null,
+      environmentCheck: response.sessionDetails.environmentCheck ?? null,
+      responseQuality: response.sessionDetails.responseQuality ?? null,
       answers: (response.sessionDetails.answers ?? []).map((a) => ({
         question: a.question,
         transcript: a.transcript,

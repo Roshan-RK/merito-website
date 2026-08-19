@@ -68,7 +68,12 @@ export default function InterviewTabs({ report }: { report: InterviewReportReady
   const skillReportEntries = Object.entries(report.skillReport);
   const strengths = report.strengths ? splitBullets(report.strengths) : [];
   const areasOfImprovement = report.areasOfImprovement ? splitBullets(report.areasOfImprovement) : [];
-  const hasCoachingContent = Boolean(report.feedbackToInterviewer || report.roadmap);
+  const hasCoachingContent = Boolean(
+    report.feedbackToInterviewer || report.roadmap || report.whatToFocusOnNext || report.trainingFocus
+  );
+  const hasConductDetail = Boolean(
+    report.confidenceLevel || report.presentation || report.bodyLanguage || report.environmentCheck || report.responseQuality
+  );
 
   return (
     <div>
@@ -230,12 +235,32 @@ export default function InterviewTabs({ report }: { report: InterviewReportReady
         >
           {hasCoachingContent ? (
             <>
+              {report.whatToFocusOnNext && (
+                <div style={{ background: "rgba(237,26,36,0.06)", border: "1px solid rgba(237,26,36,0.2)", borderRadius: 14, padding: 16 }}>
+                  <p className={EYEBROW} style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>
+                    What to focus on next
+                  </p>
+                  <p className="font-[family-name:var(--font-poppins)] text-white/75" style={{ fontSize: 13.5, lineHeight: 1.7, margin: 0 }}>
+                    {report.whatToFocusOnNext}
+                  </p>
+                </div>
+              )}
               {report.feedbackToInterviewer && (
                 <div className={CARD} style={{ borderRadius: 14, padding: 20 }}>
                   <p className={EYEBROW} style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 14px" }}>
                     Evaluator notes for hiring teams
                   </p>
                   <InterviewEvaluatorNotes notes={report.feedbackToInterviewer} />
+                </div>
+              )}
+              {report.trainingFocus && (
+                <div className={CARD} style={{ borderRadius: 14, padding: 20 }}>
+                  <p className={EYEBROW} style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>
+                    Training focus
+                  </p>
+                  <p className="font-[family-name:var(--font-poppins)] text-white/75" style={{ fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                    {report.trainingFocus}
+                  </p>
                 </div>
               )}
               {report.roadmap && (
@@ -284,6 +309,30 @@ export default function InterviewTabs({ report }: { report: InterviewReportReady
             </p>
           </div>
 
+          {hasConductDetail && (
+            <div className={CARD} style={{ borderRadius: 14, padding: 20 }}>
+              <p className={EYEBROW} style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 14px" }}>
+                How you came across on camera
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[
+                  { label: "Response quality", value: report.responseQuality },
+                  { label: "Confidence", value: report.confidenceLevel },
+                  { label: "Presentation", value: report.presentation },
+                  { label: "Body language", value: report.bodyLanguage },
+                  { label: "Environment", value: report.environmentCheck },
+                ]
+                  .filter((row): row is { label: string; value: string } => Boolean(row.value))
+                  .map((row) => (
+                    <p key={row.label} className="font-[family-name:var(--font-poppins)]" style={{ fontSize: 12.5, lineHeight: 1.6, margin: 0 }}>
+                      <span className="font-semibold text-white">{row.label}: </span>
+                      <span className="text-white/60">{row.value}</span>
+                    </p>
+                  ))}
+              </div>
+            </div>
+          )}
+
           {report.videoReport ? (
             <div className={CARD} style={{ borderRadius: 14, padding: 20 }}>
               <p className={EYEBROW} style={{ fontSize: 10, letterSpacing: "0.06em", margin: "0 0 8px" }}>
@@ -294,9 +343,11 @@ export default function InterviewTabs({ report }: { report: InterviewReportReady
               </p>
             </div>
           ) : (
-            <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 13, margin: 0 }}>
-              No delivery notes were captured for this interview.
-            </p>
+            !hasConductDetail && (
+              <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 13, margin: 0 }}>
+                No delivery notes were captured for this interview.
+              </p>
+            )
           )}
         </div>
       )}
