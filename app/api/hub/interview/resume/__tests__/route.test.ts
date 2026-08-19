@@ -118,4 +118,38 @@ describe("POST /api/hub/interview/resume", () => {
     expect(await response.json()).toEqual({ error: "IntervueBox rejected the reinvite request." });
     expect(updateMock).not.toHaveBeenCalled();
   });
+
+  it("sets stuck_at when a row that's already been resumed once fails again", async () => {
+    maybeSingleMock.mockResolvedValue({
+      data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", has_resumed: true },
+    });
+    reinviteInterviewCandidatesMock.mockResolvedValue({
+      invited: 0,
+      failed: 1,
+      errors: [{ candidateId: "USR_1", error: "Cannot resume an interview in status EVALUATED" }],
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+
+    expect(response.status).toBe(502);
+    expect(updateMock).toHaveBeenCalledWith({ stuck_at: expect.any(String) });
+  });
+
+  it("does not set stuck_at when a row on its first resume attempt fails", async () => {
+    maybeSingleMock.mockResolvedValue({
+      data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", has_resumed: false },
+    });
+    reinviteInterviewCandidatesMock.mockResolvedValue({
+      invited: 0,
+      failed: 1,
+      errors: [{ candidateId: "USR_1", error: "Some vendor error" }],
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+
+    expect(response.status).toBe(502);
+    expect(updateMock).not.toHaveBeenCalled();
+  });
 });

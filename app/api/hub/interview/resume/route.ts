@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   const admin = getSupabaseServerClient();
   const { data: row } = await admin
     .from("fitment_interviews")
-    .select("id, status, ib_agent_id, ib_candidate_id")
+    .select("id, status, ib_agent_id, ib_candidate_id, has_resumed")
     .eq("user_id", user.id)
     .eq("role_title", roleTitle)
     .order("updated_at", { ascending: false })
@@ -50,6 +50,12 @@ export async function POST(request: Request) {
     // "Cannot resume an interview in status EVALUATED"). Both are real and
     // must return clean JSON instead of crashing the route.
     console.error("Hub resume reinvite request failed", { roleTitle, error: err });
+    // A row that's already used its one resume and still fails has no
+    // self-service path left -- mark it stuck instead of leaving it to
+    // silently fall back to the plain "Start Interview" card.
+    if (row.has_resumed) {
+      await admin.from("fitment_interviews").update({ stuck_at: new Date().toISOString() }).eq("id", row.id);
+    }
     return Response.json({ error: "IntervueBox rejected the reinvite request." }, { status: 502 });
   }
 
@@ -61,6 +67,9 @@ export async function POST(request: Request) {
     // in status EVALUATED...") instead of a generic message -- matches this
     // codebase's existing pattern of surfacing real vendor/pipeline errors.
     const message = errors?.[0]?.error ?? "Couldn't resume this interview. Please try again.";
+    if (row.has_resumed) {
+      await admin.from("fitment_interviews").update({ stuck_at: new Date().toISOString() }).eq("id", row.id);
+    }
     return Response.json({ error: message }, { status: 502 });
   }
 
