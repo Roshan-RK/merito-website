@@ -9,6 +9,8 @@ import SkillDistribution from "./SkillDistribution";
 import InterviewTabs from "./InterviewTabs";
 import InterviewLockedState from "./InterviewLockedState";
 import InterviewInProgressState from "./InterviewInProgressState";
+import InterviewAppearedState from "./InterviewAppearedState";
+import InterviewTerminatedState from "./InterviewTerminatedState";
 import { resolveInterviewViewState } from "./resolveInterviewViewState";
 import ExportPreviewButton from "../ExportPreviewButton";
 
@@ -53,7 +55,7 @@ export default async function InterviewReportPage({
   async function latestReadyInterview(scopedToRole: string | null) {
     let query = supabase
       .from("fitment_interviews")
-      .select("role_title, status, report_raw, updated_at")
+      .select("role_title, status, report_raw, updated_at, ib_interview_status")
       .eq("user_id", userId);
     if (scopedToRole) {
       query = query.eq("role_title", scopedToRole);
@@ -114,11 +116,31 @@ export default async function InterviewReportPage({
     redirect("/hub/account");
   }
 
-  if (viewState === "in_progress") {
+  if (viewState === "invited") {
     return (
       <main>
         <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
           <InterviewInProgressState roleTitle={interview.role_title} />
+        </div>
+      </main>
+    );
+  }
+
+  if (viewState === "appeared") {
+    return (
+      <main>
+        <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+          <InterviewAppearedState roleTitle={interview.role_title} />
+        </div>
+      </main>
+    );
+  }
+
+  if (viewState === "terminated") {
+    return (
+      <main>
+        <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+          <InterviewTerminatedState roleTitle={interview.role_title} />
         </div>
       </main>
     );
