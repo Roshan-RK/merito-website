@@ -93,6 +93,11 @@ export default function DashboardClient({
           setInterviewStatus("ready");
         } else if (data.status === "terminated") {
           setInterviewStatus("terminated");
+        } else if (data.status === "stuck") {
+          // Stop polling as "invited" once launch-link has marked this row
+          // stuck -- otherwise the pill silently keeps retrying forever
+          // instead of ever surfacing the stuck card's href.
+          setInterviewStatus("stuck");
         }
       } catch {
         // Transient network error — next poll retries, nothing to surface.

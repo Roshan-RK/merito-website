@@ -6,7 +6,7 @@ import { FileText, Brain, Users, Mic } from "lucide-react";
 import type { CandidateLevel } from "@/lib/razorpay/pricing";
 import { durationForLevel } from "@/lib/intervuebox/agents";
 
-export type InterviewStatus = "not_started" | "invited" | "terminated" | "ready";
+export type InterviewStatus = "not_started" | "invited" | "terminated" | "stuck" | "ready";
 export type PersonalityStatus = "not_started" | "ready";
 
 // No real "interview finished, report generating" signal exists from
@@ -106,24 +106,33 @@ export default function ProgressRail({
       key: "interview",
       label: "Mock interview",
       icon: Mic,
-      state: interviewStatus === "ready" ? "done" : interviewStatus === "invited" || interviewStatus === "terminated" ? "active" : "locked",
+      state: interviewStatus === "ready" ? "done" : interviewStatus === "invited" || interviewStatus === "terminated" || interviewStatus === "stuck" ? "active" : "locked",
       statusText:
         interviewStatus === "ready"
           ? "Ready"
-          : interviewStatus === "terminated"
-            ? "Interrupted"
-            : interviewStatus === "invited"
-              ? interviewGenerating
-                ? "Generating"
-                : "Invited"
-              : "Not started",
+          : interviewStatus === "stuck"
+            ? "Needs help"
+            : interviewStatus === "terminated"
+              ? "Interrupted"
+              : interviewStatus === "invited"
+                ? interviewGenerating
+                  ? "Generating"
+                  : "Invited"
+                : "Not started",
+      // No pulse for "stuck" -- unlike invited/terminated, nothing is
+      // pending on the vendor side; the row won't self-resolve without an
+      // admin, so an animated "waiting" dot would be misleading.
       pulse: interviewStatus === "invited" || interviewStatus === "terminated",
+      // "stuck" must land here too -- a row that went stuck via launch-link
+      // (status stays "invited") otherwise has no href out of this pill at
+      // all, the same dead-end this feature was built to close. See
+      // docs/superpowers/specs/2026-08-19-interview-stuck-state-design.md.
       href:
-        interviewStatus === "ready" || interviewStatus === "terminated"
+        interviewStatus === "ready" || interviewStatus === "terminated" || interviewStatus === "stuck"
           ? `/hub/account/interview?role=${encodeURIComponent(roleTitle)}`
           : undefined,
       onClick:
-        interviewStatus === "ready" || interviewStatus === "terminated"
+        interviewStatus === "ready" || interviewStatus === "terminated" || interviewStatus === "stuck"
           ? undefined
           : interviewStatus === "invited"
             ? onOpenInterviewCheck

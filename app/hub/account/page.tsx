@@ -104,26 +104,35 @@ export default async function AccountPage() {
 
   const { data: interviewRow } = await supabase
     .from("fitment_interviews")
-    .select("id, status, ib_agent_id, ib_candidate_id, invited_at")
+    .select("id, status, ib_agent_id, ib_candidate_id, invited_at, stuck_at")
     .eq("user_id", user.id)
     .eq("role_title", current.role_title)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
+  // A genuinely-ready row always wins over a stale stuck_at flag (mirrors
+  // resolveInterviewViewState.ts's priority -- see the Critical fix in
+  // docs/superpowers/specs/2026-08-19-interview-stuck-state-design.md), so
+  // "ready" is checked before "stuck" here too.
   let interviewStatus: InterviewStatus = !interviewRow
     ? "not_started"
     : interviewRow.status === "ready"
       ? "ready"
-      : interviewRow.status === "terminated"
-        ? "terminated"
-        : "invited";
+      : interviewRow.stuck_at
+        ? "stuck"
+        : interviewRow.status === "terminated"
+          ? "terminated"
+          : "invited";
 
   // The DB row only flips to "ready" via IntervueBox's webhook -- if that
   // delivery is ever missed, nothing else updates it. Self-heal the same
   // way the resume-match report above does: re-check IntervueBox directly
-  // whenever we're about to show a stale "invited" (processing) state.
-  if (interviewRow && interviewStatus === "invited") {
+  // whenever we're about to show a stale "invited" (processing) or "stuck"
+  // state -- a stuck row can still have a real report waiting at the vendor
+  // if the interview actually completed just before the failed resume call
+  // set stuck_at (see the Critical fix referenced above).
+  if (interviewRow && (interviewStatus === "invited" || interviewStatus === "stuck")) {
     try {
       const interviewReport = await getInterviewReport(interviewRow.ib_agent_id, interviewRow.ib_candidate_id);
       if (interviewReport.status === "READY") {

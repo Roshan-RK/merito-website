@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
   const { data } = await supabase
     .from("fitment_interviews")
-    .select("id, status, ib_agent_id, ib_candidate_id")
+    .select("id, status, ib_agent_id, ib_candidate_id, stuck_at")
     .eq("user_id", user.id)
     .eq("role_title", role)
     .order("updated_at", { ascending: false })
@@ -73,6 +73,15 @@ export async function GET(request: Request) {
     }
   } catch (err) {
     console.error("Interview self-heal check failed, leaving status as invited", err);
+  }
+
+  // Surface stuck_at here too -- otherwise a row that goes stuck via
+  // launch-link (status stays "invited") reports back "invited" forever to
+  // the dashboard's poll loop, which keeps silently retrying instead of
+  // ever showing the candidate the stuck card. See
+  // docs/superpowers/specs/2026-08-19-interview-stuck-state-design.md.
+  if (data.stuck_at) {
+    return Response.json({ status: "stuck" });
   }
 
   return Response.json({ status: data.status === "terminated" ? "terminated" : "invited" });
