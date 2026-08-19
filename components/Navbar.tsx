@@ -11,6 +11,7 @@ const navLinks = [
   { label: "Merito's way", href: "/meritoways" },
   { label: "Platform & tools", href: "#tools" },
   { label: "Insights", href: "/insights" },
+  { label: "Hub", href: "/hub" },
 ];
 
 export default function Navbar() {
