@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   const admin = getSupabaseServerClient();
   const { data: row } = await admin
     .from("fitment_interviews")
-    .select("id, status, ib_agent_id, ib_candidate_id, magic_link, magic_link_expires_at")
+    .select("id, status, ib_agent_id, ib_candidate_id, magic_link, magic_link_expires_at, has_resumed")
     .eq("user_id", user.id)
     .eq("role_title", roleTitle)
     .order("updated_at", { ascending: false })
@@ -48,22 +48,41 @@ export async function POST(request: Request) {
     return Response.json({ error: "This interview is no longer awaiting a start. Please refresh." }, { status: 409 });
   }
 
-  // Treat a null/missing expiry as expired rather than crashing on it.
-  const stillValid = row.magic_link && row.magic_link_expires_at && new Date(row.magic_link_expires_at).getTime() > Date.now();
+  // Treat a null/missing expiry as expired rather than crashing on it. Once
+  // a row has ever been resumed, never trust the cache -- vendor has been
+  // observed returning the same (now-dead) token on a RESUME call, so a
+  // cached link here could be silently dead. Always ask fresh instead.
+  const stillValid =
+    !row.has_resumed &&
+    row.magic_link &&
+    row.magic_link_expires_at &&
+    new Date(row.magic_link_expires_at).getTime() > Date.now();
   if (stillValid) {
     return Response.json({ url: row.magic_link });
   }
 
   let reinviteResult: Awaited<ReturnType<typeof reinviteInterviewCandidates>>;
   try {
-    reinviteResult = await reinviteInterviewCandidates(row.ib_agent_id, [row.ib_candidate_id]);
+    // RESUME once this row has ever been resumed -- the default REINVITE
+    // mode discards progress, which is fine for a never-started candidate
+    // but would silently wipe a resumed candidate's saved progress.
+    reinviteResult = await reinviteInterviewCandidates(
+      row.ib_agent_id,
+      [row.ib_candidate_id],
+      row.has_resumed ? "RESUME" : "REINVITE"
+    );
   } catch (err) {
     console.error("Hub launch-link reinvite request failed", { roleTitle, error: err });
     return Response.json({ error: "IntervueBox rejected the reinvite request." }, { status: 502 });
   }
-  const fresh = reinviteResult.magicLinks?.[0];
+  const { magicLinks, errors } = reinviteResult;
+  const fresh = magicLinks?.[0];
   if (!fresh) {
-    return Response.json({ error: "Couldn't get a fresh interview link. Please try again." }, { status: 502 });
+    // Surface the vendor's actual reason when it gave one (matches the
+    // pattern in app/api/hub/interview/resume/route.ts) instead of masking
+    // a real vendor-side rejection behind a generic retry message.
+    const message = errors?.[0]?.error ?? "Couldn't get a fresh interview link. Please try again.";
+    return Response.json({ error: message }, { status: 502 });
   }
 
   const { error: cacheError } = await admin

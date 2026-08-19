@@ -66,6 +66,10 @@ export async function POST(request: Request) {
 
   // Reset ib_interview_status to null so a stale cached value doesn't
   // wrongly drive the appeared/invited split until the next sweep resyncs it.
+  // has_resumed marks this row as "not safe to serve from cache" -- vendor
+  // has been observed returning the same (now-dead) token on a RESUME call,
+  // so once a row has ever been through here, launch-link must always ask
+  // the vendor fresh instead of trusting magic_link_expires_at.
   const { error: resetError } = await admin
     .from("fitment_interviews")
     .update({
@@ -73,6 +77,7 @@ export async function POST(request: Request) {
       magic_link: fresh.magicLink,
       magic_link_expires_at: fresh.expiresAt,
       ib_interview_status: null,
+      has_resumed: true,
     })
     .eq("id", row.id);
   if (resetError) {

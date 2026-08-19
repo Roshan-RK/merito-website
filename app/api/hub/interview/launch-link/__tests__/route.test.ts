@@ -96,8 +96,57 @@ describe("POST /api/hub/interview/launch-link", () => {
     const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ url: "https://fresh" });
-    expect(reinviteInterviewCandidatesMock).toHaveBeenCalledWith("INT_1", ["USR_1"]);
+    expect(reinviteInterviewCandidatesMock).toHaveBeenCalledWith("INT_1", ["USR_1"], "REINVITE");
     expect(updateMock).toHaveBeenCalledWith({ magic_link: "https://fresh", magic_link_expires_at: "2026-08-20T10:00:00.000Z" });
+  });
+
+  it("skips the cache and asks for a fresh RESUME link when the row has ever been resumed, even if the cached link hasn't expired", async () => {
+    const future = new Date(Date.now() + 60_000).toISOString();
+    maybeSingleMock.mockResolvedValue({
+      data: {
+        id: "row-1",
+        status: "invited",
+        ib_agent_id: "INT_1",
+        ib_candidate_id: "USR_1",
+        magic_link: "https://stale-cached-after-resume",
+        magic_link_expires_at: future,
+        has_resumed: true,
+      },
+    });
+    reinviteInterviewCandidatesMock.mockResolvedValue({
+      invited: 1,
+      failed: 0,
+      magicLinks: [{ candidateId: "USR_1", magicLink: "https://fresh-resume", expiresAt: "2026-08-20T10:00:00.000Z" }],
+    });
+    const { POST } = await importRoute();
+    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ url: "https://fresh-resume" });
+    expect(reinviteInterviewCandidatesMock).toHaveBeenCalledWith("INT_1", ["USR_1"], "RESUME");
+  });
+
+  it("surfaces the vendor's real rejection reason when a resumed row's link comes back dead", async () => {
+    const future = new Date(Date.now() + 60_000).toISOString();
+    maybeSingleMock.mockResolvedValue({
+      data: {
+        id: "row-1",
+        status: "invited",
+        ib_agent_id: "INT_1",
+        ib_candidate_id: "USR_1",
+        magic_link: "https://dead",
+        magic_link_expires_at: future,
+        has_resumed: true,
+      },
+    });
+    reinviteInterviewCandidatesMock.mockResolvedValue({
+      invited: 0,
+      failed: 1,
+      errors: [{ candidateId: "USR_1", error: "Cannot resume an interview in status EVALUATED" }],
+    });
+    const { POST } = await importRoute();
+    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: "Cannot resume an interview in status EVALUATED" });
   });
 
   it("returns a 502 JSON error (not a crash) when the vendor reinvite call throws, and doesn't update the row", async () => {

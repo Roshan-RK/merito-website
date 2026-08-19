@@ -81,6 +81,7 @@ describe("POST /api/hub/interview/resume", () => {
       magic_link: "https://fresh",
       magic_link_expires_at: "2026-08-20T10:00:00.000Z",
       ib_interview_status: null,
+      has_resumed: true,
     });
   });
 
