@@ -5,6 +5,7 @@ import PipelineFailureActions from "./PipelineFailureActions";
 const KIND_LABEL: Record<string, string> = {
   interview_invite_after_payment: "Payment consumed, no interview created",
   orphaned_ib_job: "Orphaned IntervueBox job",
+  interview_invite_failed: "Interview invite failed, candidate can retry free",
 };
 
 export default async function AdminPipelineFailuresPage() {

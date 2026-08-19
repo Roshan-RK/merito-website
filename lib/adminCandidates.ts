@@ -5,6 +5,7 @@ import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import type { Scores, Validity } from "@/lib/personality";
 import { logAdminAction } from "@/lib/adminAuditLog";
 import type { HubNotificationCategory } from "@/lib/hubNotifications";
+import { getAbsoluteUrl } from "@/lib/site";
 
 const BAN_DURATION_INDEFINITE = "876000h"; // ~100 years, matches Supabase's ban_duration API shape for "indefinite"
 
@@ -299,7 +300,13 @@ export async function generateCandidateMagicLink(email: string, adminEmail: stri
     newValue: { linkGenerated: true },
   });
 
-  return data.properties.action_link;
+  // data.properties.action_link points at Supabase's own /auth/v1/verify
+  // endpoint, which redirects to the raw site URL and never runs our
+  // /hub/auth/callback route — so no app session cookie gets set. Route
+  // through our own callback instead, which is what actually logs the
+  // candidate in.
+  const params = new URLSearchParams({ token_hash: data.properties.hashed_token, type: "magiclink" });
+  return getAbsoluteUrl(`/hub/auth/callback?${params.toString()}`);
 }
 
 export async function mergeCandidateAccounts(keepUserId: string, mergeUserId: string, adminEmail: string): Promise<void> {

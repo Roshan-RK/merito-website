@@ -1,7 +1,7 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { logAdminAction } from "@/lib/adminAuditLog";
 
-export type PipelineFailureKind = "interview_invite_after_payment" | "orphaned_ib_job";
+export type PipelineFailureKind = "interview_invite_after_payment" | "orphaned_ib_job" | "interview_invite_failed";
 
 export type PipelineFailureRow = {
   id: string;

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function PipelineFailureActions({ id, kind }: { id: string; kind: "interview_invite_after_payment" | "orphaned_ib_job" }) {
+export default function PipelineFailureActions({ id, kind }: { id: string; kind: "interview_invite_after_payment" | "orphaned_ib_job" | "interview_invite_failed" }) {
   const router = useRouter();
   const [busy, setBusy] = useState<"retry" | "discard" | null>(null);
   const [message, setMessage] = useState<string | null>(null);

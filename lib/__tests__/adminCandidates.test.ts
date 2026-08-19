@@ -137,19 +137,19 @@ describe("generateCandidateMagicLink", () => {
   beforeEach(() => {
     generateLinkMock.mockReset();
     generateLinkMock.mockResolvedValue({
-      data: { properties: { action_link: "https://example.com/magic?token=abc123" } },
+      data: { properties: { action_link: "https://example.com/magic?token=abc123", hashed_token: "hashed-abc123" } },
       error: null,
     });
     logAdminActionMock.mockReset();
     logAdminActionMock.mockResolvedValue(undefined);
   });
 
-  it("generates a magic link and logs that a link was generated (not the link itself)", async () => {
+  it("generates a magic link through our own callback route (not Supabase's raw action_link) and logs that a link was generated (not the link itself)", async () => {
     const { generateCandidateMagicLink } = await import("../adminCandidates");
 
     const link = await generateCandidateMagicLink("candidate@example.com", "rushi.humbe@gmail.com");
 
-    expect(link).toBe("https://example.com/magic?token=abc123");
+    expect(link).toBe("https://www.merito.ai/hub/auth/callback?token_hash=hashed-abc123&type=magiclink");
     expect(generateLinkMock).toHaveBeenCalledWith({ type: "magiclink", email: "candidate@example.com" });
     expect(logAdminActionMock).toHaveBeenCalledWith({
       adminEmail: "rushi.humbe@gmail.com",
