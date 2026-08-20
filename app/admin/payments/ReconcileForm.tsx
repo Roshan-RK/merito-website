@@ -2,35 +2,45 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Button from "@/app/admin/_components/Button";
+import ConfirmDialog from "@/app/admin/_components/ConfirmDialog";
+import { useToast } from "@/app/admin/_components/Toast";
 
 export default function ReconcileForm({ userId, leadId, product }: { userId: string; leadId: string | null; product: string }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
-  async function submit() {
+  function handleSubmitClick() {
     const amountPaise = Math.round(parseFloat(amount) * 100);
     if (!amountPaise || amountPaise <= 0) {
-      setMessage("Enter a valid amount.");
+      showToast("error", "Enter a valid amount.");
       return;
     }
-    if (!window.confirm(`Record a manual reconciliation of ₹${amount} for this ${product} unlock?`)) return;
+    setConfirming(true);
+  }
 
+  async function submit() {
+    setConfirming(false);
+    const amountPaise = Math.round(parseFloat(amount) * 100);
     setBusy(true);
-    setMessage(null);
     try {
       const response = await fetch("/api/admin/payments/reconcile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, leadId, product, amountPaise }),
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
       if (!response.ok) {
-        setMessage(data.error || "Something went wrong.");
+        showToast("error", data?.error || "Something went wrong — try again.");
         return;
       }
+      showToast("success", "Reconciled.");
       router.refresh();
+    } catch {
+      showToast("error", "Something went wrong — try again.");
     } finally {
       setBusy(false);
     }
@@ -42,12 +52,22 @@ export default function ReconcileForm({ userId, leadId, product }: { userId: str
         placeholder="Amount (₹)"
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
-        style={{ fontSize: 12, padding: "3px 8px", border: "1px solid #dcdcdc", borderRadius: 6, width: 90 }}
+        className="font-[family-name:var(--font-poppins)]"
+        style={{ fontSize: 13, padding: "8px 12px", border: "1px solid #dcdcdc", borderRadius: 7, width: 100 }}
       />
-      <button onClick={submit} disabled={busy} style={{ background: "transparent", color: "#4b4b4d", border: "1px solid #dcdcdc", fontSize: 11.5, padding: "3px 8px", borderRadius: 6, cursor: busy ? "default" : "pointer" }}>
-        {busy ? "…" : "Reconcile"}
-      </button>
-      {message && <span style={{ fontSize: 11.5, color: "#4b4b4d" }}>{message}</span>}
+      <Button variant="secondary" onClick={handleSubmitClick} disabled={busy} loading={busy}>
+        Reconcile
+      </Button>
+
+      <ConfirmDialog
+        open={confirming}
+        title="Record manual reconciliation?"
+        message={`Records a manual reconciliation of ₹${amount} for this ${product} unlock.`}
+        confirmLabel="Reconcile"
+        busy={busy}
+        onConfirm={submit}
+        onCancel={() => setConfirming(false)}
+      />
     </div>
   );
 }

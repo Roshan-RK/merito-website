@@ -2,9 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Button from "@/app/admin/_components/Button";
+import ConfirmDialog from "@/app/admin/_components/ConfirmDialog";
+import { useToast } from "@/app/admin/_components/Toast";
 
-const inputStyle = { fontSize: 12, padding: "5px 8px", border: "1px solid #dcdcdc", borderRadius: 6, width: "100%" } as const;
-const textareaStyle = { ...inputStyle, minHeight: 120, fontFamily: "monospace" } as const;
+const labelStyle = { fontSize: 11.5, color: "#4b4b4d" } as const;
+const inputStyle = { fontSize: 13, padding: "8px 12px", border: "1px solid #dcdcdc", borderRadius: 7, width: "100%", marginTop: 4, boxSizing: "border-box" } as const;
+const textareaStyle = { ...inputStyle, minHeight: 140, fontFamily: "monospace" } as const;
 
 export default function EmailTemplateForm({
   templateKey,
@@ -18,81 +22,85 @@ export default function EmailTemplateForm({
   initialBodyHtml: string;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [subject, setSubject] = useState(initialSubject);
   const [bodyText, setBodyText] = useState(initialBodyText);
   const [bodyHtml, setBodyHtml] = useState(initialBodyHtml);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"save" | "test" | null>(null);
+  const [confirmingSave, setConfirmingSave] = useState(false);
 
   async function save() {
-    if (!window.confirm("Save this email template? It goes live immediately.")) return;
-    setBusy(true);
-    setMessage(null);
+    setConfirmingSave(false);
+    setBusy("save");
     try {
       const response = await fetch(`/api/admin/email-templates/${templateKey}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subject, bodyText, bodyHtml }),
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
       if (!response.ok) {
-        setMessage(data.error || "Something went wrong.");
+        showToast("error", data?.error || "Something went wrong — try again.");
         return;
       }
-      setMessage("Saved.");
+      showToast("success", "Saved — live now.");
       router.refresh();
+    } catch {
+      showToast("error", "Something went wrong — try again.");
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
   async function sendTest() {
-    setBusy(true);
-    setMessage(null);
+    setBusy("test");
     try {
       const response = await fetch(`/api/admin/email-templates/${templateKey}/test`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subject, bodyText, bodyHtml }),
       });
-      const data = await response.json();
-      setMessage(response.ok ? "Test email sent to your inbox." : data.error || "Test send failed.");
+      const data = await response.json().catch(() => null);
+      showToast(response.ok ? "success" : "error", response.ok ? "Test email sent to your inbox." : data?.error || "Test send failed.");
+    } catch {
+      showToast("error", "Test send failed.");
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 720 }}>
-      <label style={{ fontSize: 11.5, color: "#4b4b4d" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 720 }}>
+      <label className="font-[family-name:var(--font-poppins)]" style={labelStyle}>
         Subject
         <input value={subject} onChange={(e) => setSubject(e.target.value)} style={inputStyle} />
       </label>
-      <label style={{ fontSize: 11.5, color: "#4b4b4d" }}>
+      <label className="font-[family-name:var(--font-poppins)]" style={labelStyle}>
         Text body
         <textarea value={bodyText} onChange={(e) => setBodyText(e.target.value)} style={textareaStyle} />
       </label>
-      <label style={{ fontSize: 11.5, color: "#4b4b4d" }}>
+      <label className="font-[family-name:var(--font-poppins)]" style={labelStyle}>
         HTML body
         <textarea value={bodyHtml} onChange={(e) => setBodyHtml(e.target.value)} style={textareaStyle} />
       </label>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <button
-          onClick={save}
-          disabled={busy}
-          style={{ background: "transparent", color: "#4b4b4d", border: "1px solid #dcdcdc", fontSize: 11.5, padding: "5px 10px", borderRadius: 6, cursor: busy ? "default" : "pointer" }}
-        >
-          {busy ? "…" : "Save"}
-        </button>
-        <button
-          onClick={sendTest}
-          disabled={busy}
-          style={{ background: "transparent", color: "#4b4b4d", border: "1px solid #dcdcdc", fontSize: 11.5, padding: "5px 10px", borderRadius: 6, cursor: busy ? "default" : "pointer" }}
-        >
-          {busy ? "…" : "Send test email to myself"}
-        </button>
-        {message && <span style={{ fontSize: 11.5, color: "#4b4b4d" }}>{message}</span>}
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <Button variant="primary" onClick={() => setConfirmingSave(true)} disabled={busy !== null} loading={busy === "save"}>
+          Save
+        </Button>
+        <Button variant="secondary" onClick={sendTest} disabled={busy !== null} loading={busy === "test"}>
+          Send test email to myself
+        </Button>
       </div>
+
+      <ConfirmDialog
+        open={confirmingSave}
+        title="Save this email template?"
+        message="It goes live immediately for all future sends."
+        confirmLabel="Save"
+        busy={busy === "save"}
+        onConfirm={save}
+        onCancel={() => setConfirmingSave(false)}
+      />
     </div>
   );
 }
