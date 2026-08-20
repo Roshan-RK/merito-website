@@ -1,6 +1,7 @@
 import { listTransactions, listUnpaidUnlocks, type TransactionStatus } from "@/lib/adminPayments";
 import { Table, TableHeadRow, TableRow, TableCell, TableEmptyRow } from "@/app/admin/_components/Table";
 import Badge, { type BadgeVariant } from "@/app/admin/_components/Badge";
+import Pagination from "@/app/admin/_components/Pagination";
 import ReconcileForm from "./ReconcileForm";
 import PaymentActions from "./PaymentActions";
 import GrantForm from "./GrantForm";
@@ -35,8 +36,12 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
 }
 
-export default async function AdminPaymentsPage() {
-  const [transactions, unpaidUnlocks] = await Promise.all([listTransactions(), listUnpaidUnlocks()]);
+export default async function AdminPaymentsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const { page: pageParam } = await searchParams;
+  const [{ rows: transactions, page, totalPages }, unpaidUnlocks] = await Promise.all([
+    listTransactions(Number(pageParam) || 1),
+    listUnpaidUnlocks(),
+  ]);
 
   return (
     <div>
@@ -67,6 +72,7 @@ export default async function AdminPaymentsPage() {
             {transactions.length === 0 && <TableEmptyRow colSpan={7} message="No payments yet." />}
           </tbody>
         </Table>
+        <Pagination page={page} totalPages={totalPages} basePath="/admin/payments" />
       </div>
 
       <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.1rem", margin: "0 0 14px" }}>

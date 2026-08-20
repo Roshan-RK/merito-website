@@ -5,6 +5,10 @@ const deleteUserMock = vi.fn();
 const generateLinkMock = vi.fn();
 const fitmentLeadsSelectMock = vi.fn();
 const fitmentLeadsUpdateMock = vi.fn();
+const reportUnlocksSelectMock = vi.fn();
+const fitmentInterviewsSelectMock = vi.fn();
+const personalityTestsSelectMock = vi.fn();
+const referenceChecksSelectMock = vi.fn();
 const rpcMock = vi.fn();
 const logAdminActionMock = vi.fn();
 const hubNotificationsInsertMock = vi.fn();
@@ -16,6 +20,10 @@ vi.mock("@/lib/supabase", () => ({
     auth: { admin: { updateUserById: updateUserByIdMock, deleteUser: deleteUserMock, generateLink: generateLinkMock } },
     from: (table: string) => {
       if (table === "fitment_leads") return { select: fitmentLeadsSelectMock, update: fitmentLeadsUpdateMock };
+      if (table === "report_unlocks") return { select: reportUnlocksSelectMock };
+      if (table === "fitment_interviews") return { select: fitmentInterviewsSelectMock };
+      if (table === "personality_tests") return { select: personalityTestsSelectMock };
+      if (table === "reference_checks") return { select: referenceChecksSelectMock };
       if (table === "hub_notifications") return { insert: hubNotificationsInsertMock };
       if (table === "candidate_deletions") return { insert: candidateDeletionsInsertMock, delete: candidateDeletionsDeleteMock };
       throw new Error(`Unexpected table in test: ${table}`);
@@ -395,5 +403,91 @@ describe("sendCandidateNotification", () => {
       "Failed to send notification: db error"
     );
     expect(logAdminActionMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("listCandidates", () => {
+  const fitmentInterviewsEq = vi.fn();
+  const referenceChecksEq = vi.fn();
+
+  function stubCandidates(count: number) {
+    fitmentLeadsSelectMock.mockReturnValue({
+      order: () =>
+        Promise.resolve({
+          data: Array.from({ length: count }, (_, i) => ({
+            user_id: `user-${i}`,
+            email: `user${i}@example.com`,
+            name: `User ${i}`,
+            role_title: "Product Manager",
+            created_at: new Date(2026, 0, i + 1).toISOString(),
+          })),
+        }),
+    });
+    reportUnlocksSelectMock.mockResolvedValue({ data: [] });
+    fitmentInterviewsSelectMock.mockReturnValue({ eq: fitmentInterviewsEq });
+    fitmentInterviewsEq.mockResolvedValue({ data: [] });
+    personalityTestsSelectMock.mockResolvedValue({ data: [] });
+    referenceChecksSelectMock.mockReturnValue({ eq: referenceChecksEq });
+    referenceChecksEq.mockResolvedValue({ data: [] });
+  }
+
+  beforeEach(() => {
+    fitmentLeadsSelectMock.mockReset();
+    reportUnlocksSelectMock.mockReset();
+    fitmentInterviewsSelectMock.mockReset();
+    fitmentInterviewsEq.mockReset();
+    personalityTestsSelectMock.mockReset();
+    referenceChecksSelectMock.mockReset();
+    referenceChecksEq.mockReset();
+  });
+
+  it("returns page 1 of 20 rows with correct total/totalPages when there are 25 candidates", async () => {
+    stubCandidates(25);
+    const { listCandidates } = await import("../adminCandidates");
+
+    const result = await listCandidates(1);
+
+    expect(result.rows).toHaveLength(20);
+    expect(result.total).toBe(25);
+    expect(result.totalPages).toBe(2);
+    expect(result.page).toBe(1);
+  });
+
+  it("returns the remaining 5 rows on page 2", async () => {
+    stubCandidates(25);
+    const { listCandidates } = await import("../adminCandidates");
+
+    const result = await listCandidates(2);
+
+    expect(result.rows).toHaveLength(5);
+    expect(result.page).toBe(2);
+  });
+
+  it("clamps an out-of-range page to the last page", async () => {
+    stubCandidates(25);
+    const { listCandidates } = await import("../adminCandidates");
+
+    const result = await listCandidates(999);
+
+    expect(result.page).toBe(2);
+    expect(result.rows).toHaveLength(5);
+  });
+
+  it("clamps page below 1 up to 1", async () => {
+    stubCandidates(25);
+    const { listCandidates } = await import("../adminCandidates");
+
+    const result = await listCandidates(0);
+
+    expect(result.page).toBe(1);
+  });
+
+  it("defaults page and totalPages to 1 when there are no candidates", async () => {
+    stubCandidates(0);
+    const { listCandidates } = await import("../adminCandidates");
+
+    const result = await listCandidates();
+
+    expect(result).toEqual({ rows: [], total: 0, totalPages: 1, page: 1 });
   });
 });

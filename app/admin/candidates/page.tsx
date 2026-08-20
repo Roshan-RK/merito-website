@@ -2,11 +2,14 @@ import Link from "next/link";
 import { listCandidates, FUNNEL_STAGE_LABEL } from "@/lib/adminCandidates";
 import { Table, TableHeadRow, TableRow, TableCell, TableEmptyRow } from "@/app/admin/_components/Table";
 import Badge from "@/app/admin/_components/Badge";
+import Pagination from "@/app/admin/_components/Pagination";
 
-export default async function AdminCandidatesPage() {
-  const candidates = await listCandidates();
+export default async function AdminCandidatesPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const { page: pageParam } = await searchParams;
+  const { rows: candidates, page, totalPages } = await listCandidates(Number(pageParam) || 1);
 
   return (
+    <div>
     <Table>
       <TableHeadRow columns={["Name", "Email", "Latest role", "First seen", "Funnel stage"]} />
       <tbody>
@@ -43,5 +46,7 @@ export default async function AdminCandidatesPage() {
         {candidates.length === 0 && <TableEmptyRow colSpan={5} message="No candidates yet." />}
       </tbody>
     </Table>
+    <Pagination page={page} totalPages={totalPages} basePath="/admin/candidates" />
+    </div>
   );
 }

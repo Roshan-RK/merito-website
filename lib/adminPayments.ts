@@ -66,7 +66,11 @@ export function findUnpaidUnlocks(input: {
   return unpaid;
 }
 
-export async function listTransactions(): Promise<TransactionRow[]> {
+const PAGE_SIZE = 20;
+
+export type PaginatedTransactions = { rows: TransactionRow[]; total: number; totalPages: number; page: number };
+
+async function fetchAllTransactions(): Promise<TransactionRow[]> {
   const supabase = getSupabaseServerClient();
 
   const [{ data: txnRows }, { data: leadRows }] = await Promise.all([
@@ -96,6 +100,16 @@ export async function listTransactions(): Promise<TransactionRow[]> {
     status: t.status as TransactionStatus,
     createdAt: t.created_at,
   }));
+}
+
+export async function listTransactions(page: number = 1): Promise<PaginatedTransactions> {
+  const all = await fetchAllTransactions();
+  const total = all.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const clampedPage = Math.min(Math.max(1, page), totalPages);
+  const start = (clampedPage - 1) * PAGE_SIZE;
+
+  return { rows: all.slice(start, start + PAGE_SIZE), total, totalPages, page: clampedPage };
 }
 
 export type UnpaidUnlockRow = UnpaidUnlock & { email: string };

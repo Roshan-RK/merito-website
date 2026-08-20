@@ -45,7 +45,11 @@ export type CandidateListRow = {
   funnelStage: FunnelStage;
 };
 
-export async function listCandidates(): Promise<CandidateListRow[]> {
+const PAGE_SIZE = 20;
+
+export type PaginatedCandidates = { rows: CandidateListRow[]; total: number; totalPages: number; page: number };
+
+async function fetchAllCandidates(): Promise<CandidateListRow[]> {
   const supabase = getSupabaseServerClient();
 
   const [{ data: leadRows }, { data: unlockRows }, { data: interviewRows }, { data: personalityRows }, { data: referenceRows }] = await Promise.all([
@@ -84,6 +88,16 @@ export async function listCandidates(): Promise<CandidateListRow[]> {
   return Array.from(byUser.values())
     .map((c) => ({ ...c, funnelStage: computeFunnelStage(c.userId, sets) }))
     .sort((a, b) => (a.firstSeenAt < b.firstSeenAt ? 1 : -1));
+}
+
+export async function listCandidates(page: number = 1): Promise<PaginatedCandidates> {
+  const all = await fetchAllCandidates();
+  const total = all.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const clampedPage = Math.min(Math.max(1, page), totalPages);
+  const start = (clampedPage - 1) * PAGE_SIZE;
+
+  return { rows: all.slice(start, start + PAGE_SIZE), total, totalPages, page: clampedPage };
 }
 
 export type CandidateLeadDetail = {

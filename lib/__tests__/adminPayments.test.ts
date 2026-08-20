@@ -364,3 +364,78 @@ describe("grantFreeAccess", () => {
     ).rejects.toThrow("no fitment lead");
   });
 });
+
+describe("listTransactions", () => {
+  function stubTransactions(count: number) {
+    const txnRows = Array.from({ length: count }, (_, i) => ({
+      order_id: `order-${i}`,
+      payment_id: `pay-${i}`,
+      user_id: `user-${i}`,
+      product: "report",
+      level: "mid",
+      lead_id: null,
+      amount_paise: 29900,
+      status: "success",
+      created_at: new Date(2026, 0, i + 1).toISOString(),
+    }));
+    fromMock.mockImplementation((table: string) => {
+      if (table === "razorpay_transactions") return { select: () => ({ order: () => Promise.resolve({ data: txnRows }) }) };
+      if (table === "fitment_leads") return { select: () => Promise.resolve({ data: [] }) };
+      throw new Error(`unexpected table ${table}`);
+    });
+  }
+
+  beforeEach(() => {
+    fromMock.mockReset();
+  });
+
+  it("returns page 1 of 20 rows with correct total/totalPages when there are 25 transactions", async () => {
+    stubTransactions(25);
+    const { listTransactions } = await import("../adminPayments");
+
+    const result = await listTransactions(1);
+
+    expect(result.rows).toHaveLength(20);
+    expect(result.total).toBe(25);
+    expect(result.totalPages).toBe(2);
+    expect(result.page).toBe(1);
+  });
+
+  it("returns the remaining 5 rows on page 2", async () => {
+    stubTransactions(25);
+    const { listTransactions } = await import("../adminPayments");
+
+    const result = await listTransactions(2);
+
+    expect(result.rows).toHaveLength(5);
+    expect(result.page).toBe(2);
+  });
+
+  it("clamps an out-of-range page to the last page", async () => {
+    stubTransactions(25);
+    const { listTransactions } = await import("../adminPayments");
+
+    const result = await listTransactions(999);
+
+    expect(result.page).toBe(2);
+    expect(result.rows).toHaveLength(5);
+  });
+
+  it("clamps page below 1 up to 1", async () => {
+    stubTransactions(25);
+    const { listTransactions } = await import("../adminPayments");
+
+    const result = await listTransactions(0);
+
+    expect(result.page).toBe(1);
+  });
+
+  it("defaults page and totalPages to 1 when there are no transactions", async () => {
+    stubTransactions(0);
+    const { listTransactions } = await import("../adminPayments");
+
+    const result = await listTransactions();
+
+    expect(result).toEqual({ rows: [], total: 0, totalPages: 1, page: 1 });
+  });
+});
