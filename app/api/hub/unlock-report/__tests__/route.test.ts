@@ -228,7 +228,7 @@ describe("POST /api/hub/unlock-report", () => {
       expect(response.status).toBe(200);
       expect(data.status).toBe("checkout");
       expect(insertMock).toHaveBeenCalledWith(
-        expect.objectContaining({ product: "bundle", amount_paise: 89700 })
+        expect.objectContaining({ product: "bundle", amount_paise: 74900 })
       );
     });
 

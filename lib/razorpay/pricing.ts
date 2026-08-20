@@ -3,18 +3,16 @@ export type RazorpayProduct = "report" | "personality" | "references" | "intervi
 
 export const DEFAULT_LEVEL: CandidateLevel = "entry";
 
-// Personality's "bundle rate" (charged only when bought as part of the
-// report+personality+references bundle) lives in PRODUCT_PRICING.bundle,
-// not here — this table is each product's own solo price.
+// report/personality/references are flat ₹299 solo at every level; the
+// bundle is a flat ₹749 discount off their 897 combined solo total. Interview
+// and counselling still scale by level.
 export const PRODUCT_PRICING: Record<RazorpayProduct, Record<CandidateLevel, number>> = {
   report: { entry: 29900, mid: 29900, senior: 29900 },
-  personality: { entry: 34900, mid: 99900, senior: 149900 },
-  references: { entry: 29900, mid: 49900, senior: 49900 },
+  personality: { entry: 29900, mid: 29900, senior: 29900 },
+  references: { entry: 29900, mid: 29900, senior: 29900 },
   interview: { entry: 99900, mid: 99900, senior: 149900 },
   counselling: { entry: 199900, mid: 199900, senior: 299900 },
-  // report + personality(bundle rate) + references, per level:
-  // entry 299+299+299=897, mid 299+499+499=1297, senior 299+999+499=1797
-  bundle: { entry: 89700, mid: 129700, senior: 179700 },
+  bundle: { entry: 74900, mid: 74900, senior: 74900 },
 };
 
 export const PRODUCT_LABELS: Record<RazorpayProduct, string> = {
