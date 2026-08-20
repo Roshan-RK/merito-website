@@ -13,6 +13,8 @@ import InterviewAppearedState from "./InterviewAppearedState";
 import InterviewTerminatedState from "./InterviewTerminatedState";
 import InterviewStuckState from "./InterviewStuckState";
 import { resolveInterviewViewState } from "./resolveInterviewViewState";
+import { isInterviewGenerating } from "../ProgressRail";
+import InterviewGeneratingState from "./InterviewGeneratingState";
 import ExportPreviewButton from "../ExportPreviewButton";
 
 const EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40";
@@ -56,7 +58,7 @@ export default async function InterviewReportPage({
   async function latestReadyInterview(scopedToRole: string | null) {
     let query = supabase
       .from("fitment_interviews")
-      .select("role_title, status, report_raw, updated_at, ib_interview_status, stuck_at")
+      .select("role_title, status, report_raw, updated_at, ib_interview_status, stuck_at, invited_at")
       .eq("user_id", userId);
     if (scopedToRole) {
       query = query.eq("role_title", scopedToRole);
@@ -118,10 +120,25 @@ export default async function InterviewReportPage({
   }
 
   if (viewState === "invited") {
+    const { data: leadForLevel } = await supabase
+      .from("fitment_leads")
+      .select("candidate_level")
+      .eq("user_id", userId)
+      .eq("role_title", interview.role_title)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const level = (leadForLevel?.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
+    const generating = isInterviewGenerating("invited", interview.invited_at, level);
+
     return (
       <main>
         <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
-          <InterviewInProgressState roleTitle={interview.role_title} />
+          {generating ? (
+            <InterviewGeneratingState roleTitle={interview.role_title} />
+          ) : (
+            <InterviewInProgressState roleTitle={interview.role_title} />
+          )}
         </div>
       </main>
     );
