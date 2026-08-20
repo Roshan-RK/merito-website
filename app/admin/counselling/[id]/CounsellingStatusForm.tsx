@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CounsellingStatus } from "@/lib/adminCounselling";
+import Button from "@/app/admin/_components/Button";
+import ConfirmDialog from "@/app/admin/_components/ConfirmDialog";
+import { useToast } from "@/app/admin/_components/Toast";
 
 const STATUS_LABEL: Record<CounsellingStatus, string> = {
   requested: "Requested",
@@ -23,10 +26,11 @@ export default function CounsellingStatusForm({
   allowedNext: CounsellingStatus[];
 }) {
   const router = useRouter();
-  const [status, setStatus] = useState<CounsellingStatus>(allowedNext[0] ?? currentStatus);
+  const { showToast } = useToast();
+  const [status, setStatus] = useState<CounsellingStatus>(currentStatus);
   const [notes, setNotes] = useState(currentNotes ?? "");
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   if (allowedNext.length === 0) {
     return (
@@ -36,9 +40,11 @@ export default function CounsellingStatusForm({
     );
   }
 
+  const isNoOp = status === currentStatus;
+
   async function handleSave() {
-    setSaveState("saving");
-    setErrorMessage(null);
+    setConfirmOpen(false);
+    setSaving(true);
     try {
       const response = await fetch(`/api/admin/counselling/${id}`, {
         method: "PATCH",
@@ -46,16 +52,16 @@ export default function CounsellingStatusForm({
         body: JSON.stringify({ status, notes }),
       });
       if (response.ok) {
+        showToast("success", "Counselling request updated.");
         router.refresh();
-        setSaveState("idle");
       } else {
         const body = await response.json().catch(() => null);
-        setErrorMessage(body?.error ?? "Something went wrong — please try again.");
-        setSaveState("error");
+        showToast("error", body?.error ?? "Something went wrong — try again.");
       }
     } catch {
-      setErrorMessage("Something went wrong — please try again.");
-      setSaveState("error");
+      showToast("error", "Something went wrong — try again.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -75,6 +81,7 @@ export default function CounsellingStatusForm({
         className="font-[family-name:var(--font-poppins)]"
         style={{ width: "100%", padding: "9px 12px", fontSize: 14, border: "1px solid #eee", borderRadius: 7, marginBottom: 14 }}
       >
+        <option value={currentStatus}>{STATUS_LABEL[currentStatus]} (current)</option>
         {allowedNext.map((s) => (
           <option key={s} value={s}>
             {STATUS_LABEL[s]}
@@ -95,23 +102,28 @@ export default function CounsellingStatusForm({
         onChange={(e) => setNotes(e.target.value)}
         rows={3}
         className="font-[family-name:var(--font-poppins)]"
-        style={{ width: "100%", padding: "9px 12px", fontSize: 14, border: "1px solid #eee", borderRadius: 7, marginBottom: 14, resize: "vertical" }}
+        style={{ width: "100%", padding: "9px 12px", fontSize: 14, border: "1px solid #eee", borderRadius: 7, marginBottom: 8, resize: "vertical" }}
       />
 
-      <button
-        onClick={handleSave}
-        disabled={saveState === "saving"}
-        className="font-[family-name:var(--font-poppins)] font-semibold"
-        style={{ background: "#ed1a24", color: "#fff", border: "none", fontSize: 14, padding: "9px 20px", borderRadius: 7, cursor: "pointer" }}
-      >
-        {saveState === "saving" ? "Saving…" : "Save"}
-      </button>
-
-      {saveState === "error" && errorMessage && (
-        <p className="font-[family-name:var(--font-poppins)] text-[#ed1a24]" style={{ fontSize: 12.5, margin: "10px 0 0" }}>
-          {errorMessage}
+      {isNoOp && (
+        <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 12, margin: "0 0 14px" }}>
+          Choose a new status above to save a change.
         </p>
       )}
+
+      <Button variant="primary" onClick={() => setConfirmOpen(true)} disabled={saving || isNoOp} loading={saving}>
+        Save
+      </Button>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Change counselling status?"
+        message={`This changes the status from "${STATUS_LABEL[currentStatus]}" to "${STATUS_LABEL[status]}".`}
+        confirmLabel="Confirm"
+        busy={saving}
+        onConfirm={handleSave}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

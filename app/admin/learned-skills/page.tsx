@@ -1,4 +1,5 @@
 import { listLearnedSkills } from "@/lib/adminLearnedSkills";
+import { Table, TableHeadRow, TableRow, TableCell, TableEmptyRow } from "@/app/admin/_components/Table";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
@@ -13,43 +14,19 @@ export default async function AdminLearnedSkillsPage() {
         {skills.length} skills learned from job descriptions, not yet in the fallback keyword list.
       </p>
 
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ borderBottom: "1px solid #eee" }}>
-            {["Skill", "Sample job", "First seen"].map((label) => (
-              <th
-                key={label}
-                className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]"
-                style={{ padding: "10px 0", fontSize: 11, letterSpacing: "0.04em", textAlign: "left" }}
-              >
-                {label}
-              </th>
-            ))}
-          </tr>
-        </thead>
+      <Table>
+        <TableHeadRow columns={["Skill", "Sample job", "First seen"]} />
         <tbody>
           {skills.map((s) => (
-            <tr key={s.skill} style={{ borderBottom: "1px solid #eee" }}>
-              <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-                {s.skill}
-              </td>
-              <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-                {s.sampleJobTitle ?? <span className="text-[#9c9c9c]">—</span>}
-              </td>
-              <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-                {formatDate(s.firstSeenAt)}
-              </td>
-            </tr>
+            <TableRow key={s.skill}>
+              <TableCell>{s.skill}</TableCell>
+              <TableCell>{s.sampleJobTitle ?? <span className="text-[#9c9c9c]">—</span>}</TableCell>
+              <TableCell>{formatDate(s.firstSeenAt)}</TableCell>
+            </TableRow>
           ))}
-          {skills.length === 0 && (
-            <tr>
-              <td colSpan={3} className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ padding: "24px 0", fontSize: 14, textAlign: "center" }}>
-                No learned skills yet.
-              </td>
-            </tr>
-          )}
+          {skills.length === 0 && <TableEmptyRow colSpan={3} message="No learned skills yet." />}
         </tbody>
-      </table>
+      </Table>
     </div>
   );
 }

@@ -1,57 +1,47 @@
 import Link from "next/link";
 import { listCandidates, FUNNEL_STAGE_LABEL } from "@/lib/adminCandidates";
+import { Table, TableHeadRow, TableRow, TableCell, TableEmptyRow } from "@/app/admin/_components/Table";
+import Badge from "@/app/admin/_components/Badge";
 
 export default async function AdminCandidatesPage() {
   const candidates = await listCandidates();
 
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <thead>
-        <tr style={{ borderBottom: "1px solid #eee" }}>
-          {["Name", "Email", "Latest role", "First seen", "Funnel stage"].map((label) => (
-            <th
-              key={label}
-              className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]"
-              style={{ padding: "10px 0", fontSize: 11, letterSpacing: "0.04em", textAlign: "left" }}
-            >
-              {label}
-            </th>
-          ))}
-        </tr>
-      </thead>
+    <Table>
+      <TableHeadRow columns={["Name", "Email", "Latest role", "First seen", "Funnel stage"]} />
       <tbody>
         {candidates.map((c) => (
-          <tr key={c.userId} style={{ borderBottom: "1px solid #eee" }}>
-            <td style={{ padding: "10px 0", fontSize: 14 }}>
-              <Link
-                href={`/admin/candidates/${c.userId}`}
-                className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-              >
-                {c.name || "—"}
-              </Link>
-            </td>
-            <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-              {c.email}
-            </td>
-            <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-              {c.latestRoleTitle}
-            </td>
-            <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
+          <TableRow key={c.userId ?? c.email}>
+            <TableCell>
+              {c.userId ? (
+                <Link
+                  href={`/admin/candidates/${c.userId}`}
+                  className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+                >
+                  {c.name || "—"}
+                </Link>
+              ) : (
+                <span
+                  className="font-[family-name:var(--font-poppins)] font-semibold text-black"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
+                >
+                  {c.name || "—"}
+                  <Badge variant="neutral">Not linked</Badge>
+                </span>
+              )}
+            </TableCell>
+            <TableCell>{c.email}</TableCell>
+            <TableCell>{c.latestRoleTitle}</TableCell>
+            <TableCell>
               {new Date(c.firstSeenAt).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" })}
-            </td>
-            <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-              {FUNNEL_STAGE_LABEL[c.funnelStage]}
-            </td>
-          </tr>
+            </TableCell>
+            <TableCell>
+              <Badge variant="neutral">{FUNNEL_STAGE_LABEL[c.funnelStage]}</Badge>
+            </TableCell>
+          </TableRow>
         ))}
-        {candidates.length === 0 && (
-          <tr>
-            <td colSpan={5} className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ padding: "24px 0", fontSize: 14, textAlign: "center" }}>
-              No candidates yet.
-            </td>
-          </tr>
-        )}
+        {candidates.length === 0 && <TableEmptyRow colSpan={5} message="No candidates yet." />}
       </tbody>
-    </table>
+    </Table>
   );
 }

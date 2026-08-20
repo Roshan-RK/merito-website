@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Button from "@/app/admin/_components/Button";
+import ConfirmDialog from "@/app/admin/_components/ConfirmDialog";
+import { useToast } from "@/app/admin/_components/Toast";
 
 export default function ShareLinkRevokeToggle({ token, revoked }: { token: string; revoked: boolean }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function toggle() {
     setSaving(true);
@@ -16,29 +21,38 @@ export default function ShareLinkRevokeToggle({ token, revoked }: { token: strin
         body: JSON.stringify({ revoked: !revoked }),
       });
       if (response.ok) {
+        showToast("success", revoked ? "Share link restored." : "Share link revoked.");
         router.refresh();
+      } else {
+        showToast("error", "Something went wrong — try again.");
       }
+    } catch {
+      showToast("error", "Something went wrong — try again.");
     } finally {
       setSaving(false);
+      setConfirmOpen(false);
     }
   }
 
   return (
-    <button
-      onClick={toggle}
-      disabled={saving}
-      className="font-[family-name:var(--font-poppins)] font-semibold"
-      style={{
-        background: "transparent",
-        color: revoked ? "#16803c" : "#ed1a24",
-        border: `1px solid ${revoked ? "#16803c" : "#ed1a24"}`,
-        fontSize: 12,
-        padding: "4px 10px",
-        borderRadius: 6,
-        cursor: "pointer",
-      }}
-    >
-      {saving ? "…" : revoked ? "Restore" : "Revoke"}
-    </button>
+    <>
+      <Button variant={revoked ? "secondary" : "danger"} onClick={() => setConfirmOpen(true)} disabled={saving} loading={saving}>
+        {revoked ? "Restore" : "Revoke"}
+      </Button>
+      <ConfirmDialog
+        open={confirmOpen}
+        title={revoked ? "Restore this share link?" : "Revoke this share link?"}
+        message={
+          revoked
+            ? "The recruiter preview link will become viewable again."
+            : "The recruiter preview link will stop working immediately for anyone who has it."
+        }
+        confirmLabel={revoked ? "Restore" : "Revoke"}
+        danger={!revoked}
+        busy={saving}
+        onConfirm={toggle}
+        onCancel={() => setConfirmOpen(false)}
+      />
+    </>
   );
 }

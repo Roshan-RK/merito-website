@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import Script from "next/script";
 import ClientAnalytics from "@/components/ClientAnalytics";
+import ChromeGate from "@/components/ChromeGate";
 import SalesIqWidget from "@/components/SalesIqWidget";
 import { siteUrl } from "@/lib/site";
 
@@ -186,11 +185,11 @@ export default function RootLayout({
             style={{ display: "none", visibility: "hidden" }}
           />
         </noscript>
-        <Navbar />
+        <ChromeGate>
           <ClientAnalytics />
           <SalesIqWidget />
           {children}
-          <Footer />
+        </ChromeGate>
       </body>
     </html>
   );

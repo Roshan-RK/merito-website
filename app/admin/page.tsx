@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { Table, TableRow, TableCell } from "@/app/admin/_components/Table";
 
 const REFERENCE_STATUSES = ["initiated", "in_progress", "completed", "cancelled"] as const;
 
@@ -59,19 +60,17 @@ export default async function AdminFunnelPage() {
   ];
 
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+    <Table>
       <tbody>
         {rows.map(([label, value]) => (
-          <tr key={label} style={{ borderBottom: "1px solid #eee" }}>
-            <td className="font-[family-name:var(--font-poppins)] text-black" style={{ padding: "10px 0", fontSize: 14 }}>
-              {label}
-            </td>
-            <td className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ padding: "10px 0", fontSize: 14, textAlign: "right" }}>
-              {value}
-            </td>
-          </tr>
+          <TableRow key={label}>
+            <TableCell>{label}</TableCell>
+            <TableCell align="right">
+              <strong className="text-black">{value}</strong>
+            </TableCell>
+          </TableRow>
         ))}
       </tbody>
-    </table>
+    </Table>
   );
 }
