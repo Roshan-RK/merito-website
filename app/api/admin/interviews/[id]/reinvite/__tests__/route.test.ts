@@ -34,7 +34,7 @@ function makeRequest() {
 describe("POST /api/admin/interviews/[id]/reinvite", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
     reinviteInterviewCandidatesMock.mockReset();
     maybeSingleMock.mockReset();
     updateMock.mockClear();

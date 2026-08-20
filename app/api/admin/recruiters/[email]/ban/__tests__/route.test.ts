@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const requireAdminMock = vi.fn();
-vi.mock("@/lib/adminAuth", () => ({ requireAdmin: requireAdminMock }));
+vi.mock("@/lib/adminAuth", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/adminAuth")>("@/lib/adminAuth");
+  return { ...actual, requireAdmin: requireAdminMock };
+});
 
 const banRecruiterMock = vi.fn();
 vi.mock("@/lib/adminRecruiters", () => ({ banRecruiter: banRecruiterMock }));
@@ -15,7 +18,7 @@ vi.mock("@/lib/adminRateLimit", async () => {
 describe("POST /api/admin/recruiters/[email]/ban", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in", last_sign_in_at: new Date().toISOString() });
     banRecruiterMock.mockReset();
     banRecruiterMock.mockResolvedValue(undefined);
     enforceAdminRateLimitMock.mockReset();
@@ -31,7 +34,7 @@ describe("POST /api/admin/recruiters/[email]/ban", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(banRecruiterMock).toHaveBeenCalledWith("recruiter@company.com", "rushi.humbe@gmail.com", "abuse");
+    expect(banRecruiterMock).toHaveBeenCalledWith("recruiter@company.com", "roshan@merito.in", "abuse");
   });
 
   it("returns 400 when reason is missing", async () => {
@@ -42,6 +45,19 @@ describe("POST /api/admin/recruiters/[email]/ban", () => {
     });
 
     expect(response.status).toBe(400);
+  });
+
+  it("returns 401 when the admin's last sign-in is too old", async () => {
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in", last_sign_in_at: new Date(Date.now() - 31 * 60_000).toISOString() });
+    const { POST } = await import("../route");
+
+    const response = await POST(
+      new Request("http://localhost/x", { method: "POST", body: JSON.stringify({ reason: "abuse" }) }),
+      { params: Promise.resolve({ email: "recruiter@company.com" }) }
+    );
+
+    expect(response.status).toBe(401);
+    expect(banRecruiterMock).not.toHaveBeenCalled();
   });
 
   it("returns 429 when the rate limit is exceeded", async () => {

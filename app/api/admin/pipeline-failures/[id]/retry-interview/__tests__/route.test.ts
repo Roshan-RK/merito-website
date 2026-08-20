@@ -9,7 +9,7 @@ vi.mock("@/lib/pipelineFailures", () => ({ retryInterviewFromFailure: retryInter
 describe("POST /api/admin/pipeline-failures/[id]/retry-interview", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
     retryInterviewFromFailureMock.mockReset();
     retryInterviewFromFailureMock.mockResolvedValue(undefined);
   });
@@ -22,7 +22,7 @@ describe("POST /api/admin/pipeline-failures/[id]/retry-interview", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(retryInterviewFromFailureMock).toHaveBeenCalledWith("failure-1", "rushi.humbe@gmail.com");
+    expect(retryInterviewFromFailureMock).toHaveBeenCalledWith("failure-1", "roshan@merito.in");
   });
 
   it("returns 409 when not eligible", async () => {

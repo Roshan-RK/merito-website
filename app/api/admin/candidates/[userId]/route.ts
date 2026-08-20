@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/adminAuth";
+import { requireAdmin, assertRecentAuth, ReauthRequiredError } from "@/lib/adminAuth";
 import { deleteCandidate } from "@/lib/adminCandidates";
 import { enforceAdminRateLimit, RateLimitExceededError } from "@/lib/adminRateLimit";
 
@@ -9,9 +9,13 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
   const { userId } = await params;
 
   try {
+    assertRecentAuth(admin);
     await enforceAdminRateLimit(admin.email as string, "candidate.soft_delete");
     await deleteCandidate(userId, admin.email as string);
   } catch (error) {
+    if (error instanceof ReauthRequiredError) {
+      return Response.json({ error: error.message }, { status: 401 });
+    }
     if (error instanceof RateLimitExceededError) {
       return Response.json({ error: error.message }, { status: 429 });
     }

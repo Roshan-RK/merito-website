@@ -12,7 +12,7 @@ vi.mock("@/lib/adminAuditLog", () => ({ logAdminAction: logAdminActionMock }));
 describe("POST /api/admin/referees/[id]/reset-reminders", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
     resetRefereeRemindersMock.mockReset();
     resetRefereeRemindersMock.mockResolvedValue(undefined);
     logAdminActionMock.mockReset();
@@ -29,7 +29,7 @@ describe("POST /api/admin/referees/[id]/reset-reminders", () => {
     expect(response.status).toBe(200);
     expect(resetRefereeRemindersMock).toHaveBeenCalledWith("referee-1");
     expect(logAdminActionMock).toHaveBeenCalledWith({
-      adminEmail: "rushi.humbe@gmail.com",
+      adminEmail: "roshan@merito.in",
       action: "referee.reset_reminders",
       targetType: "candidate",
       targetId: "referee-1",

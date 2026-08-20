@@ -16,7 +16,7 @@ function buildRequest(body: unknown) {
 describe("POST /api/admin/candidates/[userId]/notify", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
     sendCandidateNotificationMock.mockReset();
     sendCandidateNotificationMock.mockResolvedValue(undefined);
   });
@@ -32,7 +32,7 @@ describe("POST /api/admin/candidates/[userId]/notify", () => {
     expect(sendCandidateNotificationMock).toHaveBeenCalledWith(
       "user-1",
       "Your report is ready.",
-      "rushi.humbe@gmail.com",
+      "roshan@merito.in",
       "general"
     );
   });
@@ -48,7 +48,7 @@ describe("POST /api/admin/candidates/[userId]/notify", () => {
     expect(sendCandidateNotificationMock).toHaveBeenCalledWith(
       "user-1",
       "Payment received.",
-      "rushi.humbe@gmail.com",
+      "roshan@merito.in",
       "payment"
     );
   });

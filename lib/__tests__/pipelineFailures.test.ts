@@ -66,7 +66,7 @@ describe("retryInterviewFromFailure", () => {
 
     const { retryInterviewFromFailure } = await import("../pipelineFailures");
 
-    await retryInterviewFromFailure("failure-1", "rushi.humbe@gmail.com");
+    await retryInterviewFromFailure("failure-1", "roshan@merito.in");
 
     expect(insertInterviewMock).toHaveBeenCalledWith({
       user_id: "user-1",
@@ -76,7 +76,7 @@ describe("retryInterviewFromFailure", () => {
       ib_candidate_id: "cand-1",
       status: "invited",
     });
-    expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ resolved_by: "rushi.humbe@gmail.com" }));
+    expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ resolved_by: "roshan@merito.in" }));
     expect(logAdminActionMock).toHaveBeenCalledWith(
       expect.objectContaining({ action: "pipeline_failure.retry_interview", targetId: "user-1" })
     );
@@ -91,7 +91,7 @@ describe("retryInterviewFromFailure", () => {
 
     const { retryInterviewFromFailure } = await import("../pipelineFailures");
 
-    await expect(retryInterviewFromFailure("failure-1", "rushi.humbe@gmail.com")).rejects.toThrow(
+    await expect(retryInterviewFromFailure("failure-1", "roshan@merito.in")).rejects.toThrow(
       "Pipeline failure not found or not eligible for retry."
     );
   });
@@ -115,9 +115,9 @@ describe("discardPipelineFailure", () => {
 
     const { discardPipelineFailure } = await import("../pipelineFailures");
 
-    await discardPipelineFailure("failure-1", "rushi.humbe@gmail.com");
+    await discardPipelineFailure("failure-1", "roshan@merito.in");
 
-    expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ resolved_by: "rushi.humbe@gmail.com" }));
+    expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ resolved_by: "roshan@merito.in" }));
     expect(logAdminActionMock).toHaveBeenCalledWith(expect.objectContaining({ action: "pipeline_failure.discard" }));
   });
 });

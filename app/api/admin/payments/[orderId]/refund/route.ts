@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requireAdmin } from "@/lib/adminAuth";
+import { requireAdmin, assertRecentAuth, ReauthRequiredError } from "@/lib/adminAuth";
 import { refundTransaction } from "@/lib/adminPayments";
 import { enforceAdminRateLimit, RateLimitExceededError } from "@/lib/adminRateLimit";
 
@@ -24,9 +24,13 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   try {
+    assertRecentAuth(admin);
     await enforceAdminRateLimit(admin.email as string, "payment.refund");
     await refundTransaction(orderId, parsed.data.reason, admin.email as string);
   } catch (error) {
+    if (error instanceof ReauthRequiredError) {
+      return Response.json({ error: error.message }, { status: 401 });
+    }
     if (error instanceof RateLimitExceededError) {
       return Response.json({ error: error.message }, { status: 429 });
     }

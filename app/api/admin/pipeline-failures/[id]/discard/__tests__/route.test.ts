@@ -9,7 +9,7 @@ vi.mock("@/lib/pipelineFailures", () => ({ discardPipelineFailure: discardPipeli
 describe("POST /api/admin/pipeline-failures/[id]/discard", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
     discardPipelineFailureMock.mockReset();
     discardPipelineFailureMock.mockResolvedValue(undefined);
   });
@@ -22,6 +22,6 @@ describe("POST /api/admin/pipeline-failures/[id]/discard", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(discardPipelineFailureMock).toHaveBeenCalledWith("failure-1", "rushi.humbe@gmail.com");
+    expect(discardPipelineFailureMock).toHaveBeenCalledWith("failure-1", "roshan@merito.in");
   });
 });

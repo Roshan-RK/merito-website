@@ -9,7 +9,7 @@ vi.mock("@/lib/adminCandidates", () => ({ retryResumeMatch: retryResumeMatchMock
 describe("POST /api/admin/leads/[leadId]/retry-resume-match", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
     retryResumeMatchMock.mockReset();
     retryResumeMatchMock.mockResolvedValue(undefined);
   });
@@ -22,7 +22,7 @@ describe("POST /api/admin/leads/[leadId]/retry-resume-match", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(retryResumeMatchMock).toHaveBeenCalledWith("lead-1", "rushi.humbe@gmail.com");
+    expect(retryResumeMatchMock).toHaveBeenCalledWith("lead-1", "roshan@merito.in");
   });
 
   it("returns 409 when IntervueBox still has no result", async () => {

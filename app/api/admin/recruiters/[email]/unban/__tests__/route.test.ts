@@ -9,7 +9,7 @@ vi.mock("@/lib/adminRecruiters", () => ({ unbanRecruiter: unbanRecruiterMock }))
 describe("POST /api/admin/recruiters/[email]/unban", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
     unbanRecruiterMock.mockReset();
     unbanRecruiterMock.mockResolvedValue(undefined);
   });
@@ -22,6 +22,6 @@ describe("POST /api/admin/recruiters/[email]/unban", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(unbanRecruiterMock).toHaveBeenCalledWith("recruiter@company.com", "rushi.humbe@gmail.com");
+    expect(unbanRecruiterMock).toHaveBeenCalledWith("recruiter@company.com", "roshan@merito.in");
   });
 });

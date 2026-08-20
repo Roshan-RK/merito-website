@@ -13,7 +13,7 @@ function buildRequest(body: unknown) {
 describe("POST /api/admin/payments/reconcile", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
     recordManualReconciliationMock.mockReset();
     recordManualReconciliationMock.mockResolvedValue(undefined);
   });
@@ -26,7 +26,7 @@ describe("POST /api/admin/payments/reconcile", () => {
     expect(response.status).toBe(200);
     expect(recordManualReconciliationMock).toHaveBeenCalledWith(
       { userId: "user-1", leadId: "lead-1", product: "report", amountPaise: 29900 },
-      "rushi.humbe@gmail.com"
+      "roshan@merito.in"
     );
   });
 

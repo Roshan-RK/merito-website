@@ -53,11 +53,11 @@ describe("banCandidate", () => {
   it("bans the user for ~100 years and logs the action", async () => {
     const { banCandidate } = await import("../adminCandidates");
 
-    await banCandidate("user-1", "rushi.humbe@gmail.com", "spam signup");
+    await banCandidate("user-1", "roshan@merito.in", "spam signup");
 
     expect(updateUserByIdMock).toHaveBeenCalledWith("user-1", { ban_duration: "876000h" });
     expect(logAdminActionMock).toHaveBeenCalledWith({
-      adminEmail: "rushi.humbe@gmail.com",
+      adminEmail: "roshan@merito.in",
       action: "candidate.ban",
       targetType: "candidate",
       targetId: "user-1",
@@ -70,7 +70,7 @@ describe("banCandidate", () => {
     updateUserByIdMock.mockResolvedValue({ error: { message: "user not found" } });
     const { banCandidate } = await import("../adminCandidates");
 
-    await expect(banCandidate("user-1", "rushi.humbe@gmail.com", "spam")).rejects.toThrow(
+    await expect(banCandidate("user-1", "roshan@merito.in", "spam")).rejects.toThrow(
       "Failed to ban candidate: user not found"
     );
     expect(logAdminActionMock).not.toHaveBeenCalled();
@@ -88,11 +88,11 @@ describe("unbanCandidate", () => {
   it("clears the ban and logs the action", async () => {
     const { unbanCandidate } = await import("../adminCandidates");
 
-    await unbanCandidate("user-1", "rushi.humbe@gmail.com");
+    await unbanCandidate("user-1", "roshan@merito.in");
 
     expect(updateUserByIdMock).toHaveBeenCalledWith("user-1", { ban_duration: "none" });
     expect(logAdminActionMock).toHaveBeenCalledWith({
-      adminEmail: "rushi.humbe@gmail.com",
+      adminEmail: "roshan@merito.in",
       action: "candidate.unban",
       targetType: "candidate",
       targetId: "user-1",
@@ -122,18 +122,18 @@ describe("deleteCandidate", () => {
   it("soft-deletes: bans the user, records a purge_after date, and logs the action (does not hard-delete)", async () => {
     const { deleteCandidate } = await import("../adminCandidates");
 
-    await deleteCandidate("user-1", "rushi.humbe@gmail.com");
+    await deleteCandidate("user-1", "roshan@merito.in");
 
     expect(updateUserByIdMock).toHaveBeenCalledWith("user-1", { ban_duration: "876000h" });
     expect(deleteUserMock).not.toHaveBeenCalled();
     expect(candidateDeletionsInsertMock).toHaveBeenCalledTimes(1);
     const insertedRow = candidateDeletionsInsertMock.mock.calls[0][0];
     expect(insertedRow.user_id).toBe("user-1");
-    expect(insertedRow.requested_by).toBe("rushi.humbe@gmail.com");
+    expect(insertedRow.requested_by).toBe("roshan@merito.in");
     expect(new Date(insertedRow.purge_after).getTime()).toBeGreaterThan(Date.now());
 
     expect(logAdminActionMock).toHaveBeenCalledWith({
-      adminEmail: "rushi.humbe@gmail.com",
+      adminEmail: "roshan@merito.in",
       action: "candidate.soft_delete",
       targetType: "candidate",
       targetId: "user-1",
@@ -146,7 +146,7 @@ describe("deleteCandidate", () => {
     updateUserByIdMock.mockResolvedValue({ error: { message: "user not found" } });
     const { deleteCandidate } = await import("../adminCandidates");
 
-    await expect(deleteCandidate("user-1", "rushi.humbe@gmail.com")).rejects.toThrow(
+    await expect(deleteCandidate("user-1", "roshan@merito.in")).rejects.toThrow(
       "Failed to delete candidate: user not found"
     );
     expect(candidateDeletionsInsertMock).not.toHaveBeenCalled();
@@ -157,7 +157,7 @@ describe("deleteCandidate", () => {
     candidateDeletionsInsertMock.mockResolvedValue({ error: { message: "constraint violation" } });
     const { deleteCandidate } = await import("../adminCandidates");
 
-    await expect(deleteCandidate("user-1", "rushi.humbe@gmail.com")).rejects.toThrow(
+    await expect(deleteCandidate("user-1", "roshan@merito.in")).rejects.toThrow(
       "Failed to delete candidate: constraint violation"
     );
     expect(logAdminActionMock).not.toHaveBeenCalled();
@@ -177,12 +177,12 @@ describe("restoreCandidate", () => {
   it("clears the ban, removes the deletion record, and logs the action", async () => {
     const { restoreCandidate } = await import("../adminCandidates");
 
-    await restoreCandidate("user-1", "rushi.humbe@gmail.com");
+    await restoreCandidate("user-1", "roshan@merito.in");
 
     expect(updateUserByIdMock).toHaveBeenCalledWith("user-1", { ban_duration: "none" });
     expect(candidateDeletionsDeleteMock).toHaveBeenCalledTimes(1);
     expect(logAdminActionMock).toHaveBeenCalledWith({
-      adminEmail: "rushi.humbe@gmail.com",
+      adminEmail: "roshan@merito.in",
       action: "candidate.restore",
       targetType: "candidate",
       targetId: "user-1",
@@ -195,7 +195,7 @@ describe("restoreCandidate", () => {
     updateUserByIdMock.mockResolvedValue({ error: { message: "user not found" } });
     const { restoreCandidate } = await import("../adminCandidates");
 
-    await expect(restoreCandidate("user-1", "rushi.humbe@gmail.com")).rejects.toThrow(
+    await expect(restoreCandidate("user-1", "roshan@merito.in")).rejects.toThrow(
       "Failed to restore candidate: user not found"
     );
     expect(candidateDeletionsDeleteMock).not.toHaveBeenCalled();
@@ -217,12 +217,12 @@ describe("generateCandidateMagicLink", () => {
   it("generates a magic link through our own callback route (not Supabase's raw action_link) and logs that a link was generated (not the link itself)", async () => {
     const { generateCandidateMagicLink } = await import("../adminCandidates");
 
-    const link = await generateCandidateMagicLink("candidate@example.com", "rushi.humbe@gmail.com");
+    const link = await generateCandidateMagicLink("candidate@example.com", "roshan@merito.in");
 
     expect(link).toBe("https://www.merito.ai/hub/auth/callback?token_hash=hashed-abc123&type=magiclink");
     expect(generateLinkMock).toHaveBeenCalledWith({ type: "magiclink", email: "candidate@example.com" });
     expect(logAdminActionMock).toHaveBeenCalledWith({
-      adminEmail: "rushi.humbe@gmail.com",
+      adminEmail: "roshan@merito.in",
       action: "candidate.magic_link_generated",
       targetType: "candidate",
       targetId: "candidate@example.com",
@@ -235,7 +235,7 @@ describe("generateCandidateMagicLink", () => {
     generateLinkMock.mockResolvedValue({ data: null, error: { message: "invalid email" } });
     const { generateCandidateMagicLink } = await import("../adminCandidates");
 
-    await expect(generateCandidateMagicLink("bad@example.com", "rushi.humbe@gmail.com")).rejects.toThrow(
+    await expect(generateCandidateMagicLink("bad@example.com", "roshan@merito.in")).rejects.toThrow(
       "Failed to generate magic link: invalid email"
     );
   });
@@ -257,7 +257,7 @@ describe("mergeCandidateAccounts", () => {
   it("runs the merge RPC, bans the merged-away account, and logs row counts", async () => {
     const { mergeCandidateAccounts } = await import("../adminCandidates");
 
-    await mergeCandidateAccounts("user-keep", "user-merge", "rushi.humbe@gmail.com");
+    await mergeCandidateAccounts("user-keep", "user-merge", "roshan@merito.in");
 
     expect(rpcMock).toHaveBeenCalledWith("merge_candidate_accounts", {
       keep_user_id: "user-keep",
@@ -265,7 +265,7 @@ describe("mergeCandidateAccounts", () => {
     });
     expect(updateUserByIdMock).toHaveBeenCalledWith("user-merge", { ban_duration: "876000h" });
     expect(logAdminActionMock).toHaveBeenCalledWith({
-      adminEmail: "rushi.humbe@gmail.com",
+      adminEmail: "roshan@merito.in",
       action: "candidate.merge",
       targetType: "candidate",
       targetId: "user-keep",
@@ -289,7 +289,7 @@ describe("mergeCandidateAccounts", () => {
     rpcMock.mockResolvedValue({ data: null, error: { message: "db error" } });
     const { mergeCandidateAccounts } = await import("../adminCandidates");
 
-    await expect(mergeCandidateAccounts("user-keep", "user-merge", "rushi.humbe@gmail.com")).rejects.toThrow(
+    await expect(mergeCandidateAccounts("user-keep", "user-merge", "roshan@merito.in")).rejects.toThrow(
       "Failed to merge accounts: db error"
     );
     expect(updateUserByIdMock).not.toHaveBeenCalled();
@@ -328,7 +328,7 @@ describe("retryResumeMatch", () => {
     });
 
     const { retryResumeMatch } = await import("../adminCandidates");
-    await retryResumeMatch("lead-1", "rushi.humbe@gmail.com");
+    await retryResumeMatch("lead-1", "roshan@merito.in");
 
     expect(leadUpdateEq).toHaveBeenCalledWith("id", "lead-1");
     expect(logAdminActionMock).toHaveBeenCalledWith(
@@ -344,7 +344,7 @@ describe("retryResumeMatch", () => {
     getResumeMatchReportMock.mockResolvedValue({ status: "PENDING" });
 
     const { retryResumeMatch } = await import("../adminCandidates");
-    await expect(retryResumeMatch("lead-1", "rushi.humbe@gmail.com")).rejects.toThrow(
+    await expect(retryResumeMatch("lead-1", "roshan@merito.in")).rejects.toThrow(
       "IntervueBox still hasn't produced a result for this candidate."
     );
   });
@@ -361,16 +361,16 @@ describe("sendCandidateNotification", () => {
   it("inserts the notification with created_by set, category defaulted to general, and logs the action", async () => {
     const { sendCandidateNotification } = await import("../adminCandidates");
 
-    await sendCandidateNotification("user-1", "Your report is ready.", "rushi.humbe@gmail.com");
+    await sendCandidateNotification("user-1", "Your report is ready.", "roshan@merito.in");
 
     expect(hubNotificationsInsertMock).toHaveBeenCalledWith({
       user_id: "user-1",
       message: "Your report is ready.",
       category: "general",
-      created_by: "rushi.humbe@gmail.com",
+      created_by: "roshan@merito.in",
     });
     expect(logAdminActionMock).toHaveBeenCalledWith({
-      adminEmail: "rushi.humbe@gmail.com",
+      adminEmail: "roshan@merito.in",
       action: "candidate.notify",
       targetType: "candidate",
       targetId: "user-1",
@@ -382,13 +382,13 @@ describe("sendCandidateNotification", () => {
   it("inserts the notification with an explicit category when given", async () => {
     const { sendCandidateNotification } = await import("../adminCandidates");
 
-    await sendCandidateNotification("user-1", "Payment received.", "rushi.humbe@gmail.com", "payment");
+    await sendCandidateNotification("user-1", "Payment received.", "roshan@merito.in", "payment");
 
     expect(hubNotificationsInsertMock).toHaveBeenCalledWith({
       user_id: "user-1",
       message: "Payment received.",
       category: "payment",
-      created_by: "rushi.humbe@gmail.com",
+      created_by: "roshan@merito.in",
     });
     expect(logAdminActionMock).toHaveBeenCalledWith(
       expect.objectContaining({ newValue: { message: "Payment received.", category: "payment" } })
@@ -399,7 +399,7 @@ describe("sendCandidateNotification", () => {
     hubNotificationsInsertMock.mockResolvedValue({ error: { message: "db error" } });
     const { sendCandidateNotification } = await import("../adminCandidates");
 
-    await expect(sendCandidateNotification("user-1", "hi", "rushi.humbe@gmail.com")).rejects.toThrow(
+    await expect(sendCandidateNotification("user-1", "hi", "roshan@merito.in")).rejects.toThrow(
       "Failed to send notification: db error"
     );
     expect(logAdminActionMock).not.toHaveBeenCalled();

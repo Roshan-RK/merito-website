@@ -13,7 +13,7 @@ function buildRequest(body: unknown) {
 describe("POST /api/admin/candidates/merge", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
     mergeCandidateAccountsMock.mockReset();
     mergeCandidateAccountsMock.mockResolvedValue(undefined);
   });
@@ -24,7 +24,7 @@ describe("POST /api/admin/candidates/merge", () => {
     const response = await POST(buildRequest({ keepUserId: "user-keep", mergeUserId: "user-merge" }));
 
     expect(response.status).toBe(200);
-    expect(mergeCandidateAccountsMock).toHaveBeenCalledWith("user-keep", "user-merge", "rushi.humbe@gmail.com");
+    expect(mergeCandidateAccountsMock).toHaveBeenCalledWith("user-keep", "user-merge", "roshan@merito.in");
   });
 
   it("returns 400 when keepUserId equals mergeUserId", async () => {

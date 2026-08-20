@@ -9,7 +9,7 @@ vi.mock("@/lib/adminCandidates", () => ({ unbanCandidate: unbanCandidateMock }))
 describe("POST /api/admin/candidates/[userId]/unban", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
     unbanCandidateMock.mockReset();
     unbanCandidateMock.mockResolvedValue(undefined);
   });
@@ -22,6 +22,6 @@ describe("POST /api/admin/candidates/[userId]/unban", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(unbanCandidateMock).toHaveBeenCalledWith("user-1", "rushi.humbe@gmail.com");
+    expect(unbanCandidateMock).toHaveBeenCalledWith("user-1", "roshan@merito.in");
   });
 });

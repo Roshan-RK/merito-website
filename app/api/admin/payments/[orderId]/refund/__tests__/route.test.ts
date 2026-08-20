@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const requireAdminMock = vi.fn();
-vi.mock("@/lib/adminAuth", () => ({ requireAdmin: requireAdminMock }));
+vi.mock("@/lib/adminAuth", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/adminAuth")>("@/lib/adminAuth");
+  return { ...actual, requireAdmin: requireAdminMock };
+});
 
 const refundTransactionMock = vi.fn();
 vi.mock("@/lib/adminPayments", () => ({ refundTransaction: refundTransactionMock }));
@@ -19,7 +22,7 @@ function buildRequest(body: unknown) {
 describe("POST /api/admin/payments/[orderId]/refund", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "admin@merito.in" });
+    requireAdminMock.mockResolvedValue({ email: "admin@merito.in", last_sign_in_at: new Date().toISOString() });
     refundTransactionMock.mockReset();
     refundTransactionMock.mockResolvedValue(undefined);
     enforceAdminRateLimitMock.mockReset();
@@ -51,6 +54,16 @@ describe("POST /api/admin/payments/[orderId]/refund", () => {
     const response = await POST(buildRequest({ reason: "x" }), { params: Promise.resolve({ orderId: "order-1" }) });
 
     expect(response.status).toBe(409);
+  });
+
+  it("returns 401 when the admin's last sign-in is too old", async () => {
+    requireAdminMock.mockResolvedValue({ email: "admin@merito.in", last_sign_in_at: new Date(Date.now() - 31 * 60_000).toISOString() });
+    const { POST } = await import("../route");
+
+    const response = await POST(buildRequest({ reason: "x" }), { params: Promise.resolve({ orderId: "order-1" }) });
+
+    expect(response.status).toBe(401);
+    expect(refundTransactionMock).not.toHaveBeenCalled();
   });
 
   it("returns 429 when the rate limit is exceeded", async () => {

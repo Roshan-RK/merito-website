@@ -9,7 +9,7 @@ vi.mock("@/lib/adminCandidates", () => ({ restoreCandidate: restoreCandidateMock
 describe("POST /api/admin/candidates/[userId]/restore", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
     restoreCandidateMock.mockReset();
     restoreCandidateMock.mockResolvedValue(undefined);
   });
@@ -22,7 +22,7 @@ describe("POST /api/admin/candidates/[userId]/restore", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(restoreCandidateMock).toHaveBeenCalledWith("user-1", "rushi.humbe@gmail.com");
+    expect(restoreCandidateMock).toHaveBeenCalledWith("user-1", "roshan@merito.in");
   });
 
   it("returns 409 when restore fails", async () => {

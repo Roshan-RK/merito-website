@@ -9,7 +9,7 @@ vi.mock("@/lib/adminCandidates", () => ({ generateCandidateMagicLink: generateCa
 describe("POST /api/admin/candidates/[userId]/magic-link", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
     generateCandidateMagicLinkMock.mockReset();
     generateCandidateMagicLinkMock.mockResolvedValue("https://example.com/magic?token=abc");
   });
@@ -24,7 +24,7 @@ describe("POST /api/admin/candidates/[userId]/magic-link", () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ link: "https://example.com/magic?token=abc" });
-    expect(generateCandidateMagicLinkMock).toHaveBeenCalledWith("candidate@example.com", "rushi.humbe@gmail.com");
+    expect(generateCandidateMagicLinkMock).toHaveBeenCalledWith("candidate@example.com", "roshan@merito.in");
   });
 
   it("returns 400 when email is missing", async () => {

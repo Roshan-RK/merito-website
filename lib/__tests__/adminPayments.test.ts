@@ -132,7 +132,7 @@ describe("recordManualReconciliation", () => {
     });
 
     const { recordManualReconciliation } = await import("../adminPayments");
-    await recordManualReconciliation({ userId: "user-1", leadId: "lead-1", product: "report", amountPaise: 29900 }, "rushi.humbe@gmail.com");
+    await recordManualReconciliation({ userId: "user-1", leadId: "lead-1", product: "report", amountPaise: 29900 }, "roshan@merito.in");
 
     expect(insertMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -161,7 +161,7 @@ describe("recordManualReconciliation", () => {
     });
 
     const { recordManualReconciliation } = await import("../adminPayments");
-    await recordManualReconciliation({ userId: "user-1", leadId: null, product: "personality", amountPaise: 19900 }, "rushi.humbe@gmail.com");
+    await recordManualReconciliation({ userId: "user-1", leadId: null, product: "personality", amountPaise: 19900 }, "roshan@merito.in");
 
     expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ level: "senior", lead_id: null }));
   });

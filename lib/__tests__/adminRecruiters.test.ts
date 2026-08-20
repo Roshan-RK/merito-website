@@ -40,13 +40,13 @@ describe("lib/adminRecruiters", () => {
     it("sets banned_at and logs the action", async () => {
       const { banRecruiter } = await import("../adminRecruiters");
 
-      await banRecruiter("recruiter@company.com", "rushi.humbe@gmail.com", "abuse");
+      await banRecruiter("recruiter@company.com", "roshan@merito.in", "abuse");
 
       expect(fromMock).toHaveBeenCalledWith("recruiter_identities");
       expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ banned_at: expect.any(String) }));
       expect(updateEqMock).toHaveBeenCalledWith("email", "recruiter@company.com");
       expect(logAdminActionMock).toHaveBeenCalledWith({
-        adminEmail: "rushi.humbe@gmail.com",
+        adminEmail: "roshan@merito.in",
         action: "recruiter.ban",
         targetType: "recruiter",
         targetId: "recruiter@company.com",
@@ -59,7 +59,7 @@ describe("lib/adminRecruiters", () => {
       updateEqMock.mockResolvedValue({ error: { message: "db error" } });
       const { banRecruiter } = await import("../adminRecruiters");
 
-      await expect(banRecruiter("recruiter@company.com", "rushi.humbe@gmail.com", "abuse")).rejects.toThrow(
+      await expect(banRecruiter("recruiter@company.com", "roshan@merito.in", "abuse")).rejects.toThrow(
         "Failed to ban recruiter: db error"
       );
       expect(logAdminActionMock).not.toHaveBeenCalled();
@@ -70,11 +70,11 @@ describe("lib/adminRecruiters", () => {
     it("clears banned_at and logs the action", async () => {
       const { unbanRecruiter } = await import("../adminRecruiters");
 
-      await unbanRecruiter("recruiter@company.com", "rushi.humbe@gmail.com");
+      await unbanRecruiter("recruiter@company.com", "roshan@merito.in");
 
       expect(updateMock).toHaveBeenCalledWith({ banned_at: null });
       expect(logAdminActionMock).toHaveBeenCalledWith({
-        adminEmail: "rushi.humbe@gmail.com",
+        adminEmail: "roshan@merito.in",
         action: "recruiter.unban",
         targetType: "recruiter",
         targetId: "recruiter@company.com",
@@ -88,11 +88,11 @@ describe("lib/adminRecruiters", () => {
     it("clears verified_at and logs the action", async () => {
       const { unverifyRecruiter } = await import("../adminRecruiters");
 
-      await unverifyRecruiter("recruiter@company.com", "rushi.humbe@gmail.com");
+      await unverifyRecruiter("recruiter@company.com", "roshan@merito.in");
 
       expect(updateMock).toHaveBeenCalledWith({ verified_at: null });
       expect(logAdminActionMock).toHaveBeenCalledWith({
-        adminEmail: "rushi.humbe@gmail.com",
+        adminEmail: "roshan@merito.in",
         action: "recruiter.unverify",
         targetType: "recruiter",
         targetId: "recruiter@company.com",
@@ -107,11 +107,11 @@ describe("lib/adminRecruiters", () => {
       selectMaybeSingleMock.mockResolvedValue({ data: { company_name: "Old Co" }, error: null });
       const { updateRecruiterCompany } = await import("../adminRecruiters");
 
-      await updateRecruiterCompany("recruiter@company.com", "New Co", "rushi.humbe@gmail.com");
+      await updateRecruiterCompany("recruiter@company.com", "New Co", "roshan@merito.in");
 
       expect(updateMock).toHaveBeenCalledWith({ company_name: "New Co" });
       expect(logAdminActionMock).toHaveBeenCalledWith({
-        adminEmail: "rushi.humbe@gmail.com",
+        adminEmail: "roshan@merito.in",
         action: "recruiter.update_company",
         targetType: "recruiter",
         targetId: "recruiter@company.com",

@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const requireAdminMock = vi.fn();
-vi.mock("@/lib/adminAuth", () => ({ requireAdmin: requireAdminMock }));
+vi.mock("@/lib/adminAuth", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/adminAuth")>("@/lib/adminAuth");
+  return { ...actual, requireAdmin: requireAdminMock };
+});
 
 const banCandidateMock = vi.fn();
 vi.mock("@/lib/adminCandidates", () => ({ banCandidate: banCandidateMock }));
@@ -22,7 +25,7 @@ function buildRequest(body: unknown) {
 describe("POST /api/admin/candidates/[userId]/ban", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in", last_sign_in_at: new Date().toISOString() });
     banCandidateMock.mockReset();
     banCandidateMock.mockResolvedValue(undefined);
     enforceAdminRateLimitMock.mockReset();
@@ -35,7 +38,7 @@ describe("POST /api/admin/candidates/[userId]/ban", () => {
     const response = await POST(buildRequest({ reason: "spam" }), { params: Promise.resolve({ userId: "user-1" }) });
 
     expect(response.status).toBe(200);
-    expect(banCandidateMock).toHaveBeenCalledWith("user-1", "rushi.humbe@gmail.com", "spam");
+    expect(banCandidateMock).toHaveBeenCalledWith("user-1", "roshan@merito.in", "spam");
   });
 
   it("returns 400 when reason is missing", async () => {
@@ -44,6 +47,16 @@ describe("POST /api/admin/candidates/[userId]/ban", () => {
     const response = await POST(buildRequest({}), { params: Promise.resolve({ userId: "user-1" }) });
 
     expect(response.status).toBe(400);
+    expect(banCandidateMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when the admin's last sign-in is too old", async () => {
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in", last_sign_in_at: new Date(Date.now() - 31 * 60_000).toISOString() });
+    const { POST } = await import("../route");
+
+    const response = await POST(buildRequest({ reason: "spam" }), { params: Promise.resolve({ userId: "user-1" }) });
+
+    expect(response.status).toBe(401);
     expect(banCandidateMock).not.toHaveBeenCalled();
   });
 

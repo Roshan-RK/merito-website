@@ -9,7 +9,7 @@ vi.mock("@/lib/adminRecruiters", () => ({ unverifyRecruiter: unverifyRecruiterMo
 describe("POST /api/admin/recruiters/[email]/unverify", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
     unverifyRecruiterMock.mockReset();
     unverifyRecruiterMock.mockResolvedValue(undefined);
   });
@@ -22,6 +22,6 @@ describe("POST /api/admin/recruiters/[email]/unverify", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(unverifyRecruiterMock).toHaveBeenCalledWith("recruiter@company.com", "rushi.humbe@gmail.com");
+    expect(unverifyRecruiterMock).toHaveBeenCalledWith("recruiter@company.com", "roshan@merito.in");
   });
 });

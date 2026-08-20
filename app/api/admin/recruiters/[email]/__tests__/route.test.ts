@@ -9,7 +9,7 @@ vi.mock("@/lib/adminRecruiters", () => ({ updateRecruiterCompany: updateRecruite
 describe("PATCH /api/admin/recruiters/[email]", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
     updateRecruiterCompanyMock.mockReset();
     updateRecruiterCompanyMock.mockResolvedValue(undefined);
   });
@@ -23,7 +23,7 @@ describe("PATCH /api/admin/recruiters/[email]", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(updateRecruiterCompanyMock).toHaveBeenCalledWith("recruiter@company.com", "New Co", "rushi.humbe@gmail.com");
+    expect(updateRecruiterCompanyMock).toHaveBeenCalledWith("recruiter@company.com", "New Co", "roshan@merito.in");
   });
 
   it("returns 400 when companyName is missing", async () => {

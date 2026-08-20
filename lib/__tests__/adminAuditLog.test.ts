@@ -23,7 +23,7 @@ describe("logAdminAction", () => {
     const { logAdminAction } = await import("../adminAuditLog");
 
     await logAdminAction({
-      adminEmail: "rushi.humbe@gmail.com",
+      adminEmail: "roshan@merito.in",
       action: "candidate.ban",
       targetType: "candidate",
       targetId: "user-1",
@@ -33,7 +33,7 @@ describe("logAdminAction", () => {
 
     expect(fromMock).toHaveBeenCalledWith("admin_audit_log");
     expect(insertMock).toHaveBeenCalledWith({
-      admin_email: "rushi.humbe@gmail.com",
+      admin_email: "roshan@merito.in",
       action: "candidate.ban",
       target_type: "candidate",
       target_id: "user-1",
@@ -48,7 +48,7 @@ describe("logAdminAction", () => {
 
     await expect(
       logAdminAction({
-        adminEmail: "rushi.humbe@gmail.com",
+        adminEmail: "roshan@merito.in",
         action: "candidate.ban",
         targetType: "candidate",
         targetId: "user-1",
