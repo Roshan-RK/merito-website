@@ -65,6 +65,28 @@ export async function listAdminActions(page: number = 1): Promise<PaginatedAdmin
   };
 }
 
+/** Full (unpaginated) history for one target — for showing an "overridden" badge/timeline inline on a detail page, not the paginated global feed. */
+export async function listActionsForTarget(targetType: AuditTargetType, targetId: string): Promise<AdminActionRow[]> {
+  const supabase = getSupabaseServerClient();
+  const { data } = await supabase
+    .from("admin_audit_log")
+    .select("id, admin_email, action, target_type, target_id, prior_value, new_value, created_at")
+    .eq("target_type", targetType)
+    .eq("target_id", targetId)
+    .order("created_at", { ascending: false });
+
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    adminEmail: r.admin_email,
+    action: r.action,
+    targetType: r.target_type,
+    targetId: r.target_id,
+    priorValue: r.prior_value,
+    newValue: r.new_value,
+    createdAt: r.created_at,
+  }));
+}
+
 export async function logAdminAction(params: {
   adminEmail: string;
   action: string;

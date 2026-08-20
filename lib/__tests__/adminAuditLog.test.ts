@@ -160,3 +160,60 @@ describe("getAdminActivityStats", () => {
     expect(result).toEqual({ last24h: 0, last7d: 0, last30d: 0 });
   });
 });
+
+describe("listActionsForTarget", () => {
+  const eqMock = vi.fn();
+  const targetOrderMock = vi.fn();
+
+  beforeEach(() => {
+    fromMock.mockReset();
+    eqMock.mockReset();
+    targetOrderMock.mockReset();
+    fromMock.mockReturnValue({ select: () => ({ eq: eqMock }) });
+    eqMock.mockReturnValue({ eq: () => ({ order: targetOrderMock }) });
+  });
+
+  it("returns all mapped rows for the target, unpaginated", async () => {
+    targetOrderMock.mockResolvedValue({
+      data: [
+        {
+          id: "log-1",
+          admin_email: "roshan@merito.in",
+          action: "candidate.recruiter_preview_override",
+          target_type: "candidate",
+          target_id: "user-1",
+          prior_value: { enabled: false },
+          new_value: { enabled: true, reason: "x" },
+          created_at: "2026-08-20T10:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+    const { listActionsForTarget } = await import("../adminAuditLog");
+
+    const result = await listActionsForTarget("candidate", "user-1");
+
+    expect(fromMock).toHaveBeenCalledWith("admin_audit_log");
+    expect(result).toEqual([
+      {
+        id: "log-1",
+        adminEmail: "roshan@merito.in",
+        action: "candidate.recruiter_preview_override",
+        targetType: "candidate",
+        targetId: "user-1",
+        priorValue: { enabled: false },
+        newValue: { enabled: true, reason: "x" },
+        createdAt: "2026-08-20T10:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("returns an empty array when there are no rows", async () => {
+    targetOrderMock.mockResolvedValue({ data: null, error: null });
+    const { listActionsForTarget } = await import("../adminAuditLog");
+
+    const result = await listActionsForTarget("candidate", "user-1");
+
+    expect(result).toEqual([]);
+  });
+});

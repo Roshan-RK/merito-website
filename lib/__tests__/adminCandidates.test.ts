@@ -14,6 +14,8 @@ const logAdminActionMock = vi.fn();
 const hubNotificationsInsertMock = vi.fn();
 const candidateDeletionsInsertMock = vi.fn();
 const candidateDeletionsDeleteMock = vi.fn();
+const recruiterPreviewSelectMock = vi.fn();
+const recruiterPreviewUpsertMock = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({
@@ -26,6 +28,7 @@ vi.mock("@/lib/supabase", () => ({
       if (table === "reference_checks") return { select: referenceChecksSelectMock };
       if (table === "hub_notifications") return { insert: hubNotificationsInsertMock };
       if (table === "candidate_deletions") return { insert: candidateDeletionsInsertMock, delete: candidateDeletionsDeleteMock };
+      if (table === "recruiter_preview_settings") return { select: recruiterPreviewSelectMock, upsert: recruiterPreviewUpsertMock };
       throw new Error(`Unexpected table in test: ${table}`);
     },
     rpc: rpcMock,
@@ -38,8 +41,10 @@ vi.mock("@/lib/intervuebox/reports", () => ({
   scoreOutOfTen: (n: number) => Math.round((n / 100) * 10 * 10) / 10,
 }));
 
+const listActionsForTargetMock = vi.fn();
 vi.mock("@/lib/adminAuditLog", () => ({
   logAdminAction: logAdminActionMock,
+  listActionsForTarget: listActionsForTargetMock,
 }));
 
 describe("banCandidate", () => {
@@ -489,5 +494,73 @@ describe("listCandidates", () => {
     const result = await listCandidates();
 
     expect(result).toEqual({ rows: [], total: 0, totalPages: 1, page: 1 });
+  });
+});
+
+describe("updateRecruiterPreviewOverride", () => {
+  beforeEach(() => {
+    recruiterPreviewSelectMock.mockReset();
+    recruiterPreviewUpsertMock.mockReset();
+    recruiterPreviewUpsertMock.mockResolvedValue({ error: null });
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+  });
+
+  it("upserts settings and logs the prior/new values with the reason", async () => {
+    recruiterPreviewSelectMock.mockReturnValue({
+      eq: () => ({ maybeSingle: () => Promise.resolve({ data: { enabled: false, sections: [], linkedin_url: "https://linkedin.com/in/x" } }) }),
+    });
+    const { updateRecruiterPreviewOverride } = await import("../adminCandidates");
+
+    await updateRecruiterPreviewOverride("user-1", { enabled: true, sections: ["fitment"] }, "roshan@merito.in", "candidate requested");
+
+    expect(recruiterPreviewUpsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: "user-1", enabled: true, sections: ["fitment"] }),
+      { onConflict: "user_id" }
+    );
+    expect(logAdminActionMock).toHaveBeenCalledWith({
+      adminEmail: "roshan@merito.in",
+      action: "candidate.recruiter_preview_override",
+      targetType: "candidate",
+      targetId: "user-1",
+      priorValue: { enabled: false, sections: [] },
+      newValue: { enabled: true, sections: ["fitment"], reason: "candidate requested" },
+    });
+  });
+
+  it("throws when enabling without a LinkedIn URL on file", async () => {
+    recruiterPreviewSelectMock.mockReturnValue({
+      eq: () => ({ maybeSingle: () => Promise.resolve({ data: { enabled: false, sections: [], linkedin_url: null } }) }),
+    });
+    const { updateRecruiterPreviewOverride } = await import("../adminCandidates");
+
+    await expect(
+      updateRecruiterPreviewOverride("user-1", { enabled: true, sections: [] }, "roshan@merito.in", "x")
+    ).rejects.toThrow(/LinkedIn/);
+    expect(recruiterPreviewUpsertMock).not.toHaveBeenCalled();
+  });
+
+  it("throws on an invalid section", async () => {
+    recruiterPreviewSelectMock.mockReturnValue({
+      eq: () => ({ maybeSingle: () => Promise.resolve({ data: { enabled: false, sections: [], linkedin_url: null } }) }),
+    });
+    const { updateRecruiterPreviewOverride } = await import("../adminCandidates");
+
+    await expect(
+      updateRecruiterPreviewOverride("user-1", { enabled: false, sections: ["bogus" as never] }, "roshan@merito.in", "x")
+    ).rejects.toThrow(/sections must only contain/);
+  });
+
+  it("treats a missing settings row as enabled:false, sections:[]", async () => {
+    recruiterPreviewSelectMock.mockReturnValue({
+      eq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }),
+    });
+    const { updateRecruiterPreviewOverride } = await import("../adminCandidates");
+
+    await updateRecruiterPreviewOverride("user-1", { enabled: false, sections: [] }, "roshan@merito.in", "x");
+
+    expect(logAdminActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ priorValue: { enabled: false, sections: [] } })
+    );
   });
 });

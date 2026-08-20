@@ -65,18 +65,24 @@ Explicitly out of scope for this roadmap: ATS integration (separate product, not
 
 ## Phase 3 — RBAC (gated on the open decision above)
 
+**Skipped 2026-08-20** — confirmed still single-admin (`roshan@merito.in` only). Revisit when multi-admin is real.
+
 - If multi-admin is actually needed: roles table, 3 tiers to start (read-only / ops / super-admin), admin add/remove without a redeploy
 - Concurrency/collision handling for simultaneous edits (only matters once >1 admin exists)
 - If not needed: skip entirely, revisit when it becomes real
 
 ## Phase 4 — Data CRUD, low-conflict fields first
 
-Resolve the resync-lock open decision before this phase starts.
+Resolve the resync-lock open decision before this phase starts (still applies to interview/candidate-profile fields below).
 
-- Build the shared pattern once: mandatory reason + diff-preview + "admin-overridden" badge
-- Personality report fields, references, candidate profile fields, recruiter-preview settings — all safe, no IntervueBox interaction
+- ~~Shared pattern~~ — **shipped 2026-08-20, reused existing infra instead of new schema.** `admin_audit_log` (already existed) doubles as the override history — no new `admin_field_overrides` table needed. `listActionsForTarget(targetType, targetId)` (`lib/adminAuditLog.ts`) fetches full unpaginated history for one record; reason folds into `newValue` jsonb, matching how ban/delete/refund already log reasons. "Admin-overridden" badge = any history rows exist for that action.
+- ~~recruiter_preview_settings~~ — **shipped 2026-08-20.** `updateRecruiterPreviewOverride()` (`lib/adminCandidates.ts`) — admin can override `enabled`/`sections` with a mandatory reason; blocks enabling if the candidate has no LinkedIn URL on file yet (same rule the candidate-facing PUT enforces). Candidate detail page's Recruiter Preview section is now an edit form + collapsible history, not static text.
+- **Correction — candidate profile fields (phone/location/experience/education/projects) are NOT safe/local as the roadmap assumed.** `getCandidateResumeDetails()` fetches live from IntervueBox's API on every page load — nothing is stored in Merito's DB. Editing these needs the same resync-lock handling as interview report fields (Phase 5), not a simple local-table edit. Moved out of the "safe" grouping.
+- Personality report fields — **narrow edit surface, deferred.** Only `scores`/`validity` are stored (raw/pct/band per trait); all narrative text is computed from static lookup tables, nothing to edit there. Editing raw trait numbers risks internal inconsistency (raw vs. pct vs. band drifting) for an unclear real use case. Revisit if a concrete need shows up.
+- References — not yet scoped, check what's actually editable before building (same live-code-check discipline as above)
 - Fitment report fields, lead/role record
 - Interview report fields — **last**, since this is the field set that actually collides with IntervueBox resync (Phase 5)
+- Candidate profile fields — moved next to interview report fields, same resync-lock dependency
 - Raw answer transcript stays view-only always — integrity-sensitive, fix via re-run not hand-edit
 
 ## Phase 5 — IntervueBox mirror/sync

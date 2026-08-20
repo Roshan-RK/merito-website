@@ -20,6 +20,7 @@ import InterviewRecoveryActions from "./InterviewRecoveryActions";
 import AccountActions from "./AccountActions";
 import ResumeMatchRetry from "./ResumeMatchRetry";
 import SendNotificationAction from "./SendNotificationAction";
+import RecruiterPreviewOverrideForm from "./RecruiterPreviewOverrideForm";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -196,18 +197,13 @@ export default async function AdminCandidateDetailPage({
         <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
           Recruiter Preview
         </h3>
-        {candidate.recruiterPreview.settings ? (
-          <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, margin: "0 0 14px" }}>
-            {candidate.recruiterPreview.settings.enabled ? "Visible to recruiters" : "Not visible"} ·{" "}
-            {candidate.recruiterPreview.settings.sections.length > 0
-              ? candidate.recruiterPreview.settings.sections.join(", ")
-              : "no sections selected"}
-          </p>
-        ) : (
-          <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ ...emptyNote, marginBottom: 14 }}>
-            Not configured.
-          </p>
-        )}
+        <div style={{ marginBottom: 20 }}>
+          <RecruiterPreviewOverrideForm
+            userId={candidate.userId}
+            settings={candidate.recruiterPreview.settings}
+            overrideHistory={candidate.recruiterPreview.overrideHistory}
+          />
+        </div>
 
         <Table>
           <TableHeadRow columns={["Role", "Status", "Views", "Last viewed", "Expires", ""]} />

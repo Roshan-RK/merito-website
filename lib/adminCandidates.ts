@@ -3,7 +3,8 @@ import { getReferenceCheckStatus, computeReferenceReport, type ReferenceReport, 
 import { getCandidateResumeDetails, getResumeMatchReport, scoreOutOfTen, type CandidateResumeDetails, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import type { Scores, Validity } from "@/lib/personality";
-import { logAdminAction } from "@/lib/adminAuditLog";
+import { logAdminAction, listActionsForTarget, type AdminActionRow } from "@/lib/adminAuditLog";
+import type { ReportType } from "@/app/hub/account/reportSections";
 import type { HubNotificationCategory } from "@/lib/hubNotifications";
 import { getAbsoluteUrl } from "@/lib/site";
 
@@ -134,6 +135,7 @@ export type CandidateDetail = {
   recruiterPreview: {
     settings: { enabled: boolean; sections: string[]; linkedinUrl: string | null; updatedAt: string } | null;
     shareLinks: ShareLinkDetail[];
+    overrideHistory: AdminActionRow[];
   };
   pendingDeletion: { purgeAfter: string } | null;
 };
@@ -196,6 +198,9 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
     .is("purged_at", null)
     .maybeSingle();
 
+  const candidateActions = await listActionsForTarget("candidate", userId);
+  const recruiterPreviewOverrideHistory = candidateActions.filter((a) => a.action === "candidate.recruiter_preview_override");
+
   const leads: CandidateLeadDetail[] = await Promise.all(
     leadRows.map(async (lead) => {
       const candidateDetails = lead.ib_applied_job_id
@@ -252,6 +257,7 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
         lastViewedAt: r.last_viewed_at,
         createdAt: r.created_at,
       })),
+      overrideHistory: recruiterPreviewOverrideHistory,
     },
     pendingDeletion: deletionRow ? { purgeAfter: deletionRow.purge_after } : null,
   };
@@ -475,5 +481,53 @@ export async function sendCandidateNotification(
     targetId: userId,
     priorValue: null,
     newValue: { message, category },
+  });
+}
+
+const VALID_REPORT_SECTIONS: ReportType[] = ["fitment", "personality", "interview", "references"];
+
+export async function updateRecruiterPreviewOverride(
+  userId: string,
+  updates: { enabled: boolean; sections: ReportType[] },
+  adminEmail: string,
+  reason: string
+): Promise<void> {
+  if (!updates.sections.every((s) => VALID_REPORT_SECTIONS.includes(s))) {
+    throw new Error("sections must only contain fitment, personality, interview, or references.");
+  }
+
+  const supabase = getSupabaseServerClient();
+  const { data: existing } = await supabase
+    .from("recruiter_preview_settings")
+    .select("enabled, sections, linkedin_url")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (updates.enabled && !existing?.linkedin_url) {
+    throw new Error("Candidate hasn't set a LinkedIn profile URL yet — visibility can't be turned on until they do.");
+  }
+
+  const priorValue = { enabled: existing?.enabled ?? false, sections: existing?.sections ?? [] };
+
+  const { error } = await supabase.from("recruiter_preview_settings").upsert(
+    {
+      user_id: userId,
+      enabled: updates.enabled,
+      sections: updates.sections,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
+  );
+  if (error) {
+    throw new Error(`Failed to update recruiter preview settings: ${error.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "candidate.recruiter_preview_override",
+    targetType: "candidate",
+    targetId: userId,
+    priorValue,
+    newValue: { enabled: updates.enabled, sections: updates.sections, reason },
   });
 }
