@@ -58,9 +58,9 @@ Explicitly out of scope for this roadmap: ATS integration (separate product, not
 
 ## Phase 2 — Security hardening
 
-- MFA on the admin account (currently magic-link email is the only factor)
-- Destructive-action re-verification (don't ride a long-lived session for ban/delete/refund)
-- Notification opt-out/suppression check before `SendNotificationAction`/email-template sends
+- ~~Destructive-action re-verification~~ — **shipped 2026-08-20.** `assertRecentAuth()` (`lib/adminAuth.ts`) requires the admin's `last_sign_in_at` within 30 min, not just session validity — Supabase refresh tokens keep sessions alive indefinitely otherwise. Wired into ban (candidate + recruiter), delete, refund via a 401 in each route's existing catch block. 8 new tests.
+- ~~Notification opt-out/suppression check~~ — **dropped, premise didn't hold.** Investigated both named send surfaces: `sendTestEmail` (email-templates admin page) only ever sends to the *admin's own inbox* as a preview, never to a candidate. `SendNotificationAction`/`sendCandidateNotification` only inserts a `hub_notifications` row — in-app only, no email dispatch attached. No candidate-facing email exists on either path today, so there's nothing to suppress. No opt-out schema built.
+- MFA on the admin account — **deferred 2026-08-20.** Protects only against inbox compromise; real cost (new login-flow step, lockout risk on a single-admin account, new dependency for QR rendering) weighed against low current attacker-value for an internal tool with one user. Revisit if that changes.
 - Fold "no-redeploy to change who's admin" into whatever Phase 3 RBAC ends up being (don't build a separate one-off fix)
 
 ## Phase 3 — RBAC (gated on the open decision above)
