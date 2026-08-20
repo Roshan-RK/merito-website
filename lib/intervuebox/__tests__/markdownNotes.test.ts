@@ -113,4 +113,44 @@ The candidate demonstrates strong leadership and sales strategy capabilities but
     const result = parseEvaluatorNotes("### Strengths\n- Good.\n\n#### Recommendation\nFirst line.\nSecond line.");
     expect(result!.recommendation).toBe("First line. Second line.");
   });
+
+  // Real production feedbackToInterviewer string, pulled 2026-08-20 from
+  // Yukta Wagh's Inside Sales Executive interview -- a third shape with no
+  // `#` headings at all. Sections are bold bullet labels (`- **Strengths:**`)
+  // with indented `  - item` sub-bullets, a bare `**Training Needs:**` label
+  // (no leading `-`), and an inline `**Recommendation:** ...` line. The old
+  // parser only recognized `#{2,4}` headings, so this whole string fell
+  // through to the raw-text fallback.
+  const REAL_NOTES_BOLD_BULLET_STYLE = `- **Strengths:**
+  - Familiar with various tools such as HubSpot, LinkedIn Sales Navigator, Apollo.io, and ChatGPT for outreach and client research.
+  - Basic understanding of personalized communication and lead nurturing techniques.
+- **Weaknesses:**
+  - Lack of clear examples or details to showcase strong operational experience in end-to-end sales.
+- **Opportunities:**
+  - Structured mentoring on global sales strategies and effective client research techniques could rapidly improve capabilities.
+- **Threats:**
+  - Current limitations in articulating and showcasing expertise could hinder their candidacy for roles requiring high autonomy and strategic planning.
+
+**Training Needs:**
+  - Advanced CRM usage, including lead scoring and pipeline management.
+  - Personalized engagement strategies for cross-cultural accounts.
+
+**Recommendation:** Proceed to further rounds only if the candidate demonstrates improved depth and specificity in their responses during follow-ups.`;
+
+  it("parses bold-bullet-label sections with no '#' headings", () => {
+    const result = parseEvaluatorNotes(REAL_NOTES_BOLD_BULLET_STYLE);
+    expect(result).not.toBeNull();
+    expect(result!.sections.map((s) => s.heading)).toEqual([
+      "Strengths",
+      "Weaknesses",
+      "Opportunities",
+      "Threats",
+      "Training Needs",
+    ]);
+    expect(result!.sections[0].items).toHaveLength(2);
+    expect(result!.sections[4].items).toHaveLength(2);
+    expect(result!.recommendation).toBe(
+      "Proceed to further rounds only if the candidate demonstrates improved depth and specificity in their responses during follow-ups."
+    );
+  });
 });

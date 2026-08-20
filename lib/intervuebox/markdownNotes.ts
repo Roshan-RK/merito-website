@@ -23,12 +23,17 @@ export type NotesSection = { heading: string; items: string[] };
 export type ParsedNotes = { sections: NotesSection[]; recommendation: string | null };
 
 // feedbackToInterviewer is markdown: `### Heading` sections each containing
-// `-` or numbered items. The recommendation itself arrives in two different
-// shapes depending on the interview (both live-confirmed) -- a trailing
-// `Recommendation: ...` line outside any section, or its own `#### Recommendation`
-// heading followed by a plain (non-bulleted) paragraph, sometimes spanning
-// multiple lines. Returns null on anything that doesn't match -- same
-// safe-fallback contract as parseRoadmap.
+// `-` or numbered items. A third real shape (live-confirmed 2026-08-20, Yukta
+// Wagh's Inside Sales interview) uses no `#` headings at all -- sections are
+// bold bullet labels instead, e.g. `- **Strengths:**` followed by indented
+// `  - item` bullets, with a bare `**Training Needs:**` (no leading `-`)
+// terminal section and an inline `**Recommendation:** ...` line. The
+// recommendation itself arrives in three different shapes depending on the
+// interview (all live-confirmed) -- a trailing `Recommendation: ...` line
+// outside any section, its own `#### Recommendation` heading followed by a
+// plain (non-bulleted) paragraph, or the bold-inline `**Recommendation:** ...`
+// form. Returns null on anything that doesn't match -- same safe-fallback
+// contract as parseRoadmap.
 export function parseEvaluatorNotes(raw: string): ParsedNotes | null {
   const lines = raw.split("\n");
   const sections: NotesSection[] = [];
@@ -41,9 +46,10 @@ export function parseEvaluatorNotes(raw: string): ParsedNotes | null {
     if (!line) continue;
 
     const headingMatch = line.match(/^#{2,4}\s+(.+)/);
-    if (headingMatch) {
+    const boldHeadingMatch = !headingMatch ? line.match(/^-?\s*\*\*(.+?):\*\*\s*$/) : null;
+    if (headingMatch || boldHeadingMatch) {
       if (current) sections.push(current);
-      const heading = headingMatch[1].trim();
+      const heading = (headingMatch ?? boldHeadingMatch)![1].trim();
       if (/^recommendation$/i.test(heading)) {
         current = null;
         inRecommendationHeading = true;
@@ -54,7 +60,7 @@ export function parseEvaluatorNotes(raw: string): ParsedNotes | null {
       continue;
     }
 
-    const recMatch = line.match(/^Recommendation:\s*(.+)/i);
+    const recMatch = line.match(/^(?:\*\*)?Recommendation:(?:\*\*)?\s*(.+)/i);
     if (recMatch) {
       recommendation = recMatch[1].trim();
       inRecommendationHeading = false;

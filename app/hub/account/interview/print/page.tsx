@@ -2,11 +2,12 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Manrope } from "next/font/google";
-import { Phone, Mail, MapPin, Sparkles, ShieldCheck, ShieldAlert, ListChecks, ThumbsUp, TrendingDown, Compass, CheckCircle2 } from "lucide-react";
+import { Phone, Mail, MapPin, Sparkles, ShieldCheck, ShieldAlert, ListChecks, ThumbsUp, TrendingDown, TrendingUp, AlertTriangle, Compass, CheckCircle2 } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import { getCandidateResumeDetails } from "@/lib/intervuebox/reports";
 import { parseRoadmap } from "@/lib/intervuebox/parseRoadmap";
+import { parseEvaluatorNotes, parseInlineBold } from "@/lib/intervuebox/markdownNotes";
 
 const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"], variable: "--font-manrope" });
 
@@ -72,6 +73,25 @@ function SectionHeading({ icon, children }: { icon: React.ReactNode; children: R
       {children}
     </div>
   );
+}
+
+function InlineText({ text }: { text: string }) {
+  return (
+    <>
+      {parseInlineBold(text).map((seg, i) => (seg.bold ? <strong key={i}>{seg.text}</strong> : <span key={i}>{seg.text}</span>))}
+    </>
+  );
+}
+
+const NOTES_TONE: { match: RegExp; icon: typeof Sparkles; fg: string; bg: string }[] = [
+  { match: /strength/i, icon: Sparkles, fg: "#15803D", bg: "#DCFCE7" },
+  { match: /weakness/i, icon: AlertTriangle, fg: "#92400E", bg: "#FEF3C7" },
+  { match: /opportunit/i, icon: TrendingUp, fg: "#1D4ED8", bg: "#DBEAFE" },
+  { match: /threat/i, icon: ShieldAlert, fg: "#B91C1C", bg: "#FEE2E2" },
+];
+
+function noteToneFor(heading: string) {
+  return NOTES_TONE.find((t) => t.match.test(heading)) ?? null;
 }
 
 export default async function InterviewPrintPage({
@@ -155,6 +175,13 @@ export default async function InterviewPrintPage({
   // not a flat sentence. parseRoadmap returns null on anything that doesn't
   // match, in which case the raw string is shown as-is below.
   const parsedRoadmap = report.roadmap ? parseRoadmap(report.roadmap) : null;
+
+  // report.feedbackToInterviewer is IntervueBox's own AI-generated SWOT
+  // markdown -- shown on the candidate's in-app "Coaching plan" tab
+  // (InterviewTabs.tsx) via InterviewEvaluatorNotes, but never wired into
+  // this PDF export template. parseEvaluatorNotes returns null on anything
+  // that doesn't match, in which case the raw string is shown as-is below.
+  const parsedNotes = report.feedbackToInterviewer ? parseEvaluatorNotes(report.feedbackToInterviewer) : null;
 
   return (
     <div
@@ -418,6 +445,53 @@ export default async function InterviewPrintPage({
             </div>
           </SectionCard>
         </>
+      )}
+
+      {report.feedbackToInterviewer && !parsedNotes && (
+        <SectionCard>
+          <SectionHeading icon={<Sparkles size={16} style={{ color: "#D97706" }} />}>Evaluator notes for hiring teams</SectionHeading>
+          <p style={{ fontSize: 13, lineHeight: 1.65, margin: 0, color: "#374151", whiteSpace: "pre-wrap" }}>
+            <InlineText text={report.feedbackToInterviewer} />
+          </p>
+        </SectionCard>
+      )}
+
+      {parsedNotes && (
+        <SectionCard>
+          <SectionHeading icon={<Sparkles size={16} style={{ color: "#D97706" }} />}>Evaluator notes for hiring teams</SectionHeading>
+          <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 12 }}>
+            {parsedNotes.sections.map((section, i) => {
+              const tone = noteToneFor(section.heading);
+              const Icon = tone?.icon;
+              return (
+                <div key={i} className="rounded-xl" style={{ background: tone?.bg ?? "#F9FAFB", padding: 14, breakInside: "avoid" }}>
+                  <div
+                    className="flex items-center font-bold uppercase"
+                    style={{ gap: 6, fontSize: 11, letterSpacing: "0.04em", marginBottom: 8, color: tone?.fg ?? "#6B7280" }}
+                  >
+                    {Icon && <Icon size={13} strokeWidth={2} />}
+                    {section.heading}
+                  </div>
+                  <div className="flex flex-col" style={{ gap: 6 }}>
+                    {section.items.map((item, j) => (
+                      <p key={j} style={{ fontSize: 12.5, lineHeight: 1.6, margin: 0, color: "#374151" }}>
+                        <InlineText text={item} />
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {parsedNotes.recommendation && (
+            <p className="border-t" style={{ fontSize: 13, lineHeight: 1.65, margin: "14px 0 0", paddingTop: 14, color: "#374151", borderColor: "#F0E4C8" }}>
+              <span className="font-bold uppercase" style={{ fontSize: 10.5, color: "#9CA3AF" }}>
+                Recommendation:{" "}
+              </span>
+              <InlineText text={parsedNotes.recommendation} />
+            </p>
+          )}
+        </SectionCard>
       )}
     </div>
   );
