@@ -89,7 +89,7 @@ export default function AccountActions({
     }
   }
 
-  function confirmDialogProps(): { title: string; message: string; confirmLabel: string; danger: boolean; onConfirm: () => void } | null {
+  function confirmDialogProps(): { title: string; message: string; confirmLabel: string; danger: boolean; confirmText?: string; onConfirm: () => void } | null {
     if (!pending) return null;
     if (pending.type === "ban") {
       return {
@@ -106,6 +106,7 @@ export default function AccountActions({
         message: `Bans ${email} from signing in and schedules their data for permanent erasure in ${DELETION_PURGE_WINDOW_DAYS} days. Reversible with "Restore" until then.`,
         confirmLabel: "Delete",
         danger: true,
+        confirmText: email,
         onConfirm: () => run("delete", `/api/admin/candidates/${userId}`, undefined, "DELETE"),
       };
     }
@@ -173,6 +174,7 @@ export default function AccountActions({
         message={dialog?.message ?? ""}
         confirmLabel={dialog?.confirmLabel ?? "Confirm"}
         danger={dialog?.danger ?? false}
+        confirmText={dialog?.confirmText}
         busy={busy === pending?.type}
         onConfirm={() => dialog?.onConfirm()}
         onCancel={() => setPending(null)}

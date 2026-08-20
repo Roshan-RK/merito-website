@@ -82,6 +82,7 @@ export default function PaymentActions({ orderId, status, amountPaise }: { order
         message={`Refunds ₹${(amountPaise / 100).toLocaleString("en-IN")}. Reason: "${refundReason}"`}
         confirmLabel="Refund"
         danger
+        confirmText="REFUND"
         busy={busy === "refund"}
         onConfirm={refund}
         onCancel={() => setRefundReason(null)}

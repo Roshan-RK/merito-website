@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/adminAuth";
 import { grantFreeAccess } from "@/lib/adminPayments";
+import { enforceAdminRateLimit, RateLimitExceededError } from "@/lib/adminRateLimit";
 
 const PostSchema = z.object({
   email: z.string().email(),
@@ -25,8 +26,12 @@ export async function POST(request: Request) {
   }
 
   try {
+    await enforceAdminRateLimit(admin.email as string, "payment.grant_free_access");
     await grantFreeAccess(parsed.data, admin.email as string);
   } catch (error) {
+    if (error instanceof RateLimitExceededError) {
+      return Response.json({ error: error.message }, { status: 429 });
+    }
     const message = error instanceof Error ? error.message : "Failed to grant access.";
     return Response.json({ error: message }, { status: 409 });
   }

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/adminAuth";
 import { banCandidate } from "@/lib/adminCandidates";
+import { enforceAdminRateLimit, RateLimitExceededError } from "@/lib/adminRateLimit";
 
 const PostSchema = z.object({ reason: z.string().min(1) });
 
@@ -23,8 +24,12 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   try {
+    await enforceAdminRateLimit(admin.email as string, "candidate.ban");
     await banCandidate(userId, admin.email as string, parsed.data.reason);
   } catch (error) {
+    if (error instanceof RateLimitExceededError) {
+      return Response.json({ error: error.message }, { status: 429 });
+    }
     const message = error instanceof Error ? error.message : "Failed to ban candidate.";
     return Response.json({ error: message }, { status: 409 });
   }

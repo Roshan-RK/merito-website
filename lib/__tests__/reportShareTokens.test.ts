@@ -50,6 +50,7 @@ describe("reportShareTokens", () => {
       expect(insertedRow.user_id).toBe("user-1");
       expect(insertedRow.role_title).toBe("Senior Product Manager");
       expect(insertedRow.token).toBe(result.token);
+      expect(new Date(insertedRow.expires_at).getTime()).toBeGreaterThan(Date.now());
     });
 
     it("updates the existing row in place, keeping the same token", async () => {
@@ -74,6 +75,7 @@ describe("reportShareTokens", () => {
       const updatedRow = updateMock.mock.calls[0][0];
       expect(updatedRow.include).toBe("fitment");
       expect(updatedRow.revoked_at).toBeNull();
+      expect(new Date(updatedRow.expires_at).getTime()).toBeGreaterThan(Date.now());
     });
   });
 
@@ -131,12 +133,40 @@ describe("reportShareTokens", () => {
       expect(result).toEqual({ valid: false, reason: "revoked" });
     });
 
+    it("returns valid:false reason:expired when expires_at is in the past", async () => {
+      fromMock.mockReturnValue({ select: selectMock });
+      selectMock.mockReturnValue({ eq: eqMock1 });
+      eqMock1.mockReturnValue({ maybeSingle: maybeSingleMock });
+      maybeSingleMock.mockResolvedValue({
+        data: {
+          user_id: "user-1",
+          role_title: "Senior Product Manager",
+          include: "fitment",
+          interview_sections: "",
+          revoked_at: null,
+          expires_at: new Date(Date.now() - 1000).toISOString(),
+        },
+        error: null,
+      });
+      const { validateShareToken } = await import("../reportShareTokens");
+
+      const result = await validateShareToken("expired-token");
+      expect(result).toEqual({ valid: false, reason: "expired" });
+    });
+
     it("returns valid:true with parsed include/interviewSections for a live token", async () => {
       fromMock.mockReturnValue({ select: selectMock });
       selectMock.mockReturnValue({ eq: eqMock1 });
       eqMock1.mockReturnValue({ maybeSingle: maybeSingleMock });
       maybeSingleMock.mockResolvedValue({
-        data: { user_id: "user-1", role_title: "Senior Product Manager", include: "fitment,interview", interview_sections: "scoreGauge,overview", revoked_at: null },
+        data: {
+          user_id: "user-1",
+          role_title: "Senior Product Manager",
+          include: "fitment,interview",
+          interview_sections: "scoreGauge,overview",
+          revoked_at: null,
+          expires_at: new Date(Date.now() + 1000 * 60 * 60).toISOString(),
+        },
         error: null,
       });
       const { validateShareToken } = await import("../reportShareTokens");

@@ -6,6 +6,12 @@ vi.mock("@/lib/adminAuth", () => ({ requireAdmin: requireAdminMock }));
 const grantFreeAccessMock = vi.fn();
 vi.mock("@/lib/adminPayments", () => ({ grantFreeAccess: grantFreeAccessMock }));
 
+const enforceAdminRateLimitMock = vi.fn();
+vi.mock("@/lib/adminRateLimit", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/adminRateLimit")>("@/lib/adminRateLimit");
+  return { ...actual, enforceAdminRateLimit: enforceAdminRateLimitMock };
+});
+
 function buildRequest(body: unknown) {
   return new Request("http://localhost/api/admin/payments/grant", { method: "POST", body: JSON.stringify(body) });
 }
@@ -16,6 +22,8 @@ describe("POST /api/admin/payments/grant", () => {
     requireAdminMock.mockResolvedValue({ email: "admin@merito.in" });
     grantFreeAccessMock.mockReset();
     grantFreeAccessMock.mockResolvedValue(undefined);
+    enforceAdminRateLimitMock.mockReset();
+    enforceAdminRateLimitMock.mockResolvedValue(undefined);
   });
 
   it("grants and returns ok", async () => {
@@ -46,5 +54,16 @@ describe("POST /api/admin/payments/grant", () => {
     const response = await POST(buildRequest({ email: "candidate@example.com", product: "personality", level: "entry", reason: "goodwill" }));
 
     expect(response.status).toBe(409);
+  });
+
+  it("returns 429 when the rate limit is exceeded", async () => {
+    const { RateLimitExceededError } = await import("@/lib/adminRateLimit");
+    enforceAdminRateLimitMock.mockRejectedValue(new RateLimitExceededError("payment.grant_free_access"));
+    const { POST } = await import("../route");
+
+    const response = await POST(buildRequest({ email: "candidate@example.com", product: "personality", level: "entry", reason: "goodwill" }));
+
+    expect(response.status).toBe(429);
+    expect(grantFreeAccessMock).not.toHaveBeenCalled();
   });
 });

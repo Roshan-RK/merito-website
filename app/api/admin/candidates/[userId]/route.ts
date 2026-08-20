@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/adminAuth";
 import { deleteCandidate } from "@/lib/adminCandidates";
+import { enforceAdminRateLimit, RateLimitExceededError } from "@/lib/adminRateLimit";
 
 type RouteContext = { params: Promise<{ userId: string }> };
 
@@ -8,8 +9,12 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
   const { userId } = await params;
 
   try {
+    await enforceAdminRateLimit(admin.email as string, "candidate.soft_delete");
     await deleteCandidate(userId, admin.email as string);
   } catch (error) {
+    if (error instanceof RateLimitExceededError) {
+      return Response.json({ error: error.message }, { status: 429 });
+    }
     const message = error instanceof Error ? error.message : "Failed to delete candidate.";
     return Response.json({ error: message }, { status: 409 });
   }

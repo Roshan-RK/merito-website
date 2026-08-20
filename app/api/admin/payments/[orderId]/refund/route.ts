@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/adminAuth";
 import { refundTransaction } from "@/lib/adminPayments";
+import { enforceAdminRateLimit, RateLimitExceededError } from "@/lib/adminRateLimit";
 
 const PostSchema = z.object({ reason: z.string().min(1) });
 
@@ -23,8 +24,12 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   try {
+    await enforceAdminRateLimit(admin.email as string, "payment.refund");
     await refundTransaction(orderId, parsed.data.reason, admin.email as string);
   } catch (error) {
+    if (error instanceof RateLimitExceededError) {
+      return Response.json({ error: error.message }, { status: 429 });
+    }
     const message = error instanceof Error ? error.message : "Failed to refund transaction.";
     return Response.json({ error: message }, { status: 409 });
   }

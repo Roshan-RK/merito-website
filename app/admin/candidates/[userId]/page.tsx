@@ -210,17 +210,19 @@ export default async function AdminCandidateDetailPage({
         )}
 
         <Table>
-          <TableHeadRow columns={["Role", "Status", "Views", "Last viewed", "Created", ""]} />
+          <TableHeadRow columns={["Role", "Status", "Views", "Last viewed", "Expires", ""]} />
           <tbody>
             {candidate.recruiterPreview.shareLinks.map((link) => (
               <TableRow key={link.token}>
                 <TableCell>{link.roleTitle}</TableCell>
                 <TableCell>
-                  <Badge variant={link.revoked ? "neutral" : "success"}>{link.revoked ? "Revoked" : "Active"}</Badge>
+                  <Badge variant={link.revoked || link.expired ? "neutral" : "success"}>
+                    {link.revoked ? "Revoked" : link.expired ? "Expired" : "Active"}
+                  </Badge>
                 </TableCell>
                 <TableCell>{link.viewCount}</TableCell>
                 <TableCell>{formatDate(link.lastViewedAt)}</TableCell>
-                <TableCell>{formatDate(link.createdAt)}</TableCell>
+                <TableCell>{formatDate(link.expiresAt)}</TableCell>
                 <TableCell>
                   <ShareLinkRevokeToggle token={link.token} revoked={link.revoked} />
                 </TableCell>

@@ -117,6 +117,8 @@ export type ShareLinkDetail = {
   roleTitle: string;
   token: string;
   revoked: boolean;
+  expired: boolean;
+  expiresAt: string | null;
   viewCount: number;
   lastViewedAt: string | null;
   createdAt: string;
@@ -183,7 +185,7 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
 
   const { data: shareLinkRows } = await supabase
     .from("report_share_links")
-    .select("role_title, token, revoked_at, view_count, last_viewed_at, created_at")
+    .select("role_title, token, revoked_at, expires_at, view_count, last_viewed_at, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
@@ -244,6 +246,8 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
         roleTitle: r.role_title,
         token: r.token,
         revoked: Boolean(r.revoked_at),
+        expired: Boolean(r.expires_at) && new Date(r.expires_at) < new Date(),
+        expiresAt: r.expires_at,
         viewCount: r.view_count,
         lastViewedAt: r.last_viewed_at,
         createdAt: r.created_at,

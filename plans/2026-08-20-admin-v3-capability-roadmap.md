@@ -18,8 +18,8 @@ Explicitly out of scope for this roadmap: ATS integration (separate product, not
 - Candidate ban already uses Supabase's native `auth.admin.updateUserById(userId, { ban_duration })` — reversible suspension already exists as infra, distinct from delete
 
 **Confirmed schema gaps (need a migration):**
-- Share-link TTL — `report_share_links` (migration `0024`) has `revoked_at`, no `expires_at`
-- Rate limiting — zero rate-limit infra anywhere in the codebase; needs a new mechanism (KV/edge-based, not necessarily a table)
+- ~~Share-link TTL~~ — closed by migration `0045` (see Phase 0).
+- ~~Rate limiting~~ — closed by migration `0046` (see Phase 0). Postgres table, not KV.
 - Notification opt-out — `hub_notifications` (migration `0037`) has no suppression/opt-out column, no preferences table
 - RBAC — no `admins`/roles table exists anywhere
 - Admin-overridden tracking (Phase 4) — no such column exists on any report table yet; needs a design decision (one column per table vs. one generic table) before Phase 4 starts
@@ -38,11 +38,13 @@ Explicitly out of scope for this roadmap: ATS integration (separate product, not
 
 ## Phase 0 — Quick wins (no dependencies, ship immediately)
 
-- Wire `Pagination.tsx` into candidates/payments tables (component exists, built, used nowhere)
-- Share-link expiry/TTL (currently only manual revoke stops a link — unrevoked = valid forever)
-- ~~Soft-delete instead of hard delete~~ — **shipped 2026-08-20.** `deleteCandidate()` now bans the account (reversible, reuses the existing ban mechanism) and records a `candidate_deletions` row with a 30-day `purge_after`; `restoreCandidate()` undoes it. Migration `0043`. Actual cross-table erasure at the end of the window is **not built** — still a fast-follow, see the correction note above for why it's nontrivial (9 FK-linked tables).
-- Rate limiting on admin mutation endpoints (refund/grant/delete/ban have no throttle today)
-- Type-to-confirm pattern on danger actions (extends existing `ConfirmDialog`)
+**All items below shipped 2026-08-20. Phase 0 complete.**
+
+- ~~Wire `Pagination.tsx` into candidates/payments tables~~ — **shipped.** `listCandidates(page)`/`listTransactions(page)` fetch-all-then-slice-in-JS (minimal scope, chosen over full sub-project B's DB-level pagination), `Pagination.tsx` reworked from client-callback to server Link-based, wired into both pages.
+- ~~Share-link expiry/TTL~~ — **shipped.** Migration `0045` adds `expires_at` to `report_share_links`; `createOrUpdateShareLink` sets a 90-day TTL on every create/regenerate, `validateShareToken` rejects expired tokens (`reason: "expired"`). Admin candidate detail page shows an Expires column + Expired badge.
+- ~~Soft-delete instead of hard delete~~ — **shipped 2026-08-20.** `deleteCandidate()` now bans the account (reversible, reuses the existing ban mechanism) and records a `candidate_deletions` row with a 30-day `purge_after`; `restoreCandidate()` undoes it. Migration `0043`. Cross-table erasure fast-follow also **shipped**: `purge_candidate_data()` (migration `0044`) + `purgeDueCandidateDeletions()` cron erase the 9 FK-linked tables once `purge_after` passes.
+- ~~Rate limiting on admin mutation endpoints~~ — **shipped.** `enforceAdminRateLimit()` (migration `0046`, `admin_rate_limit_events` table) caps each admin to 20 actions per action-type per 10-minute window; wired into ban (candidate + recruiter), delete, refund, grant. Postgres-backed rather than KV — no new external service/credentials needed, matches this repo's existing Supabase-for-everything convention.
+- ~~Type-to-confirm pattern on danger actions~~ — **shipped.** `ConfirmDialog` takes an optional `confirmText` prop that locks the confirm button until retyped exactly; applied to the two truly hard-to-reverse actions (candidate delete — type the email; refund — type "REFUND"). Ban/revoke/discard left as plain confirm — reversible and too frequent to add friction to.
 
 ## Phase 1 — Admin-ops foundation
 

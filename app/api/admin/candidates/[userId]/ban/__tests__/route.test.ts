@@ -6,6 +6,12 @@ vi.mock("@/lib/adminAuth", () => ({ requireAdmin: requireAdminMock }));
 const banCandidateMock = vi.fn();
 vi.mock("@/lib/adminCandidates", () => ({ banCandidate: banCandidateMock }));
 
+const enforceAdminRateLimitMock = vi.fn();
+vi.mock("@/lib/adminRateLimit", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/adminRateLimit")>("@/lib/adminRateLimit");
+  return { ...actual, enforceAdminRateLimit: enforceAdminRateLimitMock };
+});
+
 function buildRequest(body: unknown) {
   return new Request("http://localhost/api/admin/candidates/user-1/ban", {
     method: "POST",
@@ -19,6 +25,8 @@ describe("POST /api/admin/candidates/[userId]/ban", () => {
     requireAdminMock.mockResolvedValue({ email: "rushi.humbe@gmail.com" });
     banCandidateMock.mockReset();
     banCandidateMock.mockResolvedValue(undefined);
+    enforceAdminRateLimitMock.mockReset();
+    enforceAdminRateLimitMock.mockResolvedValue(undefined);
   });
 
   it("bans the candidate and returns ok", async () => {
@@ -36,6 +44,17 @@ describe("POST /api/admin/candidates/[userId]/ban", () => {
     const response = await POST(buildRequest({}), { params: Promise.resolve({ userId: "user-1" }) });
 
     expect(response.status).toBe(400);
+    expect(banCandidateMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 429 when the rate limit is exceeded", async () => {
+    const { RateLimitExceededError } = await import("@/lib/adminRateLimit");
+    enforceAdminRateLimitMock.mockRejectedValue(new RateLimitExceededError("candidate.ban"));
+    const { POST } = await import("../route");
+
+    const response = await POST(buildRequest({ reason: "spam" }), { params: Promise.resolve({ userId: "user-1" }) });
+
+    expect(response.status).toBe(429);
     expect(banCandidateMock).not.toHaveBeenCalled();
   });
 });

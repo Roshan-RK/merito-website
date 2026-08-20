@@ -6,6 +6,12 @@ vi.mock("@/lib/adminAuth", () => ({ requireAdmin: requireAdminMock }));
 const refundTransactionMock = vi.fn();
 vi.mock("@/lib/adminPayments", () => ({ refundTransaction: refundTransactionMock }));
 
+const enforceAdminRateLimitMock = vi.fn();
+vi.mock("@/lib/adminRateLimit", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/adminRateLimit")>("@/lib/adminRateLimit");
+  return { ...actual, enforceAdminRateLimit: enforceAdminRateLimitMock };
+});
+
 function buildRequest(body: unknown) {
   return new Request("http://localhost/api/admin/payments/order-1/refund", { method: "POST", body: JSON.stringify(body) });
 }
@@ -16,6 +22,8 @@ describe("POST /api/admin/payments/[orderId]/refund", () => {
     requireAdminMock.mockResolvedValue({ email: "admin@merito.in" });
     refundTransactionMock.mockReset();
     refundTransactionMock.mockResolvedValue(undefined);
+    enforceAdminRateLimitMock.mockReset();
+    enforceAdminRateLimitMock.mockResolvedValue(undefined);
   });
 
   it("refunds and returns ok", async () => {
@@ -43,5 +51,16 @@ describe("POST /api/admin/payments/[orderId]/refund", () => {
     const response = await POST(buildRequest({ reason: "x" }), { params: Promise.resolve({ orderId: "order-1" }) });
 
     expect(response.status).toBe(409);
+  });
+
+  it("returns 429 when the rate limit is exceeded", async () => {
+    const { RateLimitExceededError } = await import("@/lib/adminRateLimit");
+    enforceAdminRateLimitMock.mockRejectedValue(new RateLimitExceededError("payment.refund"));
+    const { POST } = await import("../route");
+
+    const response = await POST(buildRequest({ reason: "x" }), { params: Promise.resolve({ orderId: "order-1" }) });
+
+    expect(response.status).toBe(429);
+    expect(refundTransactionMock).not.toHaveBeenCalled();
   });
 });
