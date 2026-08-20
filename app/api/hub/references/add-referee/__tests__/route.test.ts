@@ -89,6 +89,20 @@ describe("POST /api/hub/references/add-referee", () => {
     });
   });
 
+  it("lowercases the email before passing it to addReferee, so case-differing duplicates are caught", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    getActiveReferenceCheckIdMock.mockResolvedValue("check-1");
+    addRefereeMock.mockResolvedValue({ id: "referee-1" });
+    getCandidateDisplayNameMock.mockResolvedValue("Alex Kumar");
+    createRefereeTokenMock.mockResolvedValue("token-abc");
+    sendRefereeInviteEmailMock.mockResolvedValue(undefined);
+
+    const { POST } = await importRoute();
+    await POST(body({ name: "Jane", email: "Jane@Example.com", role: "manager" }));
+
+    expect(addRefereeMock).toHaveBeenCalledWith("check-1", expect.objectContaining({ email: "jane@example.com" }));
+  });
+
   it("returns 409 when the referee cap is reached", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     getActiveReferenceCheckIdMock.mockResolvedValue("check-1");

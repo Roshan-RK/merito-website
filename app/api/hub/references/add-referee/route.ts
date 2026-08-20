@@ -6,7 +6,7 @@ import { sendRefereeInviteEmail } from "@/lib/referenceEmails";
 
 const RefereeSchema = z.object({
   name: z.string().trim().min(1),
-  email: z.string().trim().email(),
+  email: z.string().trim().email().toLowerCase(),
   phone: z.string().trim().optional(),
   linkedinUrl: z.string().trim().optional(),
   organization: z.string().trim().optional(),
