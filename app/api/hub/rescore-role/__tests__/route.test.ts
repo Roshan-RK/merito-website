@@ -80,4 +80,21 @@ describe("POST /api/hub/rescore-role", () => {
     const forwardedBody = fetchMock.mock.calls[0][1].body as FormData;
     expect(forwardedBody.get("candidateLevel")).toBe("mid");
   });
+
+  it("forwards the incoming request's Cookie header to fitment-check", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "user@example.com" } } });
+    maybeSingleMock.mockResolvedValue({ data: null, error: null });
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ status: "ready", score: 8 }), { status: 200 }));
+
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/rescore-role", {
+      method: "POST",
+      headers: { cookie: "sb-access-token=abc123" },
+      body: buildForm(),
+    });
+    await POST(request);
+
+    const forwardedHeaders = fetchMock.mock.calls[0][1].headers;
+    expect(new Headers(forwardedHeaders).get("cookie")).toBe("sb-access-token=abc123");
+  });
 });

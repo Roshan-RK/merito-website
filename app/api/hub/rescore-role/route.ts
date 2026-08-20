@@ -35,8 +35,10 @@ export async function POST(request: Request) {
     form.set("candidateLevel", existingLead.candidate_level);
   }
 
+  const cookie = request.headers.get("cookie");
   const checkResponse = await fetch(new URL("/api/hub/fitment-check", request.url), {
     method: "POST",
+    headers: cookie ? { cookie } : undefined,
     body: form,
   });
   const checkData = await checkResponse.json();
