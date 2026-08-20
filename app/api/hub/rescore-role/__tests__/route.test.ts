@@ -97,4 +97,22 @@ describe("POST /api/hub/rescore-role", () => {
     const forwardedHeaders = fetchMock.mock.calls[0][1].headers;
     expect(new Headers(forwardedHeaders).get("cookie")).toBe("sb-access-token=abc123");
   });
+
+  it("forwards the incoming request's x-forwarded-for and x-real-ip headers to fitment-check", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "user@example.com" } } });
+    maybeSingleMock.mockResolvedValue({ data: null, error: null });
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ status: "ready", score: 8 }), { status: 200 }));
+
+    const { POST } = await importRoute();
+    const request = new Request("http://localhost/api/hub/rescore-role", {
+      method: "POST",
+      headers: { "x-forwarded-for": "203.0.113.5", "x-real-ip": "203.0.113.5" },
+      body: buildForm(),
+    });
+    await POST(request);
+
+    const forwardedHeaders = new Headers(fetchMock.mock.calls[0][1].headers);
+    expect(forwardedHeaders.get("x-forwarded-for")).toBe("203.0.113.5");
+    expect(forwardedHeaders.get("x-real-ip")).toBe("203.0.113.5");
+  });
 });
