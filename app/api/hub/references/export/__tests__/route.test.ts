@@ -65,7 +65,7 @@ describe("GET /api/hub/references/export", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("application/pdf");
-    expect(renderPageToPdfMock).toHaveBeenCalledWith("http://localhost/hub/account/references", []);
+    expect(renderPageToPdfMock).toHaveBeenCalledWith("http://localhost/hub/account/references/print", [], { singlePage: true });
     const buffer = await response.arrayBuffer();
     expect(buffer.byteLength).toBeGreaterThan(0);
   });

@@ -89,8 +89,9 @@ describe("GET /api/hub/interview/export", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("application/pdf");
     expect(renderPageToPdfMock).toHaveBeenCalledWith(
-      "http://localhost/hub/account/interview?role=HR%20Business%20Partner",
-      []
+      "http://localhost/hub/account/interview/print?role=HR%20Business%20Partner",
+      [],
+      { singlePage: true }
     );
     const buffer = await response.arrayBuffer();
     expect(buffer.byteLength).toBeGreaterThan(0);

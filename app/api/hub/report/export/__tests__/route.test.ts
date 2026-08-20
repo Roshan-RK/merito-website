@@ -81,7 +81,7 @@ describe("GET /api/hub/report/export", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("application/pdf");
-    expect(renderPageToPdfMock).toHaveBeenCalledWith("http://localhost/hub/account/report", []);
+    expect(renderPageToPdfMock).toHaveBeenCalledWith("http://localhost/hub/account/report/print", [], { singlePage: true });
     const buffer = await response.arrayBuffer();
     expect(buffer.byteLength).toBeGreaterThan(0);
   });
