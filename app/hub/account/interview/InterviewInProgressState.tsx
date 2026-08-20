@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Mic, Clock, Play } from "lucide-react";
+import { Mic, Clock, Play, Volume2, Wifi } from "lucide-react";
+import InterviewResumeWarning from "./InterviewResumeWarning";
+
+const CHECKLIST = [
+  { icon: Volume2, text: "Find a quiet space with no interruptions" },
+  { icon: Wifi, text: "Check your network connection and keep your device on power" },
+  { icon: Clock, text: "Set aside about 20–25 minutes, uninterrupted" },
+];
 
 // Renders for fitment_interviews.status === "invited" with ib_interview_status
 // not "APPEARED" -- payment already happened and a magic-link invite was
@@ -43,12 +50,20 @@ export default function InterviewInProgressState({ roleTitle }: { roleTitle: str
           Mock AI interview for {roleTitle}
         </span>
       </div>
-      <div className="flex items-start bg-white/[0.04]" style={{ gap: 10, borderRadius: 10, padding: 14, marginBottom: 16 }}>
-        <Clock size={15} strokeWidth={2} className="text-white/40 shrink-0" style={{ marginTop: 1 }} />
-        <p className="font-[family-name:var(--font-poppins)] text-white/60" style={{ fontSize: 13, lineHeight: 1.65, margin: 0 }}>
-          Your AI interview for {roleTitle} is ready whenever you are. This page updates automatically once your scored report is ready. Before you start, make sure your network and power are stable — if you get disconnected you can resume once, but a second interruption may not be recoverable.
-        </p>
+      <p className="font-[family-name:var(--font-poppins)] text-white/60" style={{ fontSize: 13, lineHeight: 1.65, margin: "0 0 16px" }}>
+        Your AI interview for {roleTitle} is ready whenever you are. This page updates automatically once your scored report is ready.
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+        {CHECKLIST.map(({ icon: Icon, text }) => (
+          <div key={text} className="flex items-center bg-white/[0.04]" style={{ gap: 10, borderRadius: 10, padding: "10px 12px" }}>
+            <Icon size={14} strokeWidth={2} className="text-white/40 shrink-0" />
+            <span className="font-[family-name:var(--font-poppins)] text-white/60" style={{ fontSize: 12.5 }}>
+              {text}
+            </span>
+          </div>
+        ))}
       </div>
+      <InterviewResumeWarning />
       <button
         type="button"
         onClick={handleStart}
