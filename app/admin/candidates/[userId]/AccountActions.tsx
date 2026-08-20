@@ -12,11 +12,24 @@ type PendingAction =
   | { type: "merge"; target: string };
 
 const inputStyle = { fontSize: 13, padding: "8px 12px", border: "1px solid #dcdcdc", borderRadius: 7 } as const;
+const DELETION_PURGE_WINDOW_DAYS = 30; // must match lib/adminCandidates.ts
 
-export default function AccountActions({ userId, email }: { userId: string; email: string }) {
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
+}
+
+export default function AccountActions({
+  userId,
+  email,
+  pendingDeletion,
+}: {
+  userId: string;
+  email: string;
+  pendingDeletion: { purgeAfter: string } | null;
+}) {
   const router = useRouter();
   const { showToast } = useToast();
-  const [busy, setBusy] = useState<"ban" | "unban" | "delete" | "magic-link" | "merge" | null>(null);
+  const [busy, setBusy] = useState<"ban" | "unban" | "delete" | "restore" | "magic-link" | "merge" | null>(null);
   const [magicLink, setMagicLink] = useState<string | null>(null);
   const [mergeTarget, setMergeTarget] = useState("");
   const [pending, setPending] = useState<PendingAction | null>(null);
@@ -53,7 +66,7 @@ export default function AccountActions({ userId, email }: { userId: string; emai
     }
   }
 
-  async function run(action: "ban" | "unban" | "delete" | "merge", url: string, body?: unknown, method: string = "POST") {
+  async function run(action: "ban" | "unban" | "delete" | "restore" | "merge", url: string, body?: unknown, method: string = "POST") {
     setPending(null);
     setBusy(action);
     try {
@@ -90,7 +103,7 @@ export default function AccountActions({ userId, email }: { userId: string; emai
     if (pending.type === "delete") {
       return {
         title: "Delete this account?",
-        message: `Permanently deletes ${email}'s account. This cannot be undone.`,
+        message: `Bans ${email} from signing in and schedules their data for permanent erasure in ${DELETION_PURGE_WINDOW_DAYS} days. Reversible with "Restore" until then.`,
         confirmLabel: "Delete",
         danger: true,
         onConfirm: () => run("delete", `/api/admin/candidates/${userId}`, undefined, "DELETE"),
@@ -109,17 +122,27 @@ export default function AccountActions({ userId, email }: { userId: string; emai
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {pendingDeletion && (
+        <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 13 }}>
+            Pending deletion — erased on {formatDate(pendingDeletion.purgeAfter)}
+          </span>
+          <Button variant="secondary" onClick={() => run("restore", `/api/admin/candidates/${userId}/restore`)} disabled={busy !== null} loading={busy === "restore"}>
+            Restore
+          </Button>
+        </div>
+      )}
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <Button variant="danger" onClick={handleBanClick} disabled={busy !== null} loading={busy === "ban"}>
+        <Button variant="danger" onClick={handleBanClick} disabled={busy !== null || pendingDeletion !== null} loading={busy === "ban"}>
           Ban
         </Button>
-        <Button variant="secondary" onClick={handleUnban} disabled={busy !== null} loading={busy === "unban"}>
+        <Button variant="secondary" onClick={handleUnban} disabled={busy !== null || pendingDeletion !== null} loading={busy === "unban"}>
           Unban
         </Button>
-        <Button variant="danger" onClick={() => setPending({ type: "delete" })} disabled={busy !== null} loading={busy === "delete"}>
+        <Button variant="danger" onClick={() => setPending({ type: "delete" })} disabled={busy !== null || pendingDeletion !== null} loading={busy === "delete"}>
           Delete account
         </Button>
-        <Button variant="secondary" onClick={handleMagicLink} disabled={busy !== null} loading={busy === "magic-link"}>
+        <Button variant="secondary" onClick={handleMagicLink} disabled={busy !== null || pendingDeletion !== null} loading={busy === "magic-link"}>
           Generate magic link
         </Button>
       </div>

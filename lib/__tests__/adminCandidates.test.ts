@@ -8,6 +8,8 @@ const fitmentLeadsUpdateMock = vi.fn();
 const rpcMock = vi.fn();
 const logAdminActionMock = vi.fn();
 const hubNotificationsInsertMock = vi.fn();
+const candidateDeletionsInsertMock = vi.fn();
+const candidateDeletionsDeleteMock = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({
@@ -15,6 +17,7 @@ vi.mock("@/lib/supabase", () => ({
     from: (table: string) => {
       if (table === "fitment_leads") return { select: fitmentLeadsSelectMock, update: fitmentLeadsUpdateMock };
       if (table === "hub_notifications") return { insert: hubNotificationsInsertMock };
+      if (table === "candidate_deletions") return { insert: candidateDeletionsInsertMock, delete: candidateDeletionsDeleteMock };
       throw new Error(`Unexpected table in test: ${table}`);
     },
     rpc: rpcMock,
@@ -93,8 +96,8 @@ describe("unbanCandidate", () => {
 
 describe("deleteCandidate", () => {
   beforeEach(() => {
-    deleteUserMock.mockReset();
-    deleteUserMock.mockResolvedValue({ error: null });
+    updateUserByIdMock.mockReset();
+    updateUserByIdMock.mockResolvedValue({ error: null });
     fitmentLeadsSelectMock.mockReset();
     fitmentLeadsSelectMock.mockReturnValue({
       eq: () =>
@@ -102,33 +105,92 @@ describe("deleteCandidate", () => {
           data: [{ id: "lead-1", role_title: "Senior Product Manager", email: "candidate@example.com" }],
         }),
     });
+    candidateDeletionsInsertMock.mockReset();
+    candidateDeletionsInsertMock.mockResolvedValue({ error: null });
     logAdminActionMock.mockReset();
     logAdminActionMock.mockResolvedValue(undefined);
   });
 
-  it("snapshots the lead rows, deletes the auth user, and logs the action", async () => {
+  it("soft-deletes: bans the user, records a purge_after date, and logs the action (does not hard-delete)", async () => {
     const { deleteCandidate } = await import("../adminCandidates");
 
     await deleteCandidate("user-1", "rushi.humbe@gmail.com");
 
-    expect(deleteUserMock).toHaveBeenCalledWith("user-1");
+    expect(updateUserByIdMock).toHaveBeenCalledWith("user-1", { ban_duration: "876000h" });
+    expect(deleteUserMock).not.toHaveBeenCalled();
+    expect(candidateDeletionsInsertMock).toHaveBeenCalledTimes(1);
+    const insertedRow = candidateDeletionsInsertMock.mock.calls[0][0];
+    expect(insertedRow.user_id).toBe("user-1");
+    expect(insertedRow.requested_by).toBe("rushi.humbe@gmail.com");
+    expect(new Date(insertedRow.purge_after).getTime()).toBeGreaterThan(Date.now());
+
     expect(logAdminActionMock).toHaveBeenCalledWith({
       adminEmail: "rushi.humbe@gmail.com",
-      action: "candidate.delete",
+      action: "candidate.soft_delete",
       targetType: "candidate",
       targetId: "user-1",
       priorValue: { leads: [{ id: "lead-1", role_title: "Senior Product Manager", email: "candidate@example.com" }] },
-      newValue: null,
+      newValue: { pendingDeletion: true, purgeAfter: insertedRow.purge_after },
     });
   });
 
-  it("throws when the Admin API delete fails", async () => {
-    deleteUserMock.mockResolvedValue({ error: { message: "user not found" } });
+  it("throws when the ban call fails, and never inserts a deletion record", async () => {
+    updateUserByIdMock.mockResolvedValue({ error: { message: "user not found" } });
     const { deleteCandidate } = await import("../adminCandidates");
 
     await expect(deleteCandidate("user-1", "rushi.humbe@gmail.com")).rejects.toThrow(
       "Failed to delete candidate: user not found"
     );
+    expect(candidateDeletionsInsertMock).not.toHaveBeenCalled();
+    expect(logAdminActionMock).not.toHaveBeenCalled();
+  });
+
+  it("throws when recording the deletion fails, after the ban already succeeded", async () => {
+    candidateDeletionsInsertMock.mockResolvedValue({ error: { message: "constraint violation" } });
+    const { deleteCandidate } = await import("../adminCandidates");
+
+    await expect(deleteCandidate("user-1", "rushi.humbe@gmail.com")).rejects.toThrow(
+      "Failed to delete candidate: constraint violation"
+    );
+    expect(logAdminActionMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("restoreCandidate", () => {
+  beforeEach(() => {
+    updateUserByIdMock.mockReset();
+    updateUserByIdMock.mockResolvedValue({ error: null });
+    candidateDeletionsDeleteMock.mockReset();
+    candidateDeletionsDeleteMock.mockReturnValue({ eq: () => Promise.resolve({ error: null }) });
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+  });
+
+  it("clears the ban, removes the deletion record, and logs the action", async () => {
+    const { restoreCandidate } = await import("../adminCandidates");
+
+    await restoreCandidate("user-1", "rushi.humbe@gmail.com");
+
+    expect(updateUserByIdMock).toHaveBeenCalledWith("user-1", { ban_duration: "none" });
+    expect(candidateDeletionsDeleteMock).toHaveBeenCalledTimes(1);
+    expect(logAdminActionMock).toHaveBeenCalledWith({
+      adminEmail: "rushi.humbe@gmail.com",
+      action: "candidate.restore",
+      targetType: "candidate",
+      targetId: "user-1",
+      priorValue: { pendingDeletion: true },
+      newValue: { pendingDeletion: false },
+    });
+  });
+
+  it("throws when the unban call fails", async () => {
+    updateUserByIdMock.mockResolvedValue({ error: { message: "user not found" } });
+    const { restoreCandidate } = await import("../adminCandidates");
+
+    await expect(restoreCandidate("user-1", "rushi.humbe@gmail.com")).rejects.toThrow(
+      "Failed to restore candidate: user not found"
+    );
+    expect(candidateDeletionsDeleteMock).not.toHaveBeenCalled();
     expect(logAdminActionMock).not.toHaveBeenCalled();
   });
 });

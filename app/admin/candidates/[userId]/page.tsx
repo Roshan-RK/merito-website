@@ -54,7 +54,7 @@ export default async function AdminCandidateDetailPage({
         <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
           Account
         </h3>
-        <AccountActions userId={candidate.userId} email={candidate.email} />
+        <AccountActions userId={candidate.userId} email={candidate.email} pendingDeletion={candidate.pendingDeletion} />
       </section>
 
       <section style={{ marginBottom: 32 }}>

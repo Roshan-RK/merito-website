@@ -8,6 +8,7 @@ import type { HubNotificationCategory } from "@/lib/hubNotifications";
 import { getAbsoluteUrl } from "@/lib/site";
 
 const BAN_DURATION_INDEFINITE = "876000h"; // ~100 years, matches Supabase's ban_duration API shape for "indefinite"
+const DELETION_PURGE_WINDOW_DAYS = 30;
 
 export type FunnelStage = "fitment_started" | "report_unlocked" | "interview_ready" | "personality_completed" | "reference_completed";
 
@@ -118,6 +119,7 @@ export type CandidateDetail = {
     settings: { enabled: boolean; sections: string[]; linkedinUrl: string | null; updatedAt: string } | null;
     shareLinks: ShareLinkDetail[];
   };
+  pendingDeletion: { purgeAfter: string } | null;
 };
 
 export async function getCandidateDetail(userId: string): Promise<CandidateDetail | null> {
@@ -170,6 +172,13 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
     .select("role_title, token, revoked_at, view_count, last_viewed_at, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
+
+  const { data: deletionRow } = await supabase
+    .from("candidate_deletions")
+    .select("purge_after")
+    .eq("user_id", userId)
+    .is("purged_at", null)
+    .maybeSingle();
 
   const leads: CandidateLeadDetail[] = await Promise.all(
     leadRows.map(async (lead) => {
@@ -226,6 +235,7 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
         createdAt: r.created_at,
       })),
     },
+    pendingDeletion: deletionRow ? { purgeAfter: deletionRow.purge_after } : null,
   };
 }
 
@@ -261,6 +271,12 @@ export async function unbanCandidate(userId: string, adminEmail: string): Promis
   });
 }
 
+// Soft-delete: bans login (reversible via restoreCandidate) and records deletion
+// intent with a purge_after date. Does not touch fitment_leads/interviews/
+// personality_tests/reference_checks/report_share_links -- those are left in
+// place for the retention window. Actual cross-table erasure is a deliberate
+// fast-follow, not built here: it touches ~9 FK-linked tables and needs its
+// own careful design (see plans/2026-08-20-admin-v3-capability-roadmap.md).
 export async function deleteCandidate(userId: string, adminEmail: string): Promise<void> {
   const supabase = getSupabaseServerClient();
 
@@ -269,18 +285,51 @@ export async function deleteCandidate(userId: string, adminEmail: string): Promi
     .select("id, role_title, email")
     .eq("user_id", userId);
 
-  const { error } = await supabase.auth.admin.deleteUser(userId);
-  if (error) {
-    throw new Error(`Failed to delete candidate: ${error.message}`);
+  const { error: banError } = await supabase.auth.admin.updateUserById(userId, { ban_duration: BAN_DURATION_INDEFINITE });
+  if (banError) {
+    throw new Error(`Failed to delete candidate: ${banError.message}`);
+  }
+
+  const purgeAfter = new Date(Date.now() + DELETION_PURGE_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { error: insertError } = await supabase.from("candidate_deletions").insert({
+    user_id: userId,
+    requested_by: adminEmail,
+    purge_after: purgeAfter,
+  });
+  if (insertError) {
+    throw new Error(`Failed to delete candidate: ${insertError.message}`);
   }
 
   await logAdminAction({
     adminEmail,
-    action: "candidate.delete",
+    action: "candidate.soft_delete",
     targetType: "candidate",
     targetId: userId,
     priorValue: { leads: leadRows ?? [] },
-    newValue: null,
+    newValue: { pendingDeletion: true, purgeAfter },
+  });
+}
+
+export async function restoreCandidate(userId: string, adminEmail: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+
+  const { error: unbanError } = await supabase.auth.admin.updateUserById(userId, { ban_duration: "none" });
+  if (unbanError) {
+    throw new Error(`Failed to restore candidate: ${unbanError.message}`);
+  }
+
+  const { error: deleteError } = await supabase.from("candidate_deletions").delete().eq("user_id", userId);
+  if (deleteError) {
+    throw new Error(`Failed to restore candidate: ${deleteError.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "candidate.restore",
+    targetType: "candidate",
+    targetId: userId,
+    priorValue: { pendingDeletion: true },
+    newValue: { pendingDeletion: false },
   });
 }
 
