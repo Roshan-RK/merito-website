@@ -17,9 +17,20 @@ export default function InterviewStuckState({ roleTitle }: { roleTitle: string }
           We couldn&apos;t restart your interview
         </span>
       </div>
-      <div className="flex items-start bg-white/[0.04]" style={{ gap: 10, borderRadius: 10, padding: 14 }}>
-        <p className="font-[family-name:var(--font-poppins)] text-white/60" style={{ fontSize: 13, lineHeight: 1.65, margin: 0 }}>
-          Your session for {roleTitle} was interrupted a second time, and we weren&apos;t able to reconnect it automatically. Nothing is lost — use the Help button above and we&apos;ll get this sorted out for you.
+      <div
+        className="flex items-start"
+        style={{
+          gap: 10,
+          borderRadius: 10,
+          padding: 14,
+          background: "rgba(232,121,143,0.08)",
+          border: "1px solid rgba(232,121,143,0.25)",
+        }}
+      >
+        <AlertOctagon size={15} strokeWidth={2} style={{ color: "#E8798F", marginTop: 1 }} className="shrink-0" />
+        <p className="font-[family-name:var(--font-poppins)]" style={{ color: "#E8798F", fontSize: 13, lineHeight: 1.65, margin: 0 }}>
+          Your session for {roleTitle} was interrupted a second time, and we weren&apos;t able to reconnect it automatically. Nothing is
+          lost — use the Help button above and we&apos;ll get this sorted out for you.
         </p>
       </div>
     </div>
