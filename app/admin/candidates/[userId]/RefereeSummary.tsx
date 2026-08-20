@@ -3,6 +3,105 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { REFERENCE_CATEGORIES, MAX_REMINDERS, type RefereeRow, type RefereeRole } from "@/lib/referenceChecks";
+import type { AdminActionRow } from "@/lib/adminAuditLog";
+
+const editInputStyle = { fontSize: 12.5, padding: "6px 10px", border: "1px solid #dcdcdc", borderRadius: 6, width: "100%", boxSizing: "border-box" } as const;
+
+function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString("en-IN", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function EditContactForm({ referee, onDone }: { referee: RefereeRow; onDone: () => void }) {
+  const router = useRouter();
+  const [name, setName] = useState(referee.name);
+  const [email, setEmail] = useState(referee.email);
+  const [phone, setPhone] = useState(referee.phone ?? "");
+  const [organization, setOrganization] = useState(referee.organization ?? "");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    if (!reason.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/referees/${referee.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim() || null,
+          organization: organization.trim() || null,
+          reason: reason.trim(),
+        }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(data?.error || "Something went wrong — try again.");
+        return;
+      }
+      router.refresh();
+      onDone();
+    } catch {
+      setError("Something went wrong — try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8, padding: 12, background: "#fafafa", borderRadius: 8 }}>
+      <input style={editInputStyle} placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+      <input style={editInputStyle} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <input style={editInputStyle} placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+      <input style={editInputStyle} placeholder="Organization" value={organization} onChange={(e) => setOrganization(e.target.value)} />
+      <input style={editInputStyle} placeholder="Reason for this change" value={reason} onChange={(e) => setReason(e.target.value)} />
+      {error && <span style={{ fontSize: 11.5, color: "#ed1a24" }}>{error}</span>}
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          onClick={save}
+          disabled={busy || !reason.trim()}
+          style={{ background: "#000", color: "#fff", border: "none", fontSize: 11.5, padding: "5px 10px", borderRadius: 6, cursor: busy ? "default" : "pointer" }}
+        >
+          {busy ? "…" : "Save"}
+        </button>
+        <button onClick={onDone} disabled={busy} style={{ background: "transparent", border: "1px solid #dcdcdc", fontSize: 11.5, padding: "5px 10px", borderRadius: 6, cursor: "pointer" }}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function OverrideHistory({ history }: { history: AdminActionRow[] }) {
+  const [show, setShow] = useState(false);
+  if (history.length === 0) return null;
+  return (
+    <div style={{ marginTop: 8 }}>
+      <button
+        onClick={() => setShow((v) => !v)}
+        className="text-[#ed1a24]"
+        style={{ fontSize: 11.5, background: "none", border: "none", padding: 0, cursor: "pointer" }}
+      >
+        {show ? "Hide" : "Show"} edit history ({history.length})
+      </button>
+      {show && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
+          {history.map((row) => {
+            const nv = row.newValue as { name?: string; email?: string; phone?: string | null; organization?: string | null; reason?: string } | null;
+            return (
+              <p key={row.id} className="text-[#9c9c9c]" style={{ fontSize: 11.5, margin: 0 }}>
+                {row.adminEmail} · {formatDateTime(row.createdAt)} — set email={nv?.email}, phone={nv?.phone ?? "—"} — {nv?.reason}
+              </p>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const ROLE_LABEL: Record<RefereeRole, string> = {
   faculty: "Faculty",
@@ -59,7 +158,9 @@ function ResetRemindersButton({ refereeId, reminderCount }: { refereeId: string;
   );
 }
 
-export default function RefereeSummary({ referees }: { referees: RefereeRow[] }) {
+export default function RefereeSummary({ referees }: { referees: (RefereeRow & { overrideHistory: AdminActionRow[] })[] }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   if (referees.length === 0) {
     return (
       <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 13 }}>
@@ -100,6 +201,19 @@ export default function RefereeSummary({ referees }: { referees: RefereeRow[] })
             </p>
           )}
           {r.status === "pending" && <ResetRemindersButton refereeId={r.id} reminderCount={r.reminder_count} />}
+
+          {editingId === r.id ? (
+            <EditContactForm referee={r} onDone={() => setEditingId(null)} />
+          ) : (
+            <button
+              onClick={() => setEditingId(r.id)}
+              className="text-[#ed1a24]"
+              style={{ fontSize: 11.5, background: "none", border: "none", padding: 0, marginTop: 8, cursor: "pointer" }}
+            >
+              Edit contact info
+            </button>
+          )}
+          <OverrideHistory history={r.overrideHistory} />
         </div>
       ))}
     </div>

@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { logAdminAction, listActionsForTarget, type AdminActionRow } from "@/lib/adminAuditLog";
 
 export const MIN_REFERENCES = 3;
 export const MAX_REFEREES = 10;
@@ -31,6 +32,7 @@ export type RefereeRow = {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   status: "pending" | "completed" | "rejected";
   reminder_count: number;
   role: RefereeRole;
@@ -211,7 +213,7 @@ export async function getReferenceCheckStatus(userId: string): Promise<Reference
 
   const { data: referees, error: refereesError } = await supabase
     .from("referees")
-    .select("id, name, email, status, reminder_count, role, organization, ratings, overall_feedback")
+    .select("id, name, email, phone, status, reminder_count, role, organization, ratings, overall_feedback")
     .eq("reference_check_id", check.id)
     .order("created_at", { ascending: true });
 
@@ -421,6 +423,50 @@ export async function resetRefereeReminders(refereeId: string): Promise<void> {
   if (error) {
     throw new Error(`Failed to reset referee reminders: ${error.message}`);
   }
+}
+
+export type RefereeContactUpdate = { name: string; email: string; phone: string | null; organization: string | null };
+
+/** Contact/metadata fix only (e.g. a typo'd email blocking reminders) — never touches ratings/overall_feedback, which are the referee's own submitted testimony. */
+export async function updateRefereeContact(
+  refereeId: string,
+  updates: RefereeContactUpdate,
+  adminEmail: string,
+  reason: string
+): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const { data: existing, error: fetchError } = await supabase
+    .from("referees")
+    .select("name, email, phone, organization")
+    .eq("id", refereeId)
+    .maybeSingle();
+  if (fetchError) {
+    throw new Error(`Failed to load referee: ${fetchError.message}`);
+  }
+  if (!existing) {
+    throw new Error("Referee not found.");
+  }
+
+  const { error } = await supabase
+    .from("referees")
+    .update({ name: updates.name, email: updates.email, phone: updates.phone, organization: updates.organization })
+    .eq("id", refereeId);
+  if (error) {
+    throw new Error(`Failed to update referee: ${error.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "referee.update_contact",
+    targetType: "referee",
+    targetId: refereeId,
+    priorValue: existing,
+    newValue: { ...updates, reason },
+  });
+}
+
+export async function listRefereeOverrideHistory(refereeId: string): Promise<AdminActionRow[]> {
+  return listActionsForTarget("referee", refereeId);
 }
 
 export async function getReferenceCheckOwner(checkId: string): Promise<string | null> {

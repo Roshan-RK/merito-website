@@ -1,6 +1,6 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 
-export type AuditTargetType = "candidate" | "recruiter" | "email_template" | "counselling_request" | "interview" | "share_link";
+export type AuditTargetType = "candidate" | "recruiter" | "email_template" | "counselling_request" | "interview" | "share_link" | "referee";
 
 const PAGE_SIZE = 20;
 

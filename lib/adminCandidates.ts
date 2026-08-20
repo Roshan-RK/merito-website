@@ -1,5 +1,5 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { getReferenceCheckStatus, computeReferenceReport, type ReferenceReport, type RefereeRow } from "@/lib/referenceChecks";
+import { getReferenceCheckStatus, computeReferenceReport, listRefereeOverrideHistory, type ReferenceReport, type RefereeRow } from "@/lib/referenceChecks";
 import { getCandidateResumeDetails, getResumeMatchReport, scoreOutOfTen, type CandidateResumeDetails, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import type { Scores, Validity } from "@/lib/personality";
@@ -131,7 +131,12 @@ export type CandidateDetail = {
   name: string | null;
   leads: CandidateLeadDetail[];
   personality: { roleTitle: string; scores: Scores; validity: Validity } | null;
-  references: { status: string; minReferences: number; report: ReferenceReport; referees: RefereeRow[] } | null;
+  references: {
+    status: string;
+    minReferences: number;
+    report: ReferenceReport;
+    referees: (RefereeRow & { overrideHistory: AdminActionRow[] })[];
+  } | null;
   recruiterPreview: {
     settings: { enabled: boolean; sections: string[]; linkedinUrl: string | null; updatedAt: string } | null;
     shareLinks: ShareLinkDetail[];
@@ -178,6 +183,14 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
     .maybeSingle();
 
   const referenceStatus = await getReferenceCheckStatus(userId);
+  const refereesWithHistory = referenceStatus
+    ? await Promise.all(
+        referenceStatus.referees.map(async (referee) => ({
+          ...referee,
+          overrideHistory: await listRefereeOverrideHistory(referee.id),
+        }))
+      )
+    : [];
 
   const { data: previewSettingsRow } = await supabase
     .from("recruiter_preview_settings")
@@ -235,7 +248,7 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
           status: referenceStatus.status,
           minReferences: referenceStatus.minReferences,
           report: computeReferenceReport(referenceStatus.referees),
-          referees: referenceStatus.referees,
+          referees: refereesWithHistory,
         }
       : null,
     recruiterPreview: {

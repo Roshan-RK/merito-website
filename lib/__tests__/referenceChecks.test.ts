@@ -1,9 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const fromMock = vi.fn();
+const logAdminActionMock = vi.fn();
+const listActionsForTargetMock = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({ from: fromMock }),
+}));
+
+vi.mock("@/lib/adminAuditLog", () => ({
+  logAdminAction: logAdminActionMock,
+  listActionsForTarget: listActionsForTargetMock,
 }));
 
 describe("referenceChecks", () => {
@@ -313,5 +320,51 @@ describe("resetRefereeReminders re-admits a referee to the reminder sweep (integ
     const stale = await getStaleRefereesForReminder();
 
     expect(stale.map((r) => r.id)).toContain("referee-1");
+  });
+});
+
+describe("updateRefereeContact", () => {
+  beforeEach(() => {
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+  });
+
+  it("updates contact fields and logs prior/new values with the reason", async () => {
+    const existing = { name: "Jane Old", email: "old@example.com", phone: "111", organization: "Acme" };
+    const maybeSingle = vi.fn().mockResolvedValue({ data: existing, error: null });
+    const selectEq = vi.fn().mockReturnValue({ maybeSingle });
+    const select = vi.fn().mockReturnValue({ eq: selectEq });
+    const updateEq = vi.fn().mockResolvedValue({ error: null });
+    const update = vi.fn().mockReturnValue({ eq: updateEq });
+    fromMock.mockReturnValue({ select, update });
+
+    const { updateRefereeContact } = await import("../referenceChecks");
+    await updateRefereeContact(
+      "referee-1",
+      { name: "Jane New", email: "new@example.com", phone: "222", organization: "NewCo" },
+      "roshan@merito.in",
+      "typo fix"
+    );
+
+    expect(update).toHaveBeenCalledWith({ name: "Jane New", email: "new@example.com", phone: "222", organization: "NewCo" });
+    expect(logAdminActionMock).toHaveBeenCalledWith({
+      adminEmail: "roshan@merito.in",
+      action: "referee.update_contact",
+      targetType: "referee",
+      targetId: "referee-1",
+      priorValue: existing,
+      newValue: { name: "Jane New", email: "new@example.com", phone: "222", organization: "NewCo", reason: "typo fix" },
+    });
+  });
+
+  it("throws when the referee doesn't exist", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    const select = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ maybeSingle }) });
+    fromMock.mockReturnValue({ select });
+
+    const { updateRefereeContact } = await import("../referenceChecks");
+    await expect(
+      updateRefereeContact("referee-1", { name: "x", email: "x@x.com", phone: null, organization: null }, "roshan@merito.in", "x")
+    ).rejects.toThrow("Referee not found.");
   });
 });
