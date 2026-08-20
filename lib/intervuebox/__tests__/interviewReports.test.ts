@@ -113,6 +113,9 @@ describe("getInterviewReport", () => {
       bodyLanguage: null,
       environmentCheck: null,
       responseQuality: null,
+      opportunities: null,
+      threats: null,
+      tabChanges: null,
     });
   });
 
