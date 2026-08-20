@@ -181,6 +181,9 @@ export async function addReferee(checkId: string, input: RefereeInput): Promise<
     .select("id")
     .single();
 
+  if (error?.code === "23505") {
+    throw new Error("DUPLICATE_REFEREE");
+  }
   if (error || !data) {
     throw new Error(`Failed to add referee: ${error?.message}`);
   }

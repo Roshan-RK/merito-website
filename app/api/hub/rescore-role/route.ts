@@ -35,8 +35,17 @@ export async function POST(request: Request) {
     form.set("candidateLevel", existingLead.candidate_level);
   }
 
+  const cookie = request.headers.get("cookie");
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const realIp = request.headers.get("x-real-ip");
+  const forwardedHeaders: Record<string, string> = {};
+  if (cookie) forwardedHeaders.cookie = cookie;
+  if (forwardedFor) forwardedHeaders["x-forwarded-for"] = forwardedFor;
+  if (realIp) forwardedHeaders["x-real-ip"] = realIp;
+
   const checkResponse = await fetch(new URL("/api/hub/fitment-check", request.url), {
     method: "POST",
+    headers: Object.keys(forwardedHeaders).length ? forwardedHeaders : undefined,
     body: form,
   });
   const checkData = await checkResponse.json();

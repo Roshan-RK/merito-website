@@ -6,7 +6,7 @@ import { sendRefereeInviteEmail } from "@/lib/referenceEmails";
 
 const RefereeSchema = z.object({
   name: z.string().trim().min(1),
-  email: z.string().trim().email(),
+  email: z.string().trim().email().toLowerCase(),
   phone: z.string().trim().optional(),
   linkedinUrl: z.string().trim().optional(),
   organization: z.string().trim().optional(),
@@ -52,6 +52,9 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof Error && error.message === "MAX_REFEREES_REACHED") {
       return Response.json({ error: "You've reached the maximum of 10 referees." }, { status: 409 });
+    }
+    if (error instanceof Error && error.message === "DUPLICATE_REFEREE") {
+      return Response.json({ error: "This referee is already added." }, { status: 409 });
     }
     return Response.json({ error: "Something went wrong adding this referee." }, { status: 500 });
   }
