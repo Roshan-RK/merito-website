@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { requireAdmin } from "@/lib/adminAuth";
 import { listTemplates, TEMPLATE_PLACEHOLDERS, TEMPLATE_KEYS } from "@/lib/emailTemplates";
 import type { TemplateKey } from "@/lib/emailTemplates";
 import EmailTemplateForm from "./EmailTemplateForm";
@@ -9,7 +8,6 @@ function isTemplateKey(value: string): value is TemplateKey {
 }
 
 export default async function AdminEmailTemplateDetailPage({ params }: { params: Promise<{ key: string }> }) {
-  await requireAdmin();
   const { key } = await params;
   if (!isTemplateKey(key)) notFound();
 
@@ -18,11 +16,11 @@ export default async function AdminEmailTemplateDetailPage({ params }: { params:
   if (!template) notFound();
 
   return (
-    <div style={{ padding: 24 }}>
-      <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: 22, marginBottom: 4 }}>
+    <div>
+      <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.4rem", margin: "0 0 4px" }}>
         {key}
       </h2>
-      <p style={{ fontSize: 13, color: "#9c9c9c", marginBottom: 20 }}>
+      <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 13, margin: "0 0 32px" }}>
         Placeholders: {TEMPLATE_PLACEHOLDERS[key].map((p) => `{{${p}}}`).join(", ")}
       </p>
       <EmailTemplateForm

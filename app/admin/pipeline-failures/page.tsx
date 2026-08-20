@@ -1,6 +1,6 @@
-import { requireAdmin } from "@/lib/adminAuth";
 import { listUnresolvedPipelineFailures } from "@/lib/pipelineFailures";
 import PipelineFailureActions from "./PipelineFailureActions";
+import EmptyState from "@/app/admin/_components/EmptyState";
 
 const KIND_LABEL: Record<string, string> = {
   interview_invite_after_payment: "Payment consumed, no interview created",
@@ -9,29 +9,29 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 export default async function AdminPipelineFailuresPage() {
-  await requireAdmin();
   const failures = await listUnresolvedPipelineFailures();
 
+  if (failures.length === 0) {
+    return (
+      <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14 }}>
+        <EmptyState message="None — good." tone="success" />
+      </div>
+    );
+  }
+
   return (
-    <div style={{ padding: 24 }}>
-      <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: 22, marginBottom: 16 }}>
-        Pipeline Failures
-      </h2>
-      {failures.length === 0 ? (
-        <p style={{ fontSize: 14, color: "#9c9c9c" }}>None — good.</p>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {failures.map((f) => (
-            <div key={f.id} className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "14px 16px" }}>
-              <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>{KIND_LABEL[f.kind] ?? f.kind}</p>
-              <pre style={{ fontSize: 12, color: "#4b4b4d", whiteSpace: "pre-wrap", marginBottom: 10 }}>
-                {JSON.stringify(f.detail, null, 2)}
-              </pre>
-              <PipelineFailureActions id={f.id} kind={f.kind} />
-            </div>
-          ))}
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {failures.map((f) => (
+        <div key={f.id} className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "14px 16px" }}>
+          <p className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 13, marginBottom: 6 }}>
+            {KIND_LABEL[f.kind] ?? f.kind}
+          </p>
+          <pre className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 12, whiteSpace: "pre-wrap", marginBottom: 10 }}>
+            {JSON.stringify(f.detail, null, 2)}
+          </pre>
+          <PipelineFailureActions id={f.id} kind={f.kind} />
         </div>
-      )}
+      ))}
     </div>
   );
 }

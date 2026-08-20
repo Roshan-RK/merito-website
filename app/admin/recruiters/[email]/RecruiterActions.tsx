@@ -2,28 +2,35 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Button from "@/app/admin/_components/Button";
+import ConfirmDialog from "@/app/admin/_components/ConfirmDialog";
+import { useToast } from "@/app/admin/_components/Toast";
 
 export default function RecruiterActions({ email, banned, verified, companyName }: { email: string; banned: boolean; verified: boolean; companyName: string | null }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [busy, setBusy] = useState<"ban" | "unban" | "unverify" | "company" | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [companyInput, setCompanyInput] = useState(companyName ?? "");
+  const [pendingBanReason, setPendingBanReason] = useState<string | null>(null);
 
   async function callAction(action: "ban" | "unban" | "unverify", body?: unknown) {
+    setPendingBanReason(null);
     setBusy(action);
-    setMessage(null);
     try {
       const response = await fetch(`/api/admin/recruiters/${encodeURIComponent(email)}/${action}`, {
         method: "POST",
         headers: body ? { "Content-Type": "application/json" } : undefined,
         body: body ? JSON.stringify(body) : undefined,
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
       if (!response.ok) {
-        setMessage(data.error || "Something went wrong.");
+        showToast("error", data?.error || "Something went wrong — try again.");
         return;
       }
+      showToast("success", "Done.");
       router.refresh();
+    } catch {
+      showToast("error", "Something went wrong — try again.");
     } finally {
       setBusy(null);
     }
@@ -31,60 +38,72 @@ export default function RecruiterActions({ email, banned, verified, companyName 
 
   async function saveCompany() {
     setBusy("company");
-    setMessage(null);
     try {
       const response = await fetch(`/api/admin/recruiters/${encodeURIComponent(email)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ companyName: companyInput }),
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
       if (!response.ok) {
-        setMessage(data.error || "Something went wrong.");
+        showToast("error", data?.error || "Something went wrong — try again.");
         return;
       }
+      showToast("success", "Company saved.");
       router.refresh();
+    } catch {
+      showToast("error", "Something went wrong — try again.");
     } finally {
       setBusy(null);
     }
   }
 
-  function handleBan() {
+  function handleBanClick() {
     const reason = window.prompt("Reason for banning this recruiter?");
     if (!reason) return;
-    if (!window.confirm(`Ban ${email}? They will no longer be able to use recruiter features.`)) return;
-    callAction("ban", { reason });
+    setPendingBanReason(reason);
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         {banned ? (
-          <button onClick={() => callAction("unban")} disabled={busy !== null} style={{ background: "transparent", color: "#16803c", border: "1px solid #16803c", fontSize: 12, padding: "4px 10px", borderRadius: 6, cursor: busy ? "default" : "pointer" }}>
-            {busy === "unban" ? "…" : "Unban"}
-          </button>
+          <Button variant="secondary" onClick={() => callAction("unban")} disabled={busy !== null} loading={busy === "unban"}>
+            Unban
+          </Button>
         ) : (
-          <button onClick={handleBan} disabled={busy !== null} style={{ background: "transparent", color: "#ed1a24", border: "1px solid #ed1a24", fontSize: 12, padding: "4px 10px", borderRadius: 6, cursor: busy ? "default" : "pointer" }}>
-            {busy === "ban" ? "…" : "Ban"}
-          </button>
+          <Button variant="danger" onClick={handleBanClick} disabled={busy !== null} loading={busy === "ban"}>
+            Ban
+          </Button>
         )}
         {verified && (
-          <button onClick={() => callAction("unverify")} disabled={busy !== null} style={{ background: "transparent", color: "#4b4b4d", border: "1px solid #dcdcdc", fontSize: 12, padding: "4px 10px", borderRadius: 6, cursor: busy ? "default" : "pointer" }}>
-            {busy === "unverify" ? "…" : "Unverify"}
-          </button>
+          <Button variant="secondary" onClick={() => callAction("unverify")} disabled={busy !== null} loading={busy === "unverify"}>
+            Unverify
+          </Button>
         )}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <input
           value={companyInput}
           onChange={(e) => setCompanyInput(e.target.value)}
-          style={{ fontSize: 13, padding: "6px 10px", border: "1px solid #dcdcdc", borderRadius: 6 }}
+          className="font-[family-name:var(--font-poppins)]"
+          style={{ fontSize: 13, padding: "8px 12px", border: "1px solid #dcdcdc", borderRadius: 7 }}
         />
-        <button onClick={saveCompany} disabled={busy !== null || companyInput === (companyName ?? "")} style={{ background: "transparent", color: "#4b4b4d", border: "1px solid #dcdcdc", fontSize: 12, padding: "4px 10px", borderRadius: 6, cursor: busy ? "default" : "pointer" }}>
-          {busy === "company" ? "…" : "Save company"}
-        </button>
+        <Button variant="secondary" onClick={saveCompany} disabled={busy !== null || companyInput === (companyName ?? "")} loading={busy === "company"}>
+          Save company
+        </Button>
       </div>
-      {message && <span style={{ fontSize: 12, color: "#4b4b4d" }}>{message}</span>}
+
+      <ConfirmDialog
+        open={pendingBanReason !== null}
+        title="Ban this recruiter?"
+        message={`They will no longer be able to use recruiter features. Reason: "${pendingBanReason}"`}
+        confirmLabel="Ban"
+        danger
+        busy={busy === "ban"}
+        onConfirm={() => pendingBanReason && callAction("ban", { reason: pendingBanReason })}
+        onCancel={() => setPendingBanReason(null)}
+      />
     </div>
   );
 }
