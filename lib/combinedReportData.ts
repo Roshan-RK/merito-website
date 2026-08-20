@@ -32,28 +32,34 @@ export async function loadCombinedReportData({
   include: Set<string>;
   roleTitleParam: string | null;
 }): Promise<CombinedReportData> {
+  // Fetched unconditionally (not gated by include.has("fitment")) because
+  // fitment_leads.name is the only real-name source the public share page
+  // has -- that page deliberately never passes a real userEmail (privacy:
+  // no PII exposed to anonymous visitors), so when the fitment section
+  // itself is excluded or still locked, this lookup is the only thing
+  // standing between the displayed name and the generic email-less
+  // nameFromEmail("") fallback ("You").
+  const { data: leads } = await supabase
+    .from("fitment_leads")
+    .select("id, role_title, name, resume_match_status, resume_match_raw")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const currentLead = leads?.[0];
+
   let fitment: CombinedReportData["fitment"] = null;
-  if (include.has("fitment")) {
-    const { data: leads } = await supabase
-      .from("fitment_leads")
-      .select("id, role_title, name, resume_match_status, resume_match_raw")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(1);
-    const current = leads?.[0];
-    if (current) {
-      const unlocked = await isReportUnlocked(userId, current.role_title);
-      if (unlocked && current.resume_match_status === "READY" && current.resume_match_raw) {
-        fitment = {
-          roleTitle: current.role_title,
-          displayName: current.name || nameFromEmail(userEmail ?? ""),
-          report: current.resume_match_raw as ResumeMatchReportReady,
-        };
-      }
+  if (include.has("fitment") && currentLead) {
+    const unlocked = await isReportUnlocked(userId, currentLead.role_title);
+    if (unlocked && currentLead.resume_match_status === "READY" && currentLead.resume_match_raw) {
+      fitment = {
+        roleTitle: currentLead.role_title,
+        displayName: currentLead.name || nameFromEmail(userEmail ?? ""),
+        report: currentLead.resume_match_raw as ResumeMatchReportReady,
+      };
     }
   }
 
-  const roleTitle = roleTitleParam ?? fitment?.roleTitle ?? null;
+  const roleTitle = roleTitleParam ?? fitment?.roleTitle ?? currentLead?.role_title ?? null;
 
   let personality: CombinedReportData["personality"] = null;
   if (include.has("personality") && roleTitle) {
@@ -86,7 +92,7 @@ export async function loadCombinedReportData({
     }
   }
 
-  const displayName = fitment?.displayName || nameFromEmail(userEmail ?? "");
+  const displayName = fitment?.displayName || currentLead?.name || nameFromEmail(userEmail ?? "");
   const primaryRole = fitment?.roleTitle || interview?.roleTitle || roleTitle || "-";
 
   return { fitment, personality, interview, references, displayName, primaryRole };
