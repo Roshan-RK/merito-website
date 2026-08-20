@@ -97,4 +97,15 @@ describe("POST /api/hub/references/add-referee", () => {
     const response = await POST(body({ name: "Jane", email: "jane@example.com", role: "manager" }));
     expect(response.status).toBe(409);
   });
+
+  it("returns 409 with a clear message when the referee is already added", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    getActiveReferenceCheckIdMock.mockResolvedValue("check-1");
+    addRefereeMock.mockRejectedValue(new Error("DUPLICATE_REFEREE"));
+    const { POST } = await importRoute();
+    const response = await POST(body({ name: "Jane", email: "jane@example.com", role: "manager" }));
+    const responseBody = await response.json();
+    expect(response.status).toBe(409);
+    expect(responseBody).toEqual({ error: "This referee is already added." });
+  });
 });

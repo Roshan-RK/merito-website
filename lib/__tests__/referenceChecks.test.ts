@@ -52,6 +52,24 @@ describe("referenceChecks", () => {
       ).rejects.toThrow("MAX_REFEREES_REACHED");
     });
 
+    it("throws DUPLICATE_REFEREE when the (reference_check_id, email) unique constraint is hit", async () => {
+      const countSelect = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ count: 0, error: null }) });
+      const insertSelect = vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({
+          data: null,
+          error: { code: "23505", message: 'duplicate key value violates unique constraint "referees_reference_check_id_email_key"' },
+        }),
+      });
+      const insert = vi.fn().mockReturnValue({ select: insertSelect });
+
+      fromMock.mockReturnValueOnce({ select: countSelect }).mockReturnValueOnce({ insert });
+
+      const { addReferee } = await import("../referenceChecks");
+      await expect(
+        addReferee("check-1", { name: "Jane", email: "jane@example.com", role: "manager" })
+      ).rejects.toThrow("DUPLICATE_REFEREE");
+    });
+
     it("inserts a referee row and flips the check to in_progress", async () => {
       const countSelect = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ count: 0, error: null }) });
       const insertSelect = vi.fn().mockReturnValue({ single: vi.fn().mockResolvedValue({ data: { id: "referee-1" }, error: null }) });

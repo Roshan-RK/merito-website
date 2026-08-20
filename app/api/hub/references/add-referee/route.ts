@@ -53,6 +53,9 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message === "MAX_REFEREES_REACHED") {
       return Response.json({ error: "You've reached the maximum of 10 referees." }, { status: 409 });
     }
+    if (error instanceof Error && error.message === "DUPLICATE_REFEREE") {
+      return Response.json({ error: "This referee is already added." }, { status: 409 });
+    }
     return Response.json({ error: "Something went wrong adding this referee." }, { status: 500 });
   }
 }
