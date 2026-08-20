@@ -21,13 +21,11 @@ originally believed on the Merito side; see Open Items).
   `maxInterviewMinutes` is a required field, allowed values `15 | 30 | 45`.
   Currently hardcoded to `30` in `lib/intervuebox/agents.ts`. Mapping:
   `entry` → 30, `mid` → 30, `senior` → 45.
-- **Complexity is NOT implemented in this phase.** Checked all three
-  documented endpoints (`jobs.md`, the `interview` sub-resource, and
-  `invitations.md`) — none expose a difficulty/complexity/seniority field.
-  This contradicts what IntervueBox told the founder verbally. Do not guess
-  a field name and call it speculatively. Confirm the exact field name,
-  endpoint, and accepted values with IntervueBox (Krupal) before writing any
-  code for this half of the request. Tracked as an open item below.
+- **RESOLVED 2026-08-20:** vendor-confirmed `complexity` enum is
+  `easy | medium | hard`, sent on the same `POST /public/jobs/:jobId/interview`
+  call as `maxInterviewMinutes`. Mapped 1:1 to `candidate_level` — `entry` →
+  `easy`, `mid` → `medium`, `senior` → `hard` — via `complexityForLevel` in
+  `lib/intervuebox/agents.ts`, same convention as `durationForLevel`.
 - **`rescore-role` (JD/CV reupload) does not get a new dropdown.** It
   reuses the requesting user's most recent `candidate_level` for that
   role, the same pattern already used for `phone` in
@@ -71,13 +69,4 @@ originally believed on the Merito side; see Open Items).
 
 ## Open Items
 
-- **Complexity field unresolved.** No documented endpoint exposes it as of
-  2026-07-24. Needs a direct answer from IntervueBox: exact field name,
-  which endpoint it belongs to (job creation vs. interview-agent creation vs.
-  invitation), and accepted values/enum. Nothing ships for this half of the
-  request until that's confirmed — do not infer a mapping from `interviewType`
-  or the `experience` free-text field as a substitute without vendor
-  confirmation.
-- Once IntervueBox confirms the field, a follow-up spec/plan should map
-  `candidate_level` → their complexity enum, most likely alongside the same
-  `createInterviewAgent` call this spec already modifies for duration.
+None — both duration and complexity scaling are shipped as of 2026-08-20.

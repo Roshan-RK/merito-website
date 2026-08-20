@@ -35,6 +35,14 @@ export function durationForLevel(level: CandidateLevel): 30 | 45 {
   return level === "senior" ? 45 : 30;
 }
 
+// Vendor-confirmed 2026-08-20: complexity enum is easy|medium|hard. Mapped
+// 1:1 to candidate_level, same convention as durationForLevel above.
+export function complexityForLevel(level: CandidateLevel): "easy" | "medium" | "hard" {
+  if (level === "entry") return "easy";
+  if (level === "senior") return "hard";
+  return "medium";
+}
+
 export async function createInterviewAgent(
   jobId: string,
   roleTitle: string,
@@ -54,10 +62,7 @@ export async function createInterviewAgent(
       // codebase) is the one actually wanted. See memory
       // intervuebox-interview-modes for the full mode comparison.
       isCriteriaMatch: false,
-      // "medium" is vendor-confirmed but not mapped to candidateLevel yet —
-      // full enum (low/high?) unconfirmed. Map once confirmed, per
-      // specs/2026-07-24-ai-interview-difficulty-design.md's open item.
-      complexity: "medium",
+      complexity: complexityForLevel(candidateLevel),
       isQuickApplyEnabled: true,
       // Default voice for every interview (product decision, 2026-08-19) --
       // IntervueBox's own platform default is undocumented; "en-IN-KavyaNeural"

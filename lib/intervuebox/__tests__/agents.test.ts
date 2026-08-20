@@ -18,6 +18,23 @@ describe("durationForLevel", () => {
   });
 });
 
+describe("complexityForLevel", () => {
+  it("maps entry to easy", async () => {
+    const { complexityForLevel } = await import("../agents");
+    expect(complexityForLevel("entry")).toBe("easy");
+  });
+
+  it("maps mid to medium", async () => {
+    const { complexityForLevel } = await import("../agents");
+    expect(complexityForLevel("mid")).toBe("medium");
+  });
+
+  it("maps senior to hard", async () => {
+    const { complexityForLevel } = await import("../agents");
+    expect(complexityForLevel("senior")).toBe("hard");
+  });
+});
+
 describe("createInterviewAgent", () => {
   beforeEach(() => {
     intervueBoxFetchMock.mockReset();
@@ -74,7 +91,7 @@ describe("createInterviewAgent", () => {
       maxInterviewMinutes: 30,
       interviewType: "technical",
       isCriteriaMatch: false,
-      complexity: "medium",
+      complexity: "easy",
       isQuickApplyEnabled: true,
       voice: "en-IN-KavyaNeural",
     });
@@ -95,6 +112,7 @@ describe("createInterviewAgent", () => {
 
     const sentBody = JSON.parse(intervueBoxFetchMock.mock.calls[0][1].body);
     expect(sentBody.maxInterviewMinutes).toBe(45);
+    expect(sentBody.complexity).toBe("hard");
   });
 
   it("always sends the Kavya voice", async () => {
