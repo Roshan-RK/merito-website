@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Eye, Download, Copy, Check } from "lucide-react";
 import ExportPreviewModal from "../ExportPreviewModal";
+import { buildLinkedInCaption, type ShareSection } from "@/lib/linkedinShare";
+import { getAbsoluteUrl } from "@/lib/site";
 
 // Copy-link and Share-on-LinkedIn both need a live share URL first, which
 // means a client-side fetch to the existing /api/hub/share endpoint (the
@@ -25,6 +27,7 @@ export default function CombinedReportActions({
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [captionCopied, setCaptionCopied] = useState(false);
   const [busy, setBusy] = useState<"copy" | "linkedin" | null>(null);
   const [error, setError] = useState(false);
 
@@ -72,6 +75,24 @@ export default function CombinedReportActions({
       setError(true);
       return;
     }
+    // LinkedIn's share-offsite endpoint doesn't accept post text via URL
+    // params (it only scrapes the target URL's OG tags for the preview
+    // card) -- so the caption is copied to the clipboard instead, ready to
+    // paste into the compose box LinkedIn opens. Same workaround already
+    // used by GenerateReportModal's "Share on LinkedIn" caption.
+    const caption = buildLinkedInCaption({
+      roleTitle,
+      sections: include.split(",").filter(Boolean) as ShareSection[],
+      hubUrl: getAbsoluteUrl("/hub"),
+    });
+    try {
+      await navigator.clipboard.writeText(caption);
+      setCaptionCopied(true);
+      setTimeout(() => setCaptionCopied(false), 4000);
+    } catch {
+      // Clipboard permissions can fail silently in some browsers/contexts --
+      // still open the share window even if the caption couldn't be copied.
+    }
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, "_blank", "noopener,noreferrer");
   };
 
@@ -100,6 +121,11 @@ export default function CombinedReportActions({
       {error && (
         <span className="w-full font-[family-name:var(--font-poppins)] text-[#ed1a24]" style={{ fontSize: 11.5 }}>
           Couldn&apos;t create a share link. Please try again.
+        </span>
+      )}
+      {captionCopied && (
+        <span className="w-full font-[family-name:var(--font-poppins)] text-[#3FCB8C]" style={{ fontSize: 11.5 }}>
+          Caption copied — paste it into the LinkedIn post that just opened.
         </span>
       )}
       {previewOpen && (
