@@ -48,11 +48,13 @@ Explicitly out of scope for this roadmap: ATS integration (separate product, not
 
 ## Phase 1 — Admin-ops foundation
 
-- Audit log viewer page (`admin_audit_log` is written to already — no page reads it back)
-- Wire the 3 action types still missing logging: counselling status change, interview generate/reinvite, share-link revoke
-- Revert-from-audit-log button (natural extension once the viewer exists)
-- `contact_detail_requests` admin page (migration `0030` exists, zero admin surface — a whole feature area is currently invisible; matches the unbuilt `2026-08-10` recruiter-contact-requests design doc)
-- Admin-activity analytics (cheap once the audit viewer exists)
+**Shipped 2026-08-20**, except revert (deferred, see below).
+
+- ~~Audit log viewer page~~ — **shipped.** `/admin/activity`, `listAdminActions(page)` (real DB `range()` pagination, not JS-slice — this table is explicitly unbounded-growth per the audit-trail design doc). Links out to candidate/recruiter/email-template targets where applicable.
+- ~~Wire the 3 action types still missing logging~~ — **shipped.** `counselling.status_change`, `share_link.set_revoked`, `interview.generate`, `interview.reinvite` (4 routes, matches the approved `2026-08-12-admin-audit-trail-design.md` exactly — best-effort write, own try/catch, never blocks the actual action).
+- Revert-from-audit-log button — **deferred, not built.** No approved design exists for this (unlike the other 3 items, which had `2026-08-12-admin-audit-trail-design.md`). `prior_value` shapes differ per action type (a ban reason vs. a counselling note vs. a raw share-link token vs. interview state) — a generic "revert" needs per-action-type semantics specified first, not a blind `UPDATE ... SET x = prior_value`. Needs its own design pass before building.
+- ~~`contact_detail_requests` admin page~~ — **shipped, but scope corrected.** Investigation found the `2026-08-10` design doc's admin-approval-gate was never actually built that way: `lib/contactDetailRequests.ts::logAndGetContactEmail()` auto-approves and reveals on every request (gated only by the candidate's own `recruiter_preview_settings.enabled` toggle, not an admin decision) — `status`/`decided_by` are always `'approved'`/`'auto'`, nothing is ever `'pending'`. Built `/admin/contact-requests` as a read-only audit trail of reveals (matches what the system actually does), not an approve/deny queue (would have been non-functional UI — the backend doesn't gate on status at all).
+- ~~Admin-activity analytics~~ — **shipped, minimal.** 3 count tiles (24h/7d/30d) on the `/admin/activity` page itself, not a separate page — matches the roadmap's own "cheap" framing.
 
 ## Phase 2 — Security hardening
 

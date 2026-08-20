@@ -20,6 +20,9 @@ vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({ from: fromMock }),
 }));
 
+const logAdminActionMock = vi.fn();
+vi.mock("@/lib/adminAuditLog", () => ({ logAdminAction: logAdminActionMock }));
+
 async function importRoute() {
   return await import("../route");
 }
@@ -36,6 +39,8 @@ describe("POST /api/admin/interviews/[id]/reinvite", () => {
     maybeSingleMock.mockReset();
     updateMock.mockClear();
     updateEqMock.mockClear();
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
   });
 
   it("clears stuck_at but does not touch status/magic_link on an already-ready row", async () => {
@@ -54,6 +59,27 @@ describe("POST /api/admin/interviews/[id]/reinvite", () => {
 
     expect(response.status).toBe(200);
     expect(updateMock).toHaveBeenCalledWith({ stuck_at: null });
+    expect(logAdminActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "interview.reinvite", targetType: "interview", targetId: "row-1" })
+    );
+  });
+
+  it("still returns ok when logging the admin action fails", async () => {
+    maybeSingleMock.mockResolvedValue({
+      data: { id: "row-1", status: "ready", ib_agent_id: "INT_1", ib_candidate_id: "USR_1" },
+      error: null,
+    });
+    reinviteInterviewCandidatesMock.mockResolvedValue({
+      invited: 1,
+      failed: 0,
+      magicLinks: [{ candidateId: "USR_1", magicLink: "https://fresh", expiresAt: "2026-08-20T10:00:00.000Z" }],
+    });
+    logAdminActionMock.mockRejectedValue(new Error("db down"));
+
+    const { POST } = await importRoute();
+    const response = await POST(makeRequest(), { params: Promise.resolve({ id: "row-1" }) });
+
+    expect(response.status).toBe(200);
   });
 
   it("clears stuck_at and re-links a non-ready row, including has_resumed: false", async () => {

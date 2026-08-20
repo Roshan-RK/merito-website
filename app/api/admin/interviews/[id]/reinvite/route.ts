@@ -1,11 +1,12 @@
 import { requireAdmin } from "@/lib/adminAuth";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { reinviteInterviewCandidates } from "@/lib/intervuebox/invitations";
+import { logAdminAction } from "@/lib/adminAuditLog";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(_request: Request, { params }: RouteContext) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const { id } = await params;
   const supabase = getSupabaseServerClient();
@@ -49,6 +50,19 @@ export async function POST(_request: Request, { params }: RouteContext) {
       .eq("id", row.id);
     if (updateError) {
       console.error("Admin reinvite: failed to clear stuck_at on the row", { id, error: updateError });
+    }
+
+    try {
+      await logAdminAction({
+        adminEmail: admin.email as string,
+        action: "interview.reinvite",
+        targetType: "interview",
+        targetId: id,
+        priorValue: { status: row.status },
+        newValue: { invited },
+      });
+    } catch (error) {
+      console.error("Failed to log admin action interview.reinvite", { id, error });
     }
 
     return Response.json({ ok: true, invited });

@@ -8,8 +8,10 @@ import Button from "@/app/admin/_components/Button";
 
 const NAV_ITEMS = [
   { label: "Overview", href: "/admin" },
+  { label: "Activity", href: "/admin/activity" },
   { label: "Candidates", href: "/admin/candidates" },
   { label: "Recruiters", href: "/admin/recruiters" },
+  { label: "Contact Requests", href: "/admin/contact-requests" },
   { label: "Payments", href: "/admin/payments" },
   { label: "Counselling", href: "/admin/counselling" },
   { label: "Extension", href: "/admin/extension" },

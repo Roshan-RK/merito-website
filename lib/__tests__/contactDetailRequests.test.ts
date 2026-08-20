@@ -64,3 +64,73 @@ describe("logAndGetContactEmail", () => {
     expect(insertMock).not.toHaveBeenCalled();
   });
 });
+
+describe("listContactDetailRequests", () => {
+  beforeEach(() => {
+    fromMock.mockClear();
+  });
+
+  it("returns mapped rows joined with candidate email, and pagination metadata", async () => {
+    fromMock
+      .mockImplementationOnce(() => ({ select: () => Promise.resolve({ count: 25, error: null }) }))
+      .mockImplementationOnce(() => ({
+        select: () => ({
+          order: () => ({
+            range: () =>
+              Promise.resolve({
+                data: [
+                  {
+                    id: "req-1",
+                    user_id: "user-1",
+                    linkedin_url: "https://linkedin.com/in/x",
+                    role_title: "PM",
+                    status: "approved",
+                    requested_at: "2026-08-20T10:00:00.000Z",
+                    decided_by: "auto",
+                  },
+                ],
+                error: null,
+              }),
+          }),
+        }),
+      }))
+      .mockImplementationOnce(() => ({
+        select: () => ({ in: () => Promise.resolve({ data: [{ user_id: "user-1", email: "jane@example.com" }] }) }),
+      }));
+
+    const { listContactDetailRequests } = await importModule();
+    const result = await listContactDetailRequests(2);
+
+    expect(result).toEqual({
+      rows: [
+        {
+          id: "req-1",
+          userId: "user-1",
+          candidateEmail: "jane@example.com",
+          linkedinUrl: "https://linkedin.com/in/x",
+          roleTitle: "PM",
+          status: "approved",
+          requestedAt: "2026-08-20T10:00:00.000Z",
+          decidedBy: "auto",
+        },
+      ],
+      total: 25,
+      totalPages: 2,
+      page: 2,
+    });
+  });
+
+  it("skips the email lookup and returns an empty page when there are no rows", async () => {
+    fromMock
+      .mockImplementationOnce(() => ({ select: () => Promise.resolve({ count: 0, error: null }) }))
+      .mockImplementationOnce(() => ({
+        select: () => ({ order: () => ({ range: () => Promise.resolve({ data: [], error: null }) }) }),
+      }));
+
+    const { listContactDetailRequests } = await importModule();
+    const result = await listContactDetailRequests();
+
+    expect(result).toEqual({ rows: [], total: 0, totalPages: 1, page: 1 });
+    expect(fromMock).toHaveBeenCalledTimes(2);
+  });
+});

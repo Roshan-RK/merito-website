@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getCounsellingRequest, updateCounsellingStatus, nextCounsellingState, type CounsellingStatus } from "@/lib/adminCounselling";
+import { logAdminAction } from "@/lib/adminAuditLog";
 
 const STATUSES = ["requested", "scheduled", "completed", "cancelled"] as const;
 
@@ -12,7 +13,7 @@ const PatchSchema = z.object({
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: RouteContext) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const { id } = await params;
 
@@ -42,6 +43,19 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   }
 
   await updateCounsellingStatus(id, patch, parsed.data.notes);
+
+  try {
+    await logAdminAction({
+      adminEmail: admin.email as string,
+      action: "counselling.status_change",
+      targetType: "counselling_request",
+      targetId: id,
+      priorValue: { status: current.status },
+      newValue: { status: parsed.data.status, notes: parsed.data.notes ?? null },
+    });
+  } catch (error) {
+    console.error("Failed to log admin action counselling.status_change", { id, error });
+  }
 
   return Response.json({ ok: true });
 }

@@ -1,13 +1,14 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/adminAuth";
 import { setShareLinkRevokedByToken } from "@/lib/reportShareTokens";
+import { logAdminAction } from "@/lib/adminAuditLog";
 
 const PatchSchema = z.object({ revoked: z.boolean() });
 
 type RouteContext = { params: Promise<{ token: string }> };
 
 export async function PATCH(request: Request, { params }: RouteContext) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const { token } = await params;
 
@@ -24,6 +25,18 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   }
 
   await setShareLinkRevokedByToken(token, parsed.data.revoked);
+
+  try {
+    await logAdminAction({
+      adminEmail: admin.email as string,
+      action: "share_link.set_revoked",
+      targetType: "share_link",
+      targetId: token,
+      newValue: { revoked: parsed.data.revoked },
+    });
+  } catch (error) {
+    console.error("Failed to log admin action share_link.set_revoked", { token, error });
+  }
 
   return Response.json({ ok: true });
 }
