@@ -1,22 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check } from "lucide-react";
+import { Eye, Download, Copy, Check } from "lucide-react";
+import ExportPreviewModal from "../ExportPreviewModal";
 
 // Copy-link and Share-on-LinkedIn both need a live share URL first, which
 // means a client-side fetch to the existing /api/hub/share endpoint (the
-// same one that already backs the report/references "share" flows) — so
-// this stays a small client island rather than plain <a> tags like the
-// Preview/Download actions next to it in page.tsx, which don't need one.
+// same one that already backs the report/references "share" flows) --
+// Preview lives here too (rather than the standalone ExportPreviewButton
+// used elsewhere) purely to match this row's pill-button styling; Download
+// has no state of its own but joins this group so the four actions render
+// in one consistent order instead of splitting across the server/client
+// boundary.
 export default function CombinedReportActions({
   roleTitle,
   include,
   interviewSections,
+  exportUrl,
 }: {
   roleTitle: string;
   include: string;
   interviewSections: string;
+  exportUrl: string;
 }) {
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState<"copy" | "linkedin" | null>(null);
   const [error, setError] = useState(false);
@@ -74,6 +81,12 @@ export default function CombinedReportActions({
 
   return (
     <>
+      <button type="button" onClick={() => setPreviewOpen(true)} className={buttonClass} style={buttonStyle}>
+        <Eye size={13} strokeWidth={2} /> Preview
+      </button>
+      <a href={exportUrl} download className={buttonClass} style={buttonStyle}>
+        <Download size={13} strokeWidth={2} /> Download
+      </a>
       <button type="button" onClick={handleCopy} disabled={busy !== null} className={buttonClass} style={buttonStyle}>
         {copied ? <Check size={13} strokeWidth={2} /> : <Copy size={13} strokeWidth={2} />}
         {copied ? "Link copied" : busy === "copy" ? "Copying…" : "Copy live link"}
@@ -88,6 +101,13 @@ export default function CombinedReportActions({
         <span className="w-full font-[family-name:var(--font-poppins)] text-[#ed1a24]" style={{ fontSize: 11.5 }}>
           Couldn&apos;t create a share link. Please try again.
         </span>
+      )}
+      {previewOpen && (
+        <ExportPreviewModal
+          title="Consolidated report: export preview"
+          exportUrl={exportUrl}
+          onClose={() => setPreviewOpen(false)}
+        />
       )}
     </>
   );

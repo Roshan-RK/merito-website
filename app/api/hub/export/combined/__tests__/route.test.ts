@@ -149,4 +149,38 @@ describe("GET /api/hub/export/combined", () => {
     const buffer = await response.arrayBuffer();
     expect(buffer.byteLength).toBeGreaterThan(0);
   });
+
+  it("sets an inline Content-Disposition when inline=1 is passed, for the preview modal's iframe", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "roshan@merito.in" } } });
+    leadListLimitMock.mockResolvedValue({
+      data: [{ role_title: "Senior Product Manager", resume_match_status: "READY", resume_match_raw: { overallScore: 92 } }],
+      error: null,
+    });
+    isReportUnlockedMock.mockResolvedValue(true);
+    const { GET } = await importRoute();
+
+    const response = await GET(
+      buildRequest("http://localhost/api/hub/export/combined?include=fitment&role=Senior%20Product%20Manager&inline=1")
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-disposition")).toBe('inline; filename="merito-report.pdf"');
+  });
+
+  it("defaults to an attachment Content-Disposition when inline isn't passed", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "roshan@merito.in" } } });
+    leadListLimitMock.mockResolvedValue({
+      data: [{ role_title: "Senior Product Manager", resume_match_status: "READY", resume_match_raw: { overallScore: 92 } }],
+      error: null,
+    });
+    isReportUnlockedMock.mockResolvedValue(true);
+    const { GET } = await importRoute();
+
+    const response = await GET(
+      buildRequest("http://localhost/api/hub/export/combined?include=fitment&role=Senior%20Product%20Manager")
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-disposition")).toBe('attachment; filename="merito-report.pdf"');
+  });
 });

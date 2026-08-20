@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { ComponentType } from "react";
-import { Eye, Download, FileText, Brain, Mic, Users, Lock, ArrowRight } from "lucide-react";
+import { FileText, Brain, Mic, Users, Lock, ArrowRight } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { loadCombinedReportData } from "@/lib/combinedReportData";
 import { getMatchBand } from "../report/ResumeMatchGauge";
@@ -157,7 +157,6 @@ export default async function CombinedReportPage({
   // context the page itself was loaded with, so every downstream link/action
   // reuses these exact query values rather than re-deriving them.
   const linkParams = new URLSearchParams({ include: includeParam, role: primaryRole, interviewSections: interviewSectionsParam }).toString();
-  const printHref = `/hub/account/combined-report/print?${linkParams}`;
   const downloadHref = `/api/hub/export/combined?${linkParams}`;
 
   return (
@@ -210,24 +209,12 @@ export default async function CombinedReportPage({
           </div>
 
           <div className="flex flex-wrap items-center" style={{ gap: 8 }}>
-            <a
-              href={printHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center bg-white/[0.06] hover:bg-white/[0.1] transition-colors font-[family-name:var(--font-poppins)] font-semibold text-white"
-              style={{ gap: 6, fontSize: 12.5, borderRadius: 50, padding: "7px 14px", border: "1px solid rgba(255,255,255,0.08)" }}
-            >
-              <Eye size={13} strokeWidth={2} /> Preview
-            </a>
-            <a
-              href={downloadHref}
-              download
-              className="flex items-center bg-white/[0.06] hover:bg-white/[0.1] transition-colors font-[family-name:var(--font-poppins)] font-semibold text-white"
-              style={{ gap: 6, fontSize: 12.5, borderRadius: 50, padding: "7px 14px", border: "1px solid rgba(255,255,255,0.08)" }}
-            >
-              <Download size={13} strokeWidth={2} /> Download
-            </a>
-            <CombinedReportActions roleTitle={primaryRole} include={includeParam} interviewSections={interviewSectionsParam} />
+            <CombinedReportActions
+              roleTitle={primaryRole}
+              include={includeParam}
+              interviewSections={interviewSectionsParam}
+              exportUrl={downloadHref}
+            />
           </div>
         </div>
 

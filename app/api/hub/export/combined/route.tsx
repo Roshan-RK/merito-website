@@ -99,11 +99,16 @@ export async function GET(request: Request) {
     return Response.json({ error: "Could not generate the PDF. Please try again." }, { status: 502 });
   }
 
+  // ?inline=1 is used by ExportPreviewModal's <iframe> -- an "attachment"
+  // disposition makes the browser try to download instead of rendering the
+  // PDF in the frame, which is why the preview modal would show nothing.
+  const disposition = url.searchParams.get("inline") === "1" ? "inline" : "attachment";
+
   return new Response(new Uint8Array(buffer), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="merito-report.pdf"`,
+      "Content-Disposition": `${disposition}; filename="merito-report.pdf"`,
     },
   });
 }
