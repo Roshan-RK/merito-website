@@ -1,14 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const sendMock = vi.fn();
+vi.mock("resend", () => ({ Resend: class { emails = { send: sendMock }; } } ));
 
-vi.mock("resend", () => {
-  return {
-    Resend: class {
-      emails = { send: sendMock };
-    },
-  };
-});
+const renderTemplateMock = vi.fn();
+vi.mock("@/lib/emailTemplates", () => ({ renderTemplate: renderTemplateMock }));
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -16,31 +12,33 @@ describe("referenceEmails", () => {
   beforeEach(() => {
     sendMock.mockReset();
     sendMock.mockResolvedValue({ data: { id: "email-1" }, error: null });
+    renderTemplateMock.mockReset();
+    renderTemplateMock.mockResolvedValue({ subject: "rendered subject", bodyText: "rendered text", bodyHtml: "rendered html" });
     process.env = { ...ORIGINAL_ENV, RESEND_API_KEY: "re_test", CONTACT_FROM_EMAIL: "admin@merito.ai", NEXT_PUBLIC_SITE_URL: "https://www.merito.in" };
   });
 
   describe("sendRefereeInviteEmail", () => {
-    it("sends an email with a feedback link built from the token", async () => {
+    it("renders the referee_invite template with the feedback link and validity days", async () => {
       const { sendRefereeInviteEmail } = await import("../referenceEmails");
 
       await sendRefereeInviteEmail({ to: "referee@example.com", refereeName: "Jane Doe", candidateName: "Alex Kumar", token: "abc123" });
 
-      expect(sendMock).toHaveBeenCalledTimes(1);
-      const call = sendMock.mock.calls[0][0];
-      expect(call.to).toEqual(["referee@example.com"]);
-      expect(call.from).toBe("admin@merito.ai");
-      expect(call.subject).toContain("Alex Kumar");
-      expect(call.html).toContain("https://www.merito.in/hub/references/feedback/abc123");
-      expect(call.text).toContain("https://www.merito.in/hub/references/feedback/abc123");
+      expect(renderTemplateMock).toHaveBeenCalledWith("referee_invite", {
+        refereeName: "Jane Doe",
+        candidateName: "Alex Kumar",
+        url: "https://www.merito.in/hub/references/feedback/abc123",
+        validityDays: "14",
+      });
+      expect(sendMock).toHaveBeenCalledWith({ from: "admin@merito.ai", to: ["referee@example.com"], subject: "rendered subject", text: "rendered text", html: "rendered html" });
     });
 
-    it("escapes HTML in referee and candidate names", async () => {
+    it("uses REFERENCE_FEEDBACK_LINK_VALIDITY_DAYS when set", async () => {
+      process.env.REFERENCE_FEEDBACK_LINK_VALIDITY_DAYS = "21";
       const { sendRefereeInviteEmail } = await import("../referenceEmails");
 
-      await sendRefereeInviteEmail({ to: "referee@example.com", refereeName: "<script>alert(1)</script>", candidateName: "Alex", token: "abc123" });
+      await sendRefereeInviteEmail({ to: "referee@example.com", refereeName: "Jane", candidateName: "Alex", token: "abc123" });
 
-      const call = sendMock.mock.calls[0][0];
-      expect(call.html).not.toContain("<script>");
+      expect(renderTemplateMock).toHaveBeenCalledWith("referee_invite", expect.objectContaining({ validityDays: "21" }));
     });
 
     it("throws when RESEND_API_KEY is missing", async () => {
@@ -54,15 +52,16 @@ describe("referenceEmails", () => {
   });
 
   describe("sendRefereeReminderEmail", () => {
-    it("sends a reminder email referencing the same feedback link", async () => {
+    it("renders the referee_reminder template with the same feedback link", async () => {
       const { sendRefereeReminderEmail } = await import("../referenceEmails");
 
       await sendRefereeReminderEmail({ to: "referee@example.com", refereeName: "Jane Doe", candidateName: "Alex Kumar", token: "abc123" });
 
-      expect(sendMock).toHaveBeenCalledTimes(1);
-      const call = sendMock.mock.calls[0][0];
-      expect(call.subject.toLowerCase()).toContain("reminder");
-      expect(call.html).toContain("https://www.merito.in/hub/references/feedback/abc123");
+      expect(renderTemplateMock).toHaveBeenCalledWith("referee_reminder", {
+        refereeName: "Jane Doe",
+        candidateName: "Alex Kumar",
+        url: "https://www.merito.in/hub/references/feedback/abc123",
+      });
     });
   });
 });

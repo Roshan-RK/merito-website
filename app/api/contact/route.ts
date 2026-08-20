@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { verifyRecaptchaToken } from "@/lib/recaptcha";
 import { createRateLimiter } from "@/lib/rateLimit";
+import { renderTemplate } from "@/lib/emailTemplates";
 
 // Per-instance (sufficient for single deployments; for multi-instance Vercel, swap to KV)
 const checkRateLimit = createRateLimiter({ max: 5, windowMs: 10 * 60 * 1000 });
@@ -22,15 +23,6 @@ function normalize(value: unknown) {
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 export async function POST(request: Request) {
@@ -65,11 +57,6 @@ export async function POST(request: Request) {
   const departments = normalize(payload.departments);
   const message = normalize(payload.message);
   const recaptchaToken = normalize(payload.recaptchaToken);
-  const safeFullName = escapeHtml(`${firstName} ${lastName}`);
-  const safeEmail = escapeHtml(email);
-  const safePhone = escapeHtml(phone || "Not provided");
-  const safeDepartments = escapeHtml(departments);
-  const safeMessage = escapeHtml(message).replace(/\n/g, "<br />");
 
   if (!firstName || !lastName || !email || !departments || !message) {
     return Response.json({ error: "Missing required fields." }, { status: 400 });
@@ -110,29 +97,21 @@ export async function POST(request: Request) {
   }
 
   try {
+    const rendered = await renderTemplate("contact_form_submission", {
+      fullName: `${firstName} ${lastName}`,
+      email,
+      phone: phone || "Not provided",
+      departments,
+      message,
+    });
+
     await resend.emails.send({
       from: fromEmail,
       to: recipients,
       replyTo: email,
-      subject: `New contact form submission from ${firstName} ${lastName}`,
-      text: [
-        `Name: ${firstName} ${lastName}`,
-        `Email: ${email}`,
-        `Phone: ${phone || "Not provided"}`,
-        `Departments: ${departments}`,
-        "",
-        "Message:",
-        message,
-      ].join("\n"),
-      html: `
-        <h2>New contact form submission</h2>
-        <p><strong>Name:</strong> ${safeFullName}</p>
-        <p><strong>Email:</strong> ${safeEmail}</p>
-        <p><strong>Phone:</strong> ${safePhone}</p>
-        <p><strong>Departments:</strong> ${safeDepartments}</p>
-        <p><strong>Message:</strong></p>
-        <p>${safeMessage}</p>
-      `,
+      subject: rendered.subject,
+      text: rendered.bodyText,
+      html: rendered.bodyHtml,
     });
 
     return Response.json({ ok: true });

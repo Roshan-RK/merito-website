@@ -100,7 +100,7 @@ export const TRAIT_MEANING: Record<TraitKey, string> = {
   E: "Extroversion is about where a person draws their energy. High scorers are outgoing, talkative and stimulated by being around others; low scorers (introverts) are more reserved and recharge through quieter, independent time. It shapes how someone shows up in meetings, teams and client conversations.",
   A: "Agreeableness reflects how much someone prioritises cooperation and harmony over self-interest. High scorers are warm, trusting and accommodating; low scorers are more direct, competitive and willing to challenge. It shapes teamwork, conflict and negotiation.",
   C: "Conscientiousness captures how organised, disciplined and goal-directed a person is. High scorers plan ahead, follow through and attend to detail; low scorers are more flexible and spontaneous but less structured. Of the five traits, it is the most consistent predictor of job performance across roles.",
-  ES: "Emotional Stability describes how calm and resilient someone stays under pressure — its opposite pole is neuroticism. High scorers are steady and bounce back quickly from setbacks; low scorers feel stress more intensely and react more strongly to it. It shapes composure in demanding work.",
+  ES: "Emotional Stability describes how calm and resilient someone stays under pressure. Its opposite pole is neuroticism. High scorers are steady and bounce back quickly from setbacks; low scorers feel stress more intensely and react more strongly to it. It shapes composure in demanding work.",
   O: "Openness to Experience reflects curiosity and appetite for new ideas. High scorers are imaginative, comfortable with abstraction and drawn to novelty; low scorers are practical, conventional and prefer proven methods. It shapes how someone responds to change, learning and creative problem-solving.",
 };
 
@@ -108,27 +108,27 @@ type WorkLevel = "high" | "avg" | "low";
 export const TRAIT_WORK_IMPLICATION: Record<TraitKey, Record<WorkLevel, (name: string) => string>> = {
   E: {
     high: (n) => `${n} is likely to energise meetings, build networks quickly and be comfortable in visible, client-facing or team-leading roles. Watch-out: a pull toward talking over listening, and restlessness during long solo stretches. Best fit: collaborative, people-dense environments.`,
-    avg: (n) => `${n} can flex between collaborative and independent work, contributing in groups without needing constant interaction. This adaptability suits most roles — there's no strong social pull in either direction to manage around.`,
+    avg: (n) => `${n} can flex between collaborative and independent work, contributing in groups without needing constant interaction. This adaptability suits most roles, since there's no strong social pull in either direction to manage around.`,
     low: (n) => `${n} tends to do focused, independent work well and to listen more than they speak. They may be quieter in large meetings and prefer written or one-to-one communication. Best fit: roles with genuine deep-work time; give notice before putting them on the spot.`,
   },
   A: {
     high: (n) => `${n} is likely to be a cooperative, trusted teammate who defuses conflict and supports colleagues. Watch-out: difficulty saying no, and conceding too readily in negotiations. Best fit: service, support, account management and tight-knit teams.`,
-    avg: (n) => `${n} balances warmth with candour — backing the team but able to push back when it matters. This middle position is versatile across most roles.`,
+    avg: (n) => `${n} balances warmth with candour, backing the team but able to push back when it matters. This middle position is versatile across most roles.`,
     low: (n) => `${n} is direct and comfortable with disagreement, which helps in negotiation, quality control and roles that require hard calls. Watch-out: coming across as blunt or dismissive of others' views. Best fit: roles where candour and objectivity matter more than harmony.`,
   },
   C: {
-    high: (n) => `${n} is likely to be organised, reliable and thorough — strong on deadlines, detail and follow-through. Watch-out: rigidity or perfectionism when priorities shift suddenly. Best fit: roles that reward rigour, process and accountability.`,
+    high: (n) => `${n} is likely to be organised, reliable and thorough, strong on deadlines, detail and follow-through. Watch-out: rigidity or perfectionism when priorities shift suddenly. Best fit: roles that reward rigour, process and accountability.`,
     avg: (n) => `${n} is dependable without being rigid, keeping work on track while staying adaptable when plans change. A safe fit for most roles; light external structure helps at the margins.`,
-    low: (n) => `${n} is flexible, spontaneous and comfortable improvising, which suits fast-changing or creative settings. Watch-out: missed details and deadlines without structure. Best fit: fluid roles — pair with clear deadlines and accountability.`,
+    low: (n) => `${n} is flexible, spontaneous and comfortable improvising, which suits fast-changing or creative settings. Watch-out: missed details and deadlines without structure. Best fit: fluid roles, paired with clear deadlines and accountability.`,
   },
   ES: {
     high: (n) => `${n} is likely to stay composed under pressure, absorb setbacks and bring steadiness to a stressed team. Watch-out: occasionally under-reacting to genuine risks. Best fit: high-pressure, high-stakes or fast-changing roles.`,
-    avg: (n) => `${n} handles normal pressure well, with typical ups and downs under heavier load — resilient enough for most roles without being unusually unflappable.`,
+    avg: (n) => `${n} handles normal pressure well, with typical ups and downs under heavier load. Resilient enough for most roles without being unusually unflappable.`,
     low: (n) => `${n} feels pressure keenly and stays alert to what could go wrong, which can sharpen risk-spotting and careful work. Watch-out: stress spilling into performance during high-tension periods. Best fit: calmer, predictable environments, or strong support through crunch.`,
   },
   O: {
-    high: (n) => `${n} is likely to embrace change, generate ideas and enjoy learning — valuable in strategy, innovation and creative problem-solving. Watch-out: boredom with routine and a tendency to over-complicate simple tasks. Best fit: roles with variety, autonomy and intellectual challenge.`,
-    avg: (n) => `${n} blends practicality with curiosity — open to new approaches while staying grounded in what actually works. Versatile across both execution and improvement-focused roles.`,
+    high: (n) => `${n} is likely to embrace change, generate ideas and enjoy learning, valuable in strategy, innovation and creative problem-solving. Watch-out: boredom with routine and a tendency to over-complicate simple tasks. Best fit: roles with variety, autonomy and intellectual challenge.`,
+    avg: (n) => `${n} blends practicality with curiosity, open to new approaches while staying grounded in what actually works. Versatile across both execution and improvement-focused roles.`,
     low: (n) => `${n} is practical and consistent, favouring proven methods and dependable execution. Watch-out: resistance to change and less appetite for ambiguity. Best fit: stable, process-driven roles where consistency beats novelty.`,
   },
 };

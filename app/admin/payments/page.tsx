@@ -1,6 +1,9 @@
 import { listTransactions, listUnpaidUnlocks, type TransactionStatus } from "@/lib/adminPayments";
 import { Table, TableHeadRow, TableRow, TableCell, TableEmptyRow } from "@/app/admin/_components/Table";
 import Badge, { type BadgeVariant } from "@/app/admin/_components/Badge";
+import ReconcileForm from "./ReconcileForm";
+import PaymentActions from "./PaymentActions";
+import GrantForm from "./GrantForm";
 
 const STATUS_VARIANT: Record<TransactionStatus, BadgeVariant> = {
   initiated: "neutral",
@@ -37,9 +40,11 @@ export default async function AdminPaymentsPage() {
 
   return (
     <div>
+      <GrantForm />
+
       <div style={{ marginBottom: 40 }}>
         <Table>
-          <TableHeadRow columns={["Candidate", "Product", "Level", "Amount", "Status", "Date"]} />
+          <TableHeadRow columns={["Candidate", "Product", "Level", "Amount", "Status", "Date", ""]} />
           <tbody>
             {transactions.map((t) => (
               <TableRow key={t.orderId}>
@@ -54,9 +59,12 @@ export default async function AdminPaymentsPage() {
                   <Badge variant={STATUS_VARIANT[t.status]}>{t.status}</Badge>
                 </TableCell>
                 <TableCell>{formatDate(t.createdAt)}</TableCell>
+                <TableCell>
+                  <PaymentActions orderId={t.orderId} status={t.status} amountPaise={t.amountPaise} />
+                </TableCell>
               </TableRow>
             ))}
-            {transactions.length === 0 && <TableEmptyRow colSpan={6} message="No payments yet." />}
+            {transactions.length === 0 && <TableEmptyRow colSpan={7} message="No payments yet." />}
           </tbody>
         </Table>
       </div>
@@ -65,7 +73,7 @@ export default async function AdminPaymentsPage() {
         Unlocked without payment
       </h2>
       <Table>
-        <TableHeadRow columns={["Candidate", "Unlock", "Date"]} />
+        <TableHeadRow columns={["Candidate", "Unlock", "Date", ""]} />
         <tbody>
           {unpaidUnlocks.map((u, i) => (
             <TableRow key={`${u.userId}-${u.kind}-${u.leadId ?? i}`}>
@@ -75,9 +83,12 @@ export default async function AdminPaymentsPage() {
                 {u.roleTitle && <span className="text-[#9c9c9c]"> · {u.roleTitle}</span>}
               </TableCell>
               <TableCell>{formatDate(u.unlockedAt)}</TableCell>
+              <TableCell>
+                <ReconcileForm userId={u.userId} leadId={u.leadId} product={u.kind} />
+              </TableCell>
             </TableRow>
           ))}
-          {unpaidUnlocks.length === 0 && <TableEmptyRow colSpan={3} message="None — good." tone="success" />}
+          {unpaidUnlocks.length === 0 && <TableEmptyRow colSpan={4} message="None — good." tone="success" />}
         </tbody>
       </Table>
     </div>

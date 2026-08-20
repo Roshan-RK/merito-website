@@ -6,15 +6,25 @@ const REFERENCE_STATUSES = ["initiated", "in_progress", "completed", "cancelled"
 async function getFunnelCounts() {
   const supabase = getSupabaseServerClient();
 
-  const [{ data: leadRows }, { count: reportsUnlocked }, { count: interviewsStarted }, { count: interviewsCompleted }, { count: personalityCompleted }, { data: referenceRows }] =
-    await Promise.all([
-      supabase.from("fitment_leads").select("user_id"),
-      supabase.from("report_unlocks").select("*", { count: "exact", head: true }),
-      supabase.from("fitment_interviews").select("*", { count: "exact", head: true }).eq("status", "invited"),
-      supabase.from("fitment_interviews").select("*", { count: "exact", head: true }).eq("status", "ready"),
-      supabase.from("personality_tests").select("*", { count: "exact", head: true }),
-      supabase.from("reference_checks").select("status"),
-    ]);
+  const [
+    { data: leadRows },
+    { count: reportsUnlocked },
+    { count: interviewsStarted },
+    { count: interviewsCompleted },
+    { count: interviewsTerminated },
+    { count: interviewsStuck },
+    { count: personalityCompleted },
+    { data: referenceRows },
+  ] = await Promise.all([
+    supabase.from("fitment_leads").select("user_id"),
+    supabase.from("report_unlocks").select("*", { count: "exact", head: true }),
+    supabase.from("fitment_interviews").select("*", { count: "exact", head: true }).eq("status", "invited"),
+    supabase.from("fitment_interviews").select("*", { count: "exact", head: true }).eq("status", "ready"),
+    supabase.from("fitment_interviews").select("*", { count: "exact", head: true }).eq("status", "terminated"),
+    supabase.from("fitment_interviews").select("*", { count: "exact", head: true }).not("stuck_at", "is", null),
+    supabase.from("personality_tests").select("*", { count: "exact", head: true }),
+    supabase.from("reference_checks").select("status"),
+  ]);
 
   const fitmentStarted = new Set((leadRows ?? []).map((r) => r.user_id)).size;
 
@@ -28,6 +38,8 @@ async function getFunnelCounts() {
     reportsUnlocked: reportsUnlocked ?? 0,
     interviewsStarted: interviewsStarted ?? 0,
     interviewsCompleted: interviewsCompleted ?? 0,
+    interviewsTerminated: interviewsTerminated ?? 0,
+    interviewsStuck: interviewsStuck ?? 0,
     personalityCompleted: personalityCompleted ?? 0,
     referenceCounts,
   };
@@ -41,6 +53,8 @@ export default async function AdminFunnelPage() {
     ["Report unlocked (paid)", stats.reportsUnlocked],
     ["Interview started", stats.interviewsStarted],
     ["Interview completed", stats.interviewsCompleted],
+    ["Interview terminated", stats.interviewsTerminated],
+    ["Interview stuck", stats.interviewsStuck],
     ["Personality test completed", stats.personalityCompleted],
     ...REFERENCE_STATUSES.map((s): [string, number] => [`References — ${s}`, stats.referenceCounts[s]]),
   ];

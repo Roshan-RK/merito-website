@@ -21,7 +21,9 @@ export default function LoginPage({
     const supabase = createSupabaseBrowserClient();
     // `next` is re-validated against an allowlist server-side in
     // /hub/auth/callback — this is just passing the candidate value through.
-    const callbackPath = next ? `/hub/auth/callback?next=${encodeURIComponent(next)}` : "/hub/auth/callback";
+    // Always include the `next` query (even empty) so the Supabase email
+    // template can safely append `&token_hash=...` without conditional logic.
+    const callbackPath = `/hub/auth/callback?next=${encodeURIComponent(next ?? "")}`;
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {

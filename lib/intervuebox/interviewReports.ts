@@ -44,12 +44,35 @@ export type InterviewReportReady = {
   // as of 2026-07-28.
   feedbackToInterviewer: string | null;
   roadmap: string | null;
+  // Same freeform-bullet shape as strengths/areasOfImprovement above --
+  // opportunities/threats complete the SWOT the mockup's Coaching plan tab
+  // shows. Not present on any real IntervueBox response seen to date; same
+  // forward-compatible treatment as whatToFocusOnNext/trainingFocus below.
+  opportunities: string | null;
+  threats: string | null;
   criteriaEvaluationTable: CriteriaEvaluationEntry[];
   interviewTitle: string | null;
   skillReport: Record<string, SkillReportEntry>;
   overallSkillScore: number | null;
   answers: AnswerDetail[];
   knowledgeAnswers: unknown[];
+  // Not present on any real IntervueBox response seen to date (see
+  // RawInterviewReportResponse below) -- kept as forward-compatible optional
+  // fields so the Coaching plan / Practice conduct UI can show these sections
+  // the moment real data exists, without another round of plumbing. Always
+  // null today; never fabricate a value for these client-side.
+  whatToFocusOnNext: string | null;
+  trainingFocus: string | null;
+  confidenceLevel: string | null;
+  presentation: string | null;
+  bodyLanguage: string | null;
+  environmentCheck: string | null;
+  responseQuality: string | null;
+  // Proctoring stat the mockup's Practice conduct tab shows as a count --
+  // same "not seen live yet, defensive mapping" treatment as the conduct
+  // fields above; lives with flagForSuspiciousActivity/integrityCheck on
+  // sessionDetails, not overallReport, since it's proctoring data.
+  tabChanges: number | null;
 };
 
 export type InterviewReport = { status: "NOT_READY" } | ({ status: "READY" } & InterviewReportReady);
@@ -81,19 +104,33 @@ type RawInterviewReportResponse = {
     flagForSuspiciousActivity?: boolean;
     integrityCheck?: string;
     videoReport?: string;
+    tabChanges?: number;
     interviewTitle?: string;
     skillReport?: Record<string, { score: number; comment: string }>;
     overallSkillScore?: number;
     knowledgeAnswers?: unknown[];
+    // Discrete camera/delivery fields the mockup's Practice conduct tab
+    // shows -- not seen on any real response yet, mapped defensively in case
+    // IntervueBox adds them later (see InterviewReportReady's comment).
+    confidenceLevel?: string;
+    presentation?: string;
+    bodyLanguage?: string;
+    environmentCheck?: string;
+    responseQuality?: string;
     overallReport: {
       score: number;
       metrics: Record<string, number>;
       overallSummary: string;
       strengths?: string;
       areasOfImprovement?: string;
+      opportunities?: string;
+      threats?: string;
       feedbackToInterviewer?: string;
       roadmap?: string;
       criteriaEvaluationTable?: CriteriaEvaluationEntry[];
+      // Same forward-compatible treatment as the conduct fields above.
+      whatToFocusOnNext?: string;
+      trainingFocus?: string;
     };
   };
 };
@@ -246,11 +283,21 @@ export async function getInterviewReport(interviewId: string, candidateId: strin
       videoReport: response.sessionDetails.videoReport ?? null,
       feedbackToInterviewer: overallReport.feedbackToInterviewer ?? null,
       roadmap: overallReport.roadmap ?? null,
+      opportunities: overallReport.opportunities ?? null,
+      threats: overallReport.threats ?? null,
       criteriaEvaluationTable: overallReport.criteriaEvaluationTable ?? [],
       interviewTitle: response.sessionDetails.interviewTitle ?? null,
       skillReport: response.sessionDetails.skillReport ?? {},
       overallSkillScore: response.sessionDetails.overallSkillScore ?? null,
       knowledgeAnswers: response.sessionDetails.knowledgeAnswers ?? [],
+      whatToFocusOnNext: overallReport.whatToFocusOnNext ?? null,
+      trainingFocus: overallReport.trainingFocus ?? null,
+      confidenceLevel: response.sessionDetails.confidenceLevel ?? null,
+      presentation: response.sessionDetails.presentation ?? null,
+      bodyLanguage: response.sessionDetails.bodyLanguage ?? null,
+      environmentCheck: response.sessionDetails.environmentCheck ?? null,
+      responseQuality: response.sessionDetails.responseQuality ?? null,
+      tabChanges: response.sessionDetails.tabChanges ?? null,
       answers: (response.sessionDetails.answers ?? []).map((a) => ({
         question: a.question,
         transcript: a.transcript,

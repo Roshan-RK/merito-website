@@ -75,7 +75,7 @@ export default function PersonalityPaywallModal({
       const data = await res.json();
       if (!res.ok) {
         setPaying(false);
-        setError(data.error || "Something went wrong — please try again.");
+        setError(data.error || "Something went wrong. Please try again.");
         return;
       }
       if (data.status !== "checkout") {
@@ -87,12 +87,12 @@ export default function PersonalityPaywallModal({
         await loadRazorpayCheckoutScript();
       } catch {
         setPaying(false);
-        setError("Could not load the payment form — please try again.");
+        setError("Could not load the payment form. Please try again.");
         return;
       }
       if (!window.Razorpay) {
         setPaying(false);
-        setError("Could not load the payment form — please try again.");
+        setError("Could not load the payment form. Please try again.");
         return;
       }
       const rzp = new window.Razorpay({
@@ -117,13 +117,13 @@ export default function PersonalityPaywallModal({
             const verifyData = await verifyRes.json();
             setPaying(false);
             if (!verifyRes.ok) {
-              setError(verifyData.error || "Payment succeeded but verification failed — please contact support.");
+              setError(verifyData.error || "Payment succeeded, but verification failed. Please contact support.");
               return;
             }
             await onPaid();
           } catch {
             setPaying(false);
-            setError("Payment succeeded but verification failed — please refresh.");
+            setError("Payment succeeded, but verification failed. Please refresh.");
           }
         },
         modal: { ondismiss: () => setPaying(false) },
@@ -131,7 +131,7 @@ export default function PersonalityPaywallModal({
       rzp.open();
     } catch {
       setPaying(false);
-      setError("Something went wrong — please try again.");
+      setError("Something went wrong. Please try again.");
     }
   };
 

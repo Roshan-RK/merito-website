@@ -253,3 +253,47 @@ describe("referenceChecks", () => {
     });
   });
 });
+
+describe("resetRefereeReminders", () => {
+  it("sets reminder_count to 0 and clears last_reminded_at", async () => {
+    const updateEq = vi.fn().mockResolvedValue({ error: null });
+    const update = vi.fn().mockReturnValue({ eq: updateEq });
+    fromMock.mockReturnValue({ update });
+
+    const { resetRefereeReminders } = await import("../referenceChecks");
+    await resetRefereeReminders("referee-1");
+
+    expect(update).toHaveBeenCalledWith({ reminder_count: 0, last_reminded_at: null });
+    expect(updateEq).toHaveBeenCalledWith("id", "referee-1");
+  });
+
+  it("throws when the update fails", async () => {
+    const updateEq = vi.fn().mockResolvedValue({ error: { message: "db error" } });
+    const update = vi.fn().mockReturnValue({ eq: updateEq });
+    fromMock.mockReturnValue({ update });
+
+    const { resetRefereeReminders } = await import("../referenceChecks");
+    await expect(resetRefereeReminders("referee-1")).rejects.toThrow("Failed to reset referee reminders: db error");
+  });
+});
+
+describe("resetRefereeReminders re-admits a referee to the reminder sweep (integration)", () => {
+  it("getStaleRefereesForReminder includes the referee after reset", async () => {
+    const update = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
+    const or = vi.fn().mockResolvedValue({
+      data: [{ id: "referee-1", name: "Jane", email: "jane@example.com", reference_check_id: "check-1" }],
+      error: null,
+    });
+    const inFn = vi.fn().mockReturnValue({ or });
+    const lt = vi.fn().mockReturnValue({ in: inFn });
+    const eq = vi.fn().mockReturnValue({ lt });
+    const select = vi.fn().mockReturnValue({ eq });
+    fromMock.mockReturnValue({ update, select });
+
+    const { resetRefereeReminders, getStaleRefereesForReminder } = await import("../referenceChecks");
+    await resetRefereeReminders("referee-1");
+    const stale = await getStaleRefereesForReminder();
+
+    expect(stale.map((r) => r.id)).toContain("referee-1");
+  });
+});

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ClipboardList, Play } from "lucide-react";
 import {
   ITEMS,
   IMPRESSION_ITEMS,
@@ -14,6 +15,7 @@ import PersonalityReport from "./PersonalityReport";
 const ALL = [...ITEMS, ...IMPRESSION_ITEMS];
 const PER_PAGE = 13;
 const PAGES = Math.ceil(ALL.length / PER_PAGE);
+const SCALE_LABELS = ["Very inaccurate", "Moderately inaccurate", "Neither", "Moderately accurate", "Very accurate"];
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -45,7 +47,6 @@ export default function PersonalityTestClient({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const answeredCount = Object.keys(answers).length;
   const pageItems = useMemo(() => order.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE), [order, page]);
   const pageComplete = pageItems.every((it) => it.id in answers);
 
@@ -78,7 +79,7 @@ export default function PersonalityTestClient({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Something went wrong — please try again.");
+        setError(data.error || "Something went wrong. Please try again.");
         setSaving(false);
         return;
       }
@@ -87,17 +88,9 @@ export default function PersonalityTestClient({
       setPhase("report");
       window.scrollTo(0, 0);
     } catch {
-      setError("Something went wrong — please try again.");
+      setError("Something went wrong. Please try again.");
       setSaving(false);
     }
-  };
-
-  const handleRetake = () => {
-    setAnswers({});
-    setPage(0);
-    setResult(null);
-    setPhase("intro");
-    window.scrollTo(0, 0);
   };
 
   if (phase === "report" && result) {
@@ -107,126 +100,167 @@ export default function PersonalityTestClient({
         roleTitle={roleTitle}
         scores={result.scores}
         validity={result.validity}
-        onRetake={handleRetake}
       />
     );
   }
 
   if (phase === "intro") {
     return (
-      <div
-        className="bg-white border border-black/[0.08]"
-        style={{ borderRadius: 20, padding: 28, boxShadow: "0 18px 50px rgba(17,35,89,0.05)" }}
-      >
-        <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.6rem", margin: "0 0 8px" }}>
-          Big Five (OCEAN) Personality Test
-        </h1>
-        <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 14.5, lineHeight: 1.6, margin: "0 0 16px" }}>
-          A short questionnaire that maps how you tend to think, work and relate to others across five broad dimensions of personality — for {roleTitle}.
+      <div style={{ background: "rgb(29,25,31)", border: "1px solid rgb(49,47,55)", borderRadius: 14, padding: 24 }}>
+        <div className="flex items-center" style={{ gap: 10, marginBottom: 12 }}>
+          <ClipboardList size={20} strokeWidth={2} className="text-[#ed1a24]" />
+          <span className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 15 }}>
+            Big Five (OCEAN) Personality Test
+          </span>
+        </div>
+        <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 14, lineHeight: 1.65, margin: "0 0 16px" }}>
+          A short questionnaire that maps how you tend to think, work and relate to others across five broad dimensions of personality &mdash; for {roleTitle}.
         </p>
-        <div className="flex flex-wrap" style={{ gap: 10, marginBottom: 18 }}>
+        <div className="flex flex-wrap" style={{ gap: 8, marginBottom: 20 }}>
           {[`${ALL.length} scored statements`, "~11 minutes", "No right or wrong answers"].map((b) => (
             <span
               key={b}
-              className="bg-[#fdf8fb] font-[family-name:var(--font-poppins)] text-[#4b4b4d]"
-              style={{ fontSize: 12.5, borderRadius: 999, padding: "7px 13px", border: "1px solid #ece4da" }}
+              className="font-[family-name:var(--font-poppins)] text-white/55"
+              style={{ fontSize: 11, borderRadius: 999, padding: "4px 12px", border: "1px solid rgb(49,47,55)" }}
             >
               {b}
             </span>
           ))}
         </div>
-        <ul className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 13.5, lineHeight: 1.8, margin: "0 0 20px", paddingLeft: 18 }}>
-          <li>Rate how accurately each statement describes you, from 1 (very inaccurate) to 5 (very accurate).</li>
-          <li>Answer for how you actually are — not how you think you should be.</li>
-          <li>Try not to sit on the fence: pick the side that fits you better.</li>
-          <li>A few statements are worded in reverse, so read each one carefully.</li>
-        </ul>
+        <div className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 13, lineHeight: 1.65, margin: "0 0 20px", display: "flex", flexDirection: "column", gap: 6 }}>
+          <p style={{ margin: 0 }}>Rate how accurately each statement describes you, from 1 (very inaccurate) to 5 (very accurate).</p>
+          <p style={{ margin: 0 }}>Answer for how you actually are &mdash; not how you think you should be.</p>
+          <p style={{ margin: 0 }}>Try not to sit on the fence: pick the side that fits you better.</p>
+          <p style={{ margin: 0 }}>A few statements are worded in reverse, so read each one carefully.</p>
+        </div>
         <button
           onClick={() => setPhase("quiz")}
-          className="font-[family-name:var(--font-poppins)] font-semibold text-white"
-          style={{ height: 50, padding: "0 26px", borderRadius: 8, fontSize: 15, background: "#ed1a24", border: "none", cursor: "pointer", boxShadow: "0 4px 6px rgba(236,34,40,0.3)" }}
+          className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
+          style={{ gap: 8, height: 48, padding: "0 24px", borderRadius: 8, fontSize: 14.5, border: "none", cursor: "pointer", boxShadow: "0 4px 6px rgba(236,34,40,0.3)" }}
         >
+          <Play size={15} strokeWidth={2} fill="currentColor" />
           Start test
         </button>
-        <p className="text-[#9c9c9c]" style={{ fontSize: 12, marginTop: 12 }}>Your answers stay private and are only used to build your Merito profile.</p>
+        <p className="text-white/35" style={{ fontSize: 12, marginTop: 14 }}>
+          Your answers stay private and are only used to build your Merito profile.
+        </p>
       </div>
     );
   }
 
   // phase === "quiz"
+  const qStart = page * PER_PAGE + 1;
+  const qEnd = page * PER_PAGE + pageItems.length;
   return (
     <div>
-      <div className="sticky bg-[#fdf8fb]" style={{ top: 0, zIndex: 10, padding: "10px 0" }}>
-        <div className="flex items-center justify-between font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 12.5, marginBottom: 6 }}>
-          <span>Set {page + 1} of {PAGES}</span>
-          <span>{answeredCount}/{ALL.length} answered</span>
-        </div>
-        <div className="bg-[#f0e6ea] overflow-hidden" style={{ height: 8, borderRadius: 6 }}>
-          <div className="bg-[#ed1a24] h-full" style={{ borderRadius: 6, width: `${(answeredCount / ALL.length) * 100}%`, transition: "width .25s ease" }} />
-        </div>
-      </div>
-
-      <div
-        className="bg-white border border-black/[0.08]"
-        style={{ borderRadius: 20, padding: "20px 24px", marginTop: 10, boxShadow: "0 18px 50px rgba(17,35,89,0.05)" }}
-      >
-        <div className="hidden sm:grid font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ gridTemplateColumns: "1fr repeat(5,64px)", fontSize: 10.5, textAlign: "center", marginBottom: 10 }}>
-          <div />
-          <div>Very inaccurate</div>
-          <div>Moderately inaccurate</div>
-          <div>Neither</div>
-          <div>Moderately accurate</div>
-          <div>Very accurate</div>
-        </div>
-
-        {pageItems.map((it, i) => (
-          <div key={it.id} className="border-b border-[#ece4da]" style={{ padding: "14px 0" }}>
-            <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14.5, margin: "0 0 10px" }}>
-              <span className="font-bold text-[#ed1a24]" style={{ marginRight: 8 }}>{page * PER_PAGE + i + 1}.</span>
-              {it.s}
-            </p>
-            <div className="grid" style={{ gridTemplateColumns: "repeat(5,1fr)", gap: 8 }}>
-              {[1, 2, 3, 4, 5].map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => setAnswer(it.id, v)}
-                  aria-pressed={answers[it.id] === v}
-                  className="font-[family-name:var(--font-poppins)] font-semibold"
-                  style={{
-                    height: 42,
-                    borderRadius: 8,
-                    border: answers[it.id] === v ? "1px solid #ed1a24" : "1px solid #dfdcd6",
-                    background: answers[it.id] === v ? "#ed1a24" : "#fff",
-                    color: answers[it.id] === v ? "#fff" : "#6e6e6e",
-                    cursor: "pointer",
-                  }}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
+      <div style={{ borderRadius: 14, padding: "20px 24px", background: "rgb(29,25,31)", border: "1px solid rgb(49,47,55)" }}>
+        <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
+          <span className="font-[family-name:var(--font-poppins)] font-semibold text-white/55" style={{ fontSize: 13 }}>
+            Question {qStart}&ndash;{qEnd} of {ALL.length}
+          </span>
+          <div className="bg-white/[0.08] overflow-hidden" style={{ height: 6, width: 128, borderRadius: 999 }}>
+            <div
+              className="bg-[#ed1a24] h-full"
+              style={{ borderRadius: 999, width: `${((page + 1) / PAGES) * 100}%`, transition: "width .25s ease" }}
+            />
           </div>
-        ))}
+        </div>
 
-        {hint && <p style={{ color: "#ed1a24", fontSize: 13, marginTop: 10 }}>{hint}</p>}
-        {error && <p style={{ color: "#ed1a24", fontSize: 13, marginTop: 10 }}>{error}</p>}
+        <div
+          className="hidden sm:flex font-[family-name:var(--font-poppins)] text-white/35"
+          style={{ gap: 8, fontSize: 9, textAlign: "center", marginBottom: 6 }}
+        >
+          <div style={{ flex: 1 }} />
+          {SCALE_LABELS.map((l) => (
+            <div key={l} style={{ width: 48, lineHeight: 1.2 }}>
+              {l}
+            </div>
+          ))}
+        </div>
 
-        <div className="flex items-center justify-between" style={{ marginTop: 20 }}>
+        <div>
+          {pageItems.map((it, i) => {
+            const qNum = page * PER_PAGE + i + 1;
+            return (
+              <div
+                key={it.id}
+                className="border-b border-white/[0.08] flex flex-col sm:flex-row sm:items-center"
+                style={{ gap: 12, padding: "14px 0" }}
+              >
+                <p id={`q-${it.id}-label`} className="font-[family-name:var(--font-poppins)] text-white/85" style={{ fontSize: 14, margin: 0, flex: 1, minWidth: 0 }}>
+                  <span className="font-semibold text-[#ed1a24]" style={{ marginRight: 6 }}>
+                    {qNum}.
+                  </span>
+                  {it.s}
+                </p>
+                <div role="radiogroup" aria-labelledby={`q-${it.id}-label`} className="flex shrink-0" style={{ gap: 8 }}>
+                  {[1, 2, 3, 4, 5].map((v) => {
+                    const selected = answers[it.id] === v;
+                    return (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setAnswer(it.id, v)}
+                        role="radio"
+                        aria-checked={selected}
+                        aria-label={`${v}: ${SCALE_LABELS[v - 1]}`}
+                        className={
+                          "font-[family-name:var(--font-poppins)] font-medium border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#ed1a24] focus-visible:ring-offset-2 focus-visible:ring-offset-[#141416] " +
+                          (selected
+                            ? "border-[#ed1a24] bg-[#ed1a24]/15 text-[#ed1a24]"
+                            : "border-white/[0.12] text-white/50 hover:border-[#ed1a24]/40")
+                        }
+                        style={{ width: 48, height: 40, borderRadius: 8, fontSize: 14, cursor: "pointer" }}
+                      >
+                        {v}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {hint && (
+          <p role="alert" style={{ color: "#E8798F", fontSize: 13, marginTop: 12 }}>
+            {hint}
+          </p>
+        )}
+        {error && (
+          <p role="alert" style={{ color: "#E8798F", fontSize: 13, marginTop: 12 }}>
+            {error}
+          </p>
+        )}
+
+        <div className="flex items-center justify-between" style={{ marginTop: 22 }}>
           <button
-            onClick={() => { setPage((p) => Math.max(0, p - 1)); window.scrollTo(0, 0); }}
-            className="font-[family-name:var(--font-poppins)] font-semibold"
-            style={{ visibility: page === 0 ? "hidden" : "visible", height: 46, padding: "0 20px", borderRadius: 8, fontSize: 14, background: "#fff", border: "1px solid #dcdcdc", cursor: "pointer" }}
+            onClick={() => {
+              setPage((p) => Math.max(0, p - 1));
+              window.scrollTo(0, 0);
+            }}
+            disabled={page === 0}
+            className="font-[family-name:var(--font-poppins)] font-medium text-white/50 hover:text-white transition-colors"
+            style={{
+              opacity: page === 0 ? 0 : 1,
+              background: "none",
+              border: "none",
+              fontSize: 12,
+              cursor: page === 0 ? "default" : "pointer",
+            }}
           >
-            Back
+            &larr; Back
           </button>
           <button
             onClick={handleNext}
             disabled={saving}
-            className="font-[family-name:var(--font-poppins)] font-semibold text-white"
-            style={{ height: 46, padding: "0 24px", borderRadius: 8, fontSize: 14, background: saving ? "#dcdcdc" : "#ed1a24", border: "none", cursor: saving ? "default" : "pointer" }}
+            className={
+              "font-[family-name:var(--font-poppins)] font-semibold text-white transition-colors " +
+              (saving ? "bg-white/[0.12]" : "bg-[#ed1a24] hover:bg-[#c8151e]")
+            }
+            style={{ height: 46, padding: "0 24px", borderRadius: 8, fontSize: 14, border: "none", cursor: saving ? "default" : "pointer", boxShadow: saving ? "none" : "0 4px 6px rgba(236,34,40,0.3)" }}
           >
-            {saving ? "Scoring…" : page === PAGES - 1 ? "See my results" : "Next"}
+            {saving ? "Scoring…" : page === PAGES - 1 ? "Finish test" : "Next"}
           </button>
         </div>
       </div>

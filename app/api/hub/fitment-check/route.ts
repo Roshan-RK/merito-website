@@ -9,6 +9,8 @@ import { addApplicant, listApplicantsForJob, isDuplicateApplicantError, type Add
 import { getResumeMatchReport, scoreOutOfTen } from "@/lib/intervuebox/reports";
 import { IntervueBoxError } from "@/lib/intervuebox/client";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { recordPipelineFailure } from "@/lib/pipelineFailures";
+import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 
 export const runtime = "nodejs";
 
@@ -213,6 +215,11 @@ export async function POST(request: Request) {
     request.headers.get("x-real-ip") ??
     "unknown";
 
+  const supabaseAuth = await createSupabaseServerClient();
+  const {
+    data: { user: sessionUser },
+  } = await supabaseAuth.auth.getUser();
+
   let form: FormData;
   try {
     form = await request.formData();
@@ -221,7 +228,8 @@ export async function POST(request: Request) {
   }
 
   const name = normalize(form.get("name"));
-  const email = normalize(form.get("email"));
+  const submittedEmail = normalize(form.get("email"));
+  const email = sessionUser?.email ?? submittedEmail;
   const role = normalize(form.get("role"));
   const jdText = normalize(form.get("jdText"));
   const jdUrl = normalize(form.get("jdUrl"));
@@ -254,13 +262,13 @@ export async function POST(request: Request) {
   }
   if (cv.size > MAX_CV_SIZE_BYTES) {
     return Response.json(
-      { error: "CV file is too large — please upload a file under 5MB." },
+      { error: "CV file is too large. Please upload a file under 5MB." },
       { status: 400 }
     );
   }
 
   const recaptchaSecretKey = process.env.RECAPTCHA_SECRET_KEY;
-  if (recaptchaSecretKey) {
+  if (recaptchaSecretKey && !sessionUser) {
     if (!recaptchaToken) {
       return Response.json({ error: "Captcha verification is required." }, { status: 400 });
     }
@@ -272,7 +280,7 @@ export async function POST(request: Request) {
 
   if (!checkEmailRateLimit(email) || !checkIpRateLimit(ip)) {
     return Response.json(
-      { error: "You've checked your fitment recently — please try again later." },
+      { error: "You've checked your fitment recently. Please try again later." },
       { status: 429 }
     );
   }
@@ -337,7 +345,16 @@ export async function POST(request: Request) {
         { status: 409 }
       );
     }
-    return Response.json({ error: "Something went wrong — please try again." }, { status: 502 });
+    if (ibJobId) {
+      await recordPipelineFailure({
+        kind: "orphaned_ib_job",
+        userId: null,
+        leadId: null,
+        orderId: null,
+        detail: { email, roleTitle: role, ibJobId, ibResumeId, error: err instanceof Error ? err.message : String(err) },
+      });
+    }
+    return Response.json({ error: "Something went wrong. Please try again." }, { status: 502 });
   }
 
   const report = await getResumeMatchReport(ibAppliedJobId).catch((err) => {
@@ -351,6 +368,7 @@ export async function POST(request: Request) {
     .insert({
       name: name || null,
       email,
+      user_id: sessionUser?.id,
       phone,
       candidate_level: validCandidateLevel,
       role_title: role,

@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import ProgressRail, { type InterviewStatus, type PersonalityStatus } from "./ProgressRail";
 import ScoreCard from "./ScoreCard";
 import BundlePromoCard from "./BundlePromoCard";
+import OnboardingBanner from "./OnboardingBanner";
+import QuickTipsCard from "./QuickTipsCard";
+import ApplicationsCard, { type Application } from "./ApplicationsCard";
+import RecentActivityCard from "./RecentActivityCard";
 import ReportPaywallModal from "./ReportPaywallModal";
 import PersonalityPaywallModal from "./PersonalityPaywallModal";
 import ReferencesPaywallModal from "./ReferencesPaywallModal";
@@ -11,6 +15,7 @@ import InterviewPaywallModal from "./InterviewPaywallModal";
 import GenerateReportModal from "./GenerateReportModal";
 import CounsellingCard from "./CounsellingCard";
 import CounsellingPaywallModal from "./CounsellingPaywallModal";
+import OnboardingTour from "./OnboardingTour";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import type { CandidateLevel } from "@/lib/razorpay/pricing";
 
@@ -22,8 +27,8 @@ export default function DashboardClient({
   personalityUnlocked,
   referencesUnlocked,
   userEmail,
+  userName,
   score,
-  prevScore,
   verdict,
   initialReportUnlocked,
   initialReport,
@@ -33,6 +38,8 @@ export default function DashboardClient({
   personalityStatus,
   counsellingPriceLabel,
   initialCounsellingRequested,
+  applications,
+  recruiterActivity,
 }: {
   leadId: string;
   roleTitle: string;
@@ -41,6 +48,7 @@ export default function DashboardClient({
   personalityUnlocked: boolean;
   referencesUnlocked: boolean;
   userEmail: string;
+  userName: string;
   score: number;
   prevScore: number | null;
   verdict: string;
@@ -52,15 +60,25 @@ export default function DashboardClient({
   personalityStatus: PersonalityStatus;
   counsellingPriceLabel: string;
   initialCounsellingRequested: boolean;
+  applications: Application[];
+  recruiterActivity: React.ReactNode;
 }) {
-  const [modal, setModal] = useState<"none" | "report" | "personality" | "references" | "interview" | "generate" | "counselling">("none");
+  const [modal, setModal] = useState<"none" | "report" | "personality" | "references" | "interview" | "generate" | "counselling" | "tour">("none");
   const [interviewModalAlreadyInvited, setInterviewModalAlreadyInvited] = useState(false);
   const [reportUnlocked, setReportUnlocked] = useState(initialReportUnlocked);
-  const [report, setReport] = useState<ResumeMatchReportReady | null>(initialReport);
+  const [, setReport] = useState<ResumeMatchReportReady | null>(initialReport);
   const [interviewStatus, setInterviewStatus] = useState<InterviewStatus>(initialInterviewStatus);
   const [counsellingRequested, setCounsellingRequested] = useState(initialCounsellingRequested);
   const [personalityUnlockedState, setPersonalityUnlockedState] = useState(personalityUnlocked);
   const [referencesUnlockedState, setReferencesUnlockedState] = useState(referencesUnlocked);
+
+  const doneCount =
+    1 +
+    (reportUnlocked ? 1 : 0) +
+    (personalityStatus === "ready" ? 1 : 0) +
+    (referenceCheckStatus === "completed" ? 1 : 0) +
+    (interviewStatus === "ready" ? 1 : 0);
+  const totalSteps = 5;
 
   // While the interview report is still generating, poll for it so the
   // dashboard updates live instead of requiring a manual refresh.
@@ -73,6 +91,13 @@ export default function DashboardClient({
         const data = await res.json();
         if (data.status === "ready") {
           setInterviewStatus("ready");
+        } else if (data.status === "terminated") {
+          setInterviewStatus("terminated");
+        } else if (data.status === "stuck") {
+          // Stop polling as "invited" once launch-link has marked this row
+          // stuck -- otherwise the pill silently keeps retrying forever
+          // instead of ever surfacing the stuck card's href.
+          setInterviewStatus("stuck");
         }
       } catch {
         // Transient network error — next poll retries, nothing to surface.
@@ -81,12 +106,26 @@ export default function DashboardClient({
     return () => clearInterval(interval);
   }, [interviewStatus, roleTitle]);
 
+  const otherApplications = applications.filter((app) => app.id !== leadId);
+
   return (
     <>
-      <div
-        className="mx-auto"
-        style={{ maxWidth: 1440, padding: 24, display: "grid", gridTemplateColumns: "280px minmax(0,1fr)", gap: 22 }}
-      >
+      <div className="mx-auto" style={{ maxWidth: 1040, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 18 }}>
+        <div>
+          <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.7rem", letterSpacing: "-0.02em", margin: "0 0 6px" }}>
+            Hi {userName}, here&apos;s how you stand for {roleTitle}
+          </h1>
+          <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 13.5, margin: 0 }}>
+            {doneCount} of {totalSteps} steps complete. Each one strengthens the case a recruiter sees.
+          </p>
+        </div>
+
+        <OnboardingBanner roleTitle={roleTitle} />
+
+        <QuickTipsCard onStartTour={() => setModal("tour")} />
+
+        <ScoreCard roleTitle={roleTitle} score={score} verdict={verdict} />
+
         <ProgressRail
           reportUnlocked={reportUnlocked}
           interviewStatus={interviewStatus}
@@ -105,37 +144,26 @@ export default function DashboardClient({
             setInterviewModalAlreadyInvited(true);
             setModal("interview");
           }}
-          onOpenGenerateReport={() => setModal("generate")}
         />
 
-        <div>
-          <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.9rem", letterSpacing: "-0.03em", margin: "0 0 6px" }}>
-            Hi — here&apos;s where you stand.
-          </h1>
-          <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 14, margin: "0 0 20px" }}>
-            {reportUnlocked ? "Your detailed report is unlocked." : "1 step left to a profile recruiters can't ignore."}
+        {bundleEligible && <BundlePromoCard level={level} onOpenPaywall={() => setModal("report")} />}
+
+        {recruiterActivity}
+
+        <section id="guidance" style={{ scrollMarginTop: 82 }}>
+          <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 11, letterSpacing: "0.08em", margin: "0 0 10px" }}>
+            Guidance
           </p>
-
-          <ScoreCard
-            roleTitle={roleTitle}
-            score={score}
-            prevScore={prevScore}
-            verdict={verdict}
-            reportUnlocked={reportUnlocked}
-            report={report}
-            onOpenReportPaywall={() => setModal("report")}
-          />
-
-          {bundleEligible && (
-            <BundlePromoCard level={level} onOpenPaywall={() => setModal("report")} />
-          )}
-
           <CounsellingCard
             priceLabel={counsellingPriceLabel}
             requested={counsellingRequested}
             onOpenPaywall={() => setModal("counselling")}
           />
-        </div>
+        </section>
+
+        <RecentActivityCard applications={otherApplications} />
+
+        <ApplicationsCard applications={applications} currentLeadId={leadId} />
       </div>
 
       {modal === "counselling" && (
@@ -220,6 +248,7 @@ export default function DashboardClient({
           onClose={() => setModal("none")}
         />
       )}
+      {modal === "tour" && <OnboardingTour onClose={() => setModal("none")} />}
     </>
   );
 }

@@ -71,6 +71,40 @@ describe("parseRoadmap", () => {
     expect(longTerm.topics[1].name).toBe("Data-Driven Measurement");
   });
 
+  // Real production roadmap string, pulled 2026-08-20 from Yukta Wagh's
+  // Inside Sales Executive interview -- unlike REAL_ROADMAP above, IntervueBox
+  // here labels each numbered topic as `**Focus Area:** <name>` instead of a
+  // bare `**<name>**`, which the old topic regex (anchored to end right after
+  // the closing `**`) never matched, leaving every phase's topics empty.
+  const REAL_ROADMAP_LABELED_TOPICS = `### Strengths to Leverage
+Before diving into improvements, the candidate should continue building on their strengths:
+- Familiarity with industry-standard tools like HubSpot, LinkedIn Sales Navigator, and Apollo.io.
+- Adaptability to cross-cultural communication patterns.
+
+### Roadmap for Improvement
+
+#### Short-Term (0-2 Months)
+**Goal:** Build foundational clarity and depth in sales strategies.
+1. **Focus Area:** CRM and Pipeline Management
+   - **What to Do:** Take online courses on HubSpot CRM and Apollo.io to fully understand their advanced functionalities.
+   - **Resources:** HubSpot Academy, Apollo.io Resource Center, LinkedIn Learning.
+2. **Focus Area:** Communication Clarity and Specificity
+   - **What to Do:** Practice framing real-life examples with the SOAR method through mock interviews.
+   - **Resources:** Public speaking workshops or online platforms like Toastmasters and Udemy.`;
+
+  it("parses numbered topics that use a bold label prefix instead of a bare bold name", () => {
+    const result = parseRoadmap(REAL_ROADMAP_LABELED_TOPICS);
+    expect(result).not.toBeNull();
+    expect(result!.phases).toHaveLength(1);
+    expect(result!.phases[0].topics).toHaveLength(2);
+    expect(result!.phases[0].topics[0]).toEqual({
+      name: "CRM and Pipeline Management",
+      whatToDo: "Take online courses on HubSpot CRM and Apollo.io to fully understand their advanced functionalities.",
+      resources: "HubSpot Academy, Apollo.io Resource Center, LinkedIn Learning.",
+    });
+    expect(result!.phases[0].topics[1].name).toBe("Communication Clarity and Specificity");
+  });
+
   it("returns null when the strengths section is missing", () => {
     expect(parseRoadmap("Just a plain paragraph of roadmap text with no structure.")).toBeNull();
   });

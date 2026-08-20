@@ -64,6 +64,14 @@ export async function renderPageToPdf(
       await page.setViewport({ width: 900, height: 1200 });
     }
     await page.goto(url, { waitUntil: "networkidle0" });
+    // page.pdf() emulates print media internally right before rendering,
+    // which collapses any print:hidden chrome (e.g. the dashboard's own
+    // Sidebar/TopBar, still present in the DOM behind these print routes).
+    // Switching to print media before measuring scrollHeight too keeps the
+    // measurement and the actual render in the same layout state -- without
+    // this, heightPx included the chrome's height, leaving a trailing blank
+    // gap in the PDF once print media hid it during the real render.
+    await page.emulateMediaType("print");
 
     let pdf: Uint8Array;
     if (options.singlePage) {

@@ -87,7 +87,7 @@ export async function loadCombinedReportData({
   }
 
   const displayName = fitment?.displayName || nameFromEmail(userEmail ?? "");
-  const primaryRole = fitment?.roleTitle || interview?.roleTitle || roleTitle || "—";
+  const primaryRole = fitment?.roleTitle || interview?.roleTitle || roleTitle || "-";
 
   return { fitment, personality, interview, references, displayName, primaryRole };
 }

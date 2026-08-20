@@ -9,10 +9,13 @@ import Button from "@/app/admin/_components/Button";
 const NAV_ITEMS = [
   { label: "Overview", href: "/admin" },
   { label: "Candidates", href: "/admin/candidates" },
+  { label: "Recruiters", href: "/admin/recruiters" },
   { label: "Payments", href: "/admin/payments" },
   { label: "Counselling", href: "/admin/counselling" },
   { label: "Extension", href: "/admin/extension" },
+  { label: "Pipeline Failures", href: "/admin/pipeline-failures" },
   { label: "Learned Skills", href: "/admin/learned-skills" },
+  { label: "Email Templates", href: "/admin/email-templates" },
 ];
 
 function isNavItemActive(pathname: string, href: string): boolean {

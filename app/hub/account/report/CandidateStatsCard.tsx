@@ -1,4 +1,5 @@
 import { Phone, Mail, MapPin } from "lucide-react";
+import type { CandidateExperience } from "@/lib/intervuebox/reports";
 
 // currentSalary/expectedSalary/noticePeriod/willingToRelocate are always
 // "Not specified" — Merito's own applicant-intake flow sends that literal
@@ -8,27 +9,49 @@ import { Phone, Mail, MapPin } from "lucide-react";
 // value back. Shown as-is rather than invented or hidden.
 const NOT_SPECIFIED = "Not specified";
 
+// Used when the vendor's experience array is simply empty (fresher / no work
+// history parsed) — distinct from NOT_SPECIFIED, which is reserved for the
+// applicant-intake placeholder fields above.
+const NO_EXPERIENCE = "Not available";
+
+// IntervueBox's resume-parse experience array has no isCurrent/current flag —
+// verified against 3 live candidates on 2026-08-17. Two of three had a
+// literal "Present" in experience[0].duration (e.g. "2023-Present",
+// "Jun 2026 – Present"); the third's dates were relative ("1 year") but its
+// role ordering (Associate Consultant > System Engineer > Graduate Trainee >
+// Management Intern, most-senior-first) matched the same most-recent-first
+// convention. experience[0] is the reliable "current" entry; there is no
+// separate "relevant experience" figure anywhere in the API (the resume-match
+// experienceMatch.comment sometimes mentions a relevant-years figure in free
+// text, but format is inconsistent across candidates and not safe to parse),
+// so we show real totalExperience instead of fabricating one.
+function currentRole(experience: CandidateExperience[]): { company: string; designation: string } | null {
+  const latest = experience[0];
+  if (!latest) return null;
+  return { company: latest.company || NO_EXPERIENCE, designation: latest.position || NO_EXPERIENCE };
+}
+
 function StatItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 11.5, margin: "0 0 4px" }}>
+      <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 11, margin: "0 0 4px" }}>
         {label}
       </p>
-      <p className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: 14.5, margin: 0 }}>
+      <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13, margin: 0 }}>
         {value}
       </p>
     </div>
   );
 }
 
-function ContactRow({ icon, value }: { icon: React.ReactNode; value: string }) {
+function ContactItem({ icon, value }: { icon: React.ReactNode; value: string }) {
   return (
-    <div className="flex items-center text-[#4b4b4d]" style={{ gap: 8 }}>
+    <span className="flex items-center text-white/55" style={{ gap: 6 }}>
       {icon}
-      <span className="font-[family-name:var(--font-poppins)]" style={{ fontSize: 13.5 }}>
+      <span className="font-[family-name:var(--font-poppins)]" style={{ fontSize: 13 }}>
         {value}
       </span>
-    </div>
+    </span>
   );
 }
 
@@ -37,31 +60,30 @@ export default function CandidateStatsCard({
   phoneNumber,
   location,
   totalExperience,
+  experience,
 }: {
   email: string | null;
   phoneNumber: string | null;
   location: string | null;
   totalExperience: number | null;
+  experience: CandidateExperience[];
 }) {
+  const hasContact = Boolean(phoneNumber || email || location);
+  const current = currentRole(experience);
+
   return (
-    <div
-      className="bg-white border border-black/[0.08]"
-      style={{
-        borderRadius: 14,
-        padding: 20,
-        margin: "20px 0 24px",
-        display: "grid",
-        gridTemplateColumns: "minmax(0,1fr) minmax(0,2fr)",
-        gap: 24,
-      }}
-    >
-      <div className="flex flex-col" style={{ gap: 10, borderRight: "1px solid rgba(0,0,0,0.08)", paddingRight: 24 }}>
-        {phoneNumber && <ContactRow icon={<Phone size={14} />} value={phoneNumber} />}
-        {email && <ContactRow icon={<Mail size={14} />} value={email} />}
-        {location && <ContactRow icon={<MapPin size={14} />} value={location} />}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 18 }}>
-        <StatItem label="Total work experience" value={totalExperience != null ? `${totalExperience} years` : NOT_SPECIFIED} />
+    <div style={{ borderRadius: 14, padding: 18, background: "rgb(29,25,31)", border: "1px solid rgb(49,47,55)" }}>
+      {hasContact && (
+        <div className="flex flex-wrap items-center" style={{ gap: 18, paddingBottom: 14, marginBottom: 14, borderBottom: "1px solid rgb(49,47,55)" }}>
+          {phoneNumber && <ContactItem icon={<Phone size={13} strokeWidth={2} />} value={phoneNumber} />}
+          {email && <ContactItem icon={<Mail size={13} strokeWidth={2} />} value={email} />}
+          {location && <ContactItem icon={<MapPin size={13} strokeWidth={2} />} value={location} />}
+        </div>
+      )}
+      <div className="grid grid-cols-2 sm:grid-cols-4" style={{ gap: 16 }}>
+        <StatItem label="Total experience" value={totalExperience != null ? `${totalExperience} years` : NOT_SPECIFIED} />
+        <StatItem label="Current company" value={current ? current.company : NO_EXPERIENCE} />
+        <StatItem label="Current designation" value={current ? current.designation : NO_EXPERIENCE} />
         <StatItem label="Current salary" value={NOT_SPECIFIED} />
         <StatItem label="Expected salary" value={NOT_SPECIFIED} />
         <StatItem label="Notice period" value={NOT_SPECIFIED} />

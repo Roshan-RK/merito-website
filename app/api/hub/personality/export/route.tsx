@@ -46,15 +46,20 @@ export async function GET(request: Request) {
   const pageCookies = requestCookiesFor(request, url.hostname);
 
   const buffer = await renderPageToPdf(
-    `${url.origin}/hub/account/personality?role=${encodeURIComponent(roleTitle)}`,
-    pageCookies
+    `${url.origin}/hub/account/personality/print?role=${encodeURIComponent(roleTitle)}`,
+    pageCookies,
+    { singlePage: true }
   );
+
+  // ?inline=1 is used by ExportPreviewModal's <iframe> -- an "attachment"
+  // disposition forces a download prompt instead of rendering in the iframe.
+  const disposition = url.searchParams.get("inline") === "1" ? "inline" : "attachment";
 
   return new Response(new Uint8Array(buffer), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="personality-report.pdf"`,
+      "Content-Disposition": `${disposition}; filename="personality-report.pdf"`,
     },
   });
 }

@@ -16,6 +16,10 @@ import RefereeSummary from "./RefereeSummary";
 import ShareLinkRevokeToggle from "./ShareLinkRevokeToggle";
 import { Table, TableHeadRow, TableRow, TableCell, TableEmptyRow } from "@/app/admin/_components/Table";
 import Badge from "@/app/admin/_components/Badge";
+import InterviewRecoveryActions from "./InterviewRecoveryActions";
+import AccountActions from "./AccountActions";
+import ResumeMatchRetry from "./ResumeMatchRetry";
+import SendNotificationAction from "./SendNotificationAction";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -46,6 +50,20 @@ export default async function AdminCandidateDetailPage({
         {candidate.email}
       </p>
 
+      <section style={{ marginBottom: 32 }}>
+        <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
+          Account
+        </h3>
+        <AccountActions userId={candidate.userId} email={candidate.email} />
+      </section>
+
+      <section style={{ marginBottom: 32 }}>
+        <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
+          Send notification
+        </h3>
+        <SendNotificationAction userId={candidate.userId} />
+      </section>
+
       {candidate.leads.map((lead) => (
         <section key={lead.id} style={{ marginBottom: 40 }}>
           <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
@@ -58,6 +76,7 @@ export default async function AdminCandidateDetailPage({
               phoneNumber={lead.candidateDetails.phoneNumber}
               location={lead.candidateDetails.location}
               totalExperience={lead.candidateDetails.totalExperience}
+              experience={lead.candidateDetails.experience}
             />
           )}
 
@@ -76,9 +95,12 @@ export default async function AdminCandidateDetailPage({
               </div>
             </div>
           ) : (
-            <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={emptyNote}>
-              Fitment report not ready yet.
-            </p>
+            <div style={{ marginBottom: 20 }}>
+              <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={emptyNote}>
+                Fitment report not ready yet.
+              </p>
+              <ResumeMatchRetry leadId={lead.id} />
+            </div>
           )}
 
           {lead.interviewReport ? (
@@ -107,19 +129,30 @@ export default async function AdminCandidateDetailPage({
               {lead.interviewReport.feedbackToInterviewer && <EvaluatorNotes notes={lead.interviewReport.feedbackToInterviewer} />}
               <AnswerTranscript answers={lead.interviewReport.answers} />
             </div>
+          ) : lead.interviewRow ? (
+            <div style={{ marginBottom: 20 }}>
+              <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ ...emptyNote, marginBottom: 10 }}>
+                Interview not completed yet.
+              </p>
+              <InterviewRecoveryActions interviewId={lead.interviewRow.id} status={lead.interviewRow.status} />
+            </div>
           ) : (
             <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={emptyNote}>
               Interview not completed yet.
             </p>
           )}
 
-          {lead.candidateDetails && (lead.candidateDetails.education.length > 0 || lead.candidateDetails.experience.length > 0) && (
-            <CandidateProfile
-              education={lead.candidateDetails.education}
-              experience={lead.candidateDetails.experience}
-              certifications={lead.candidateDetails.certifications}
-            />
-          )}
+          {lead.candidateDetails &&
+            (lead.candidateDetails.education.length > 0 ||
+              lead.candidateDetails.experience.length > 0 ||
+              lead.candidateDetails.projects.length > 0) && (
+              <CandidateProfile
+                education={lead.candidateDetails.education}
+                experience={lead.candidateDetails.experience}
+                certifications={lead.candidateDetails.certifications}
+                projects={lead.candidateDetails.projects}
+              />
+            )}
         </section>
       ))}
 

@@ -18,7 +18,7 @@ export async function POST(_request: Request) {
 
   if (!isRazorpayBypassed() && !(await isProductUnlocked(user.id, "references"))) {
     return Response.json(
-      { error: "Payment required to unlock reference checks — please pay first." },
+      { error: "Payment required to unlock reference checks. Please pay first." },
       { status: 402 }
     );
   }

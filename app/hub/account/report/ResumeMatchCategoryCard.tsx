@@ -1,19 +1,35 @@
-import type { ResumeMatchCategory } from "@/lib/intervuebox/reports";
-import { getMatchBand } from "./ResumeMatchGauge";
+import type { ComponentType, CSSProperties } from "react";
+import { Target, GraduationCap, Briefcase, MapPin, Building2, Crosshair } from "lucide-react";
+import type { ResumeMatchCategory, ResumeMatchCategoryKey } from "@/lib/intervuebox/reports";
+import { getMatchBandDark } from "./ResumeMatchGauge";
+
+// Icon-per-dimension mapping matches mockups/merito-dashboard-v34.html's tA
+// lookup exactly (Skills Match -> target, Role Relevance -> crosshair) --
+// verified live in the rendered mockup, not assumed from the label text.
+export const CATEGORY_ICONS: Record<ResumeMatchCategoryKey, ComponentType<{ size?: number; strokeWidth?: number; className?: string; style?: CSSProperties }>> = {
+  skillsMatch: Target,
+  educationMatch: GraduationCap,
+  experienceMatch: Briefcase,
+  locationMatch: MapPin,
+  domainMatch: Building2,
+  roleRelevance: Crosshair,
+};
 
 export default function ResumeMatchCategoryCard({ category }: { category: ResumeMatchCategory }) {
-  const band = getMatchBand(category.score);
+  const band = getMatchBandDark(category.score);
+  const Icon = CATEGORY_ICONS[category.key];
   return (
-    <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: "16px 18px", breakInside: "avoid" }}>
+    <div style={{ borderRadius: 14, padding: "16px 18px", breakInside: "avoid", background: "rgb(29,25,31)", border: "1px solid rgb(49,47,55)" }}>
       <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
-        <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.05rem", margin: 0 }}>
+        <h3 className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ gap: 8, fontSize: 13, margin: 0 }}>
+          <Icon size={14} strokeWidth={2} className="text-white/40" />
           {category.label}
         </h3>
         <span className="font-[family-name:var(--font-poppins)] font-semibold" style={{ fontSize: 13, color: band.textColor }}>
           {category.score}%
         </span>
       </div>
-      <div className="bg-[#f0e6ea] overflow-hidden" style={{ height: 6, borderRadius: 6, marginBottom: 10 }}>
+      <div className="overflow-hidden" style={{ height: 6, borderRadius: 6, marginBottom: 10, background: band.trackColor }}>
         <div
           style={{
             borderRadius: 6,
@@ -23,7 +39,7 @@ export default function ResumeMatchCategoryCard({ category }: { category: Resume
           }}
         />
       </div>
-      <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+      <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 13, lineHeight: 1.6, margin: 0 }}>
         {category.comment}
       </p>
     </div>

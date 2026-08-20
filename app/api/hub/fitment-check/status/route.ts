@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     "unknown";
 
   if (!checkIpRateLimit(ip)) {
-    return Response.json({ error: "Too many requests — please try again later." }, { status: 429 });
+    return Response.json({ error: "Too many requests. Please try again later." }, { status: 429 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -47,11 +47,15 @@ export async function GET(request: Request) {
   }
 
   const score = scoreOutOfTen(report.overallScore);
+  // IntervueBox can return a null summary on an otherwise-READY report
+  // (live-confirmed) -- verdict is NOT NULL, so a bare pass-through 500s
+  // this update even though the score itself is valid.
+  const verdict = report.summary || "No summary available.";
   const { error: updateError } = await supabase
     .from("fitment_leads")
     .update({
       score,
-      verdict: report.summary,
+      verdict,
       resume_match_status: "READY",
       resume_match_score: report.overallScore,
       resume_match_raw: {
@@ -69,5 +73,5 @@ export async function GET(request: Request) {
     return Response.json({ error: "Something went wrong updating your result." }, { status: 500 });
   }
 
-  return Response.json({ status: "ready", score, verdict: report.summary });
+  return Response.json({ status: "ready", score, verdict });
 }

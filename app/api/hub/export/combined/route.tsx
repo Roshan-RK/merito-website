@@ -77,7 +77,10 @@ export async function GET(request: Request) {
     return Response.json({ error: "None of the requested reports are ready yet." }, { status: 404 });
   }
 
-  const targetUrl = new URL("/hub/account/combined-report", url.origin);
+  // The dashboard's /hub/account/combined-report route is now the dark
+  // summary panel, not the printable document -- the full report this PDF
+  // needs to screenshot lives at its /print sibling instead.
+  const targetUrl = new URL("/hub/account/combined-report/print", url.origin);
   targetUrl.searchParams.set("include", Array.from(include).join(","));
   if (roleTitle) targetUrl.searchParams.set("role", roleTitle);
   const interviewSections = url.searchParams.get("interviewSections");
@@ -93,7 +96,7 @@ export async function GET(request: Request) {
       errorMessage: err instanceof Error ? err.message : String(err),
       stack: err instanceof Error ? err.stack : undefined,
     });
-    return Response.json({ error: "Could not generate the PDF — please try again." }, { status: 502 });
+    return Response.json({ error: "Could not generate the PDF. Please try again." }, { status: 502 });
   }
 
   return new Response(new Uint8Array(buffer), {

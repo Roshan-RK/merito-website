@@ -136,7 +136,7 @@ describe("completeReportUnlock", () => {
       resume_match_raw: null,
     });
 
-    expect(result).toEqual({ status: "error", message: "Unlocked, but the report failed to save — please refresh." });
+    expect(result).toEqual({ status: "error", message: "Unlocked, but the report failed to save. Please refresh." });
   });
 
   it("also unlocks personality and references for a bundle completion", async () => {

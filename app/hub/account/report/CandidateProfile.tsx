@@ -1,67 +1,141 @@
-import type { CandidateEducation, CandidateExperience } from "@/lib/intervuebox/reports";
+import type { ComponentType, ReactNode } from "react";
+import { GraduationCap, Briefcase, Award, ChevronDown, FolderGit2, ExternalLink } from "lucide-react";
+import type { CandidateEducation, CandidateExperience, CandidateProject } from "@/lib/intervuebox/reports";
+
+// Native <details>/<summary> gives us expand/collapse for free — no client
+// component, no state, matches the mockup's accordion without adding any
+// interactivity logic to what was a pure server-rendered panel.
+function AccordionSection({
+  icon: Icon,
+  title,
+  count,
+  defaultOpen,
+  children,
+}: {
+  icon: ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  title: string;
+  count: number;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details open={defaultOpen} className="group" style={{ borderRadius: 14, padding: "0 16px", background: "rgb(29,25,31)", border: "1px solid rgb(49,47,55)" }}>
+      <summary className="flex items-center justify-between" style={{ padding: "14px 0", cursor: "pointer", listStyle: "none" }}>
+        <span className="flex items-center font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ gap: 10, fontSize: 14 }}>
+          <span className="flex items-center justify-center bg-[#ed1a24]/15 text-[#ed1a24] shrink-0" style={{ width: 36, height: 36, borderRadius: 10 }}>
+            <Icon size={16} strokeWidth={2} />
+          </span>
+          {title}
+          <span className="font-normal text-white/40" style={{ fontSize: 12 }}>
+            ({count})
+          </span>
+        </span>
+        <ChevronDown size={15} strokeWidth={2} className="shrink-0 text-white/40 transition-transform group-open:rotate-180" />
+      </summary>
+      <div style={{ paddingBottom: 14, display: "flex", flexDirection: "column", gap: 10 }}>{children}</div>
+    </details>
+  );
+}
 
 export default function CandidateProfile({
   education,
   experience,
   certifications,
+  projects = [],
 }: {
   education: CandidateEducation[];
   experience: CandidateExperience[];
   certifications: string[];
+  projects?: CandidateProject[];
 }) {
+  if (education.length === 0 && experience.length === 0 && certifications.length === 0 && projects.length === 0) return null;
+
   return (
-    <div style={{ marginTop: 32 }}>
-      <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.3rem", margin: "0 0 14px" }}>
+    <div>
+      <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>
         Candidate profile
-      </h2>
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 24 }}>
+      </p>
+      <div className="flex flex-col" style={{ gap: 10 }}>
         {education.length > 0 && (
-          <div>
-            <h3 className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>
-              Education
-            </h3>
+          <AccordionSection icon={GraduationCap} title="Education" count={education.length} defaultOpen>
             {education.map((e, i) => (
-              <div key={i} style={{ marginBottom: 14 }}>
-                <p className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 13.5, margin: 0 }}>
+              <div key={i} style={{ borderRadius: 10, padding: 12, background: "rgba(42,37,45,0.4)" }}>
+                <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13, margin: 0 }}>
                   {e.qualification}
                 </p>
-                <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 12.5, margin: "2px 0 0" }}>
+                <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 12, margin: "3px 0 0" }}>
                   {e.college} · {e.duration}
                 </p>
               </div>
             ))}
-          </div>
+          </AccordionSection>
         )}
         {experience.length > 0 && (
-          <div>
-            <h3 className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>
-              Experience
-            </h3>
+          <AccordionSection icon={Briefcase} title="Experience" count={experience.length} defaultOpen>
             {experience.map((e, i) => (
-              <div key={i} style={{ marginBottom: 14 }}>
-                <p className="font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 13.5, margin: 0 }}>
+              <div key={i} style={{ borderRadius: 10, padding: 12, background: "rgba(42,37,45,0.4)" }}>
+                <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13, margin: 0 }}>
                   {e.position}
                 </p>
-                <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 12.5, margin: "2px 0 0" }}>
+                <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 12, margin: "3px 0 0" }}>
                   {e.company} · {e.duration}
                 </p>
               </div>
             ))}
-          </div>
+          </AccordionSection>
+        )}
+        {certifications.length > 0 && (
+          <AccordionSection icon={Award} title="Certifications" count={certifications.length}>
+            {certifications.map((c, i) => (
+              <div key={i} style={{ borderRadius: 10, padding: 12, background: "rgba(42,37,45,0.4)" }}>
+                <p className="font-[family-name:var(--font-poppins)] text-white" style={{ fontSize: 13, margin: 0 }}>
+                  {c}
+                </p>
+              </div>
+            ))}
+          </AccordionSection>
+        )}
+        {projects.length > 0 && (
+          <AccordionSection icon={FolderGit2} title="Projects" count={projects.length}>
+            {projects.map((p, i) => (
+              <div key={i} style={{ borderRadius: 10, padding: 12, background: "rgba(42,37,45,0.4)" }}>
+                <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13, margin: 0 }}>
+                  {p.name}
+                </p>
+                {p.description && (
+                  <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 12, margin: "3px 0 0", lineHeight: 1.5 }}>
+                    {p.description}
+                  </p>
+                )}
+                {p.technologies.length > 0 && (
+                  <div className="flex flex-wrap" style={{ gap: 6, marginTop: 8 }}>
+                    {p.technologies.map((tech) => (
+                      <span
+                        key={tech}
+                        className="bg-white/[0.06] border border-white/[0.08] font-[family-name:var(--font-poppins)] text-white/60"
+                        style={{ fontSize: 11, borderRadius: 50, padding: "3px 10px" }}
+                      >
+                        {tech}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {p.link && (
+                  <a
+                    href={p.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center text-[#E8798F] hover:text-white transition-colors font-[family-name:var(--font-poppins)]"
+                    style={{ gap: 4, fontSize: 12, marginTop: 8 }}
+                  >
+                    <ExternalLink size={12} strokeWidth={2} /> View project
+                  </a>
+                )}
+              </div>
+            ))}
+          </AccordionSection>
         )}
       </div>
-      {certifications.length > 0 && (
-        <div style={{ marginTop: 20 }}>
-          <h3 className="font-[family-name:var(--font-poppins)] font-bold uppercase text-[#9c9c9c]" style={{ fontSize: 11, letterSpacing: "0.06em", margin: "0 0 10px" }}>
-            Certifications
-          </h3>
-          {certifications.map((c, i) => (
-            <p key={i} className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 13, margin: "0 0 6px" }}>
-              {c}
-            </p>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

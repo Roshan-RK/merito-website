@@ -1,4 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { getSupabaseServerClient } from "@/lib/supabase";
+import { logAdminAction } from "@/lib/adminAuditLog";
+import { createRefund } from "@/lib/razorpay/client";
+import { markRazorpayRefunded } from "@/lib/razorpay/finalize";
+import { unlockProduct, isProductUnlocked } from "@/lib/productUnlocks";
+import { completeReportUnlock } from "@/lib/completeReportUnlock";
+import type { RazorpayProduct, CandidateLevel } from "@/lib/razorpay/pricing";
 
 export type TransactionStatus = "initiated" | "success" | "failed" | "refunded";
 
@@ -122,4 +129,199 @@ export async function listUnpaidUnlocks(): Promise<UnpaidUnlockRow[]> {
   });
 
   return unpaid.map((u) => ({ ...u, email: emailByUser.get(u.userId) ?? "—" }));
+}
+
+export async function recordManualReconciliation(
+  params: { userId: string; leadId: string | null; product: string; amountPaise: number },
+  adminEmail: string
+): Promise<void> {
+  const supabase = getSupabaseServerClient();
+
+  let level: string | null = null;
+  if (params.leadId) {
+    const { data } = await supabase.from("fitment_leads").select("candidate_level").eq("id", params.leadId).maybeSingle();
+    level = data?.candidate_level ?? null;
+  }
+  if (!level) {
+    const { data } = await supabase
+      .from("fitment_leads")
+      .select("candidate_level")
+      .eq("user_id", params.userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    level = data?.candidate_level ?? null;
+  }
+  if (!level) {
+    throw new Error("Could not determine candidate level for this reconciliation.");
+  }
+
+  const orderId = `manual_${randomUUID()}`;
+  const { error } = await supabase.from("razorpay_transactions").insert({
+    order_id: orderId,
+    user_id: params.userId,
+    product: params.product,
+    level,
+    lead_id: params.leadId,
+    amount_paise: params.amountPaise,
+    status: "success",
+    consumed_at: new Date().toISOString(),
+  });
+  if (error) {
+    throw new Error(`Failed to record manual reconciliation: ${error.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "payment.manual_reconciliation",
+    targetType: "candidate",
+    targetId: params.userId,
+    priorValue: null,
+    newValue: { orderId, product: params.product, amountPaise: params.amountPaise, leadId: params.leadId },
+  });
+}
+
+export async function refundTransaction(orderId: string, reason: string, adminEmail: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const { data: txn, error } = await supabase
+    .from("razorpay_transactions")
+    .select("order_id, payment_id, user_id, status, amount_paise")
+    .eq("order_id", orderId)
+    .maybeSingle();
+
+  if (error || !txn) {
+    throw new Error("Transaction not found.");
+  }
+  if (txn.status !== "success") {
+    throw new Error(`Transaction is not refundable in its current state (${txn.status}).`);
+  }
+  if (!txn.payment_id) {
+    throw new Error("Transaction has no associated payment to refund.");
+  }
+
+  await createRefund(txn.payment_id, txn.amount_paise);
+  await markRazorpayRefunded(orderId);
+
+  await logAdminAction({
+    adminEmail,
+    action: "payment.refund",
+    targetType: "candidate",
+    targetId: txn.user_id,
+    priorValue: { status: "success" },
+    newValue: { status: "refunded", reason, orderId, amountPaise: txn.amount_paise },
+  });
+}
+
+export async function voidStuckTransaction(orderId: string, adminEmail: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const { data: txn, error } = await supabase
+    .from("razorpay_transactions")
+    .select("order_id, user_id, status")
+    .eq("order_id", orderId)
+    .maybeSingle();
+
+  if (error || !txn) {
+    throw new Error("Transaction not found.");
+  }
+  if (txn.status !== "initiated") {
+    throw new Error(`Only initiated transactions can be voided (current status: ${txn.status}).`);
+  }
+
+  const { error: updateError } = await supabase.from("razorpay_transactions").update({ status: "failed" }).eq("order_id", orderId);
+  if (updateError) {
+    throw new Error(`Failed to void transaction: ${updateError.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "payment.void",
+    targetType: "candidate",
+    targetId: txn.user_id,
+    priorValue: { status: "initiated" },
+    newValue: { status: "failed", orderId },
+  });
+}
+
+export type ResolvedCandidate = { userId: string; leadId: string | null; roleTitle: string | null };
+
+export async function resolveCandidateByEmail(email: string): Promise<ResolvedCandidate | null> {
+  const supabase = getSupabaseServerClient();
+  const { data: lead } = await supabase
+    .from("fitment_leads")
+    .select("id, user_id, role_title")
+    .eq("email", email)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!lead) return null;
+  return { userId: lead.user_id, leadId: lead.id, roleTitle: lead.role_title };
+}
+
+export async function grantFreeAccess(
+  params: { email: string; product: RazorpayProduct; level: CandidateLevel; reason: string },
+  adminEmail: string
+): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const candidate = await resolveCandidateByEmail(params.email);
+
+  const needsLead = params.product === "report" || params.product === "bundle";
+  if (needsLead && !candidate) {
+    throw new Error(`Candidate has no fitment lead — can't grant ${params.product} without one.`);
+  }
+  if (!candidate) {
+    throw new Error("No candidate found for that email.");
+  }
+
+  const userId = candidate.userId;
+
+  if (params.product === "personality" || params.product === "references") {
+    if (await isProductUnlocked(userId, params.product)) {
+      throw new Error(`Candidate already has ${params.product} unlocked.`);
+    }
+  }
+
+  const consumedAt = params.product === "interview" ? null : new Date().toISOString();
+  const orderId = `comp_${randomUUID()}`;
+
+  const { error: insertError } = await supabase.from("razorpay_transactions").insert({
+    order_id: orderId,
+    user_id: userId,
+    product: params.product,
+    level: params.level,
+    lead_id: candidate.leadId,
+    amount_paise: 0,
+    status: "success",
+    consumed_at: consumedAt,
+  });
+  if (insertError) {
+    throw new Error(`Failed to record comp grant: ${insertError.message}`);
+  }
+
+  if (params.product === "report" || params.product === "bundle") {
+    const { data: leadRow } = await supabase
+      .from("fitment_leads")
+      .select("id, role_title, ib_applied_job_id, resume_match_status, resume_match_raw")
+      .eq("id", candidate.leadId)
+      .maybeSingle();
+    if (leadRow) {
+      await completeReportUnlock(userId, leadRow, params.product === "bundle" ? "bundle" : "report");
+    }
+  } else if (params.product === "personality") {
+    await unlockProduct(userId, "personality");
+  } else if (params.product === "references") {
+    await unlockProduct(userId, "references");
+  } else if (params.product === "counselling") {
+    await supabase.from("counselling_requests").insert({ user_id: userId, order_id: orderId });
+  }
+  // "interview": the $0 success/unconsumed row inserted above is itself the credit.
+
+  await logAdminAction({
+    adminEmail,
+    action: "payment.grant_free_access",
+    targetType: "candidate",
+    targetId: userId,
+    priorValue: null,
+    newValue: { product: params.product, level: params.level, reason: params.reason, orderId },
+  });
 }

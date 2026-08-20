@@ -36,4 +36,9 @@ describe("isInterviewGenerating", () => {
   it("flips to generating once the senior-level 45min slot elapses", () => {
     expect(isInterviewGenerating("invited", invitedAt, "senior", invitedAtMs + 45 * 60_000)).toBe(true);
   });
+
+  it("isInterviewGenerating is false for a terminated interview regardless of elapsed time", () => {
+    const invitedAt = new Date(0).toISOString();
+    expect(isInterviewGenerating("terminated", invitedAt, "mid", 999_999_999)).toBe(false);
+  });
 });

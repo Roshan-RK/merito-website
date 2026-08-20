@@ -43,7 +43,7 @@ export async function completeReportUnlock(
   try {
     report = await getResumeMatchReport(lead.ib_applied_job_id);
   } catch {
-    return { status: "error", message: "Unlocked, but the report failed to load — please refresh." };
+    return { status: "error", message: "Unlocked, but the report failed to load. Please refresh." };
   }
 
   if (report.status === "PENDING") {
@@ -60,11 +60,14 @@ export async function completeReportUnlock(
   };
 
   const admin = getSupabaseServerClient();
+  // IntervueBox can return a null summary on an otherwise-READY report
+  // (live-confirmed) -- verdict is NOT NULL, so a bare pass-through 500s
+  // this update even though the score itself is valid.
   const { error: updateError } = await admin
     .from("fitment_leads")
     .update({
       score: scoreOutOfTen(report.overallScore),
-      verdict: report.summary,
+      verdict: report.summary || "No summary available.",
       resume_match_status: "READY",
       resume_match_score: report.overallScore,
       resume_match_raw: resumeMatchRaw,
@@ -72,7 +75,7 @@ export async function completeReportUnlock(
     .eq("id", lead.id);
 
   if (updateError) {
-    return { status: "error", message: "Unlocked, but the report failed to save — please refresh." };
+    return { status: "error", message: "Unlocked, but the report failed to save. Please refresh." };
   }
 
   return { status: "unlocked", report: resumeMatchRaw };

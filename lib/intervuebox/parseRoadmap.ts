@@ -6,10 +6,19 @@ export type ParsedRoadmap = { strengthsToLeverage: string[]; phases: RoadmapPhas
 // live-confirmed 2026-07-30 against a real Growth Strategist interview,
 // matching the shape their own reference PDF export renders as a timeline.
 // Parses that specific markdown shape (### Strengths to Leverage, #### Phase
-// (duration), **Goal:**, numbered **Topic** items with - **What to Do:** /
+// (duration), **Goal:**, numbered topic items with - **What to Do:** /
 // - **Resources:** sub-bullets). Returns null on anything that doesn't
 // match -- AI-generated text formatting isn't guaranteed identical across
 // interviews, and callers fall back to rendering the raw string as-is.
+//
+// The numbered topic line itself has two live-confirmed shapes: a bare bold
+// name (`1. **Communication Skills**`, 2026-07-30 Growth Strategist
+// interview) and a bold label followed by plain trailing text
+// (`1. **Focus Area:** CRM and Pipeline Management`, 2026-08-20 Yukta Wagh
+// Inside Sales interview). The old regex only matched the first shape and
+// required the line to end right after the closing `**`, so the label
+// shape never matched -- topics stayed empty and only the phase goal
+// rendered, no What to Do / Resources detail.
 export function parseRoadmap(raw: string): ParsedRoadmap | null {
   const lines = raw.split("\n");
 
@@ -58,10 +67,12 @@ export function parseRoadmap(raw: string): ParsedRoadmap | null {
       continue;
     }
 
-    const topicMatch = line.match(/^\d+\.\s*\*\*(.+?)\*\*\s*$/);
-    if (topicMatch) {
+    const labeledTopicMatch = line.match(/^\d+\.\s*\*\*.+?:\*\*\s*(.+)/);
+    const bareTopicMatch = !labeledTopicMatch ? line.match(/^\d+\.\s*\*\*(.+?)\*\*\s*$/) : null;
+    if (labeledTopicMatch || bareTopicMatch) {
       flushTopic();
-      currentTopic = { name: topicMatch[1].trim(), whatToDo: "", resources: "" };
+      const name = (labeledTopicMatch ?? bareTopicMatch)![1].trim();
+      currentTopic = { name, whatToDo: "", resources: "" };
       continue;
     }
 

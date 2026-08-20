@@ -55,7 +55,7 @@ export default function ReportSectionPicker({
             <span className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14 }}>
               {REPORT_TYPE_LABELS[type]}
               {!availability[type] && (
-                <span style={{ color: "#9c9c9c", fontSize: 12 }}> — not completed yet</span>
+                <span style={{ color: "#9c9c9c", fontSize: 12 }}> (not completed yet)</span>
               )}
             </span>
           </label>

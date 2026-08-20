@@ -176,7 +176,7 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
         { key: "O", label: "Openness to Experience", pct: 70, bandLabel: "High" },
       ],
       summary:
-        "Jane scores highest in Conscientiousness and Emotional Stability. Jane is likely to be organised, reliable and thorough — strong on deadlines, detail and follow-through. Watch-out: rigidity or perfectionism when priorities shift suddenly. Best fit: roles that reward rigour, process and accountability.",
+        "Jane scores highest in Conscientiousness and Emotional Stability. Jane is likely to be organised, reliable and thorough, strong on deadlines, detail and follow-through. Watch-out: rigidity or perfectionism when priorities shift suddenly. Best fit: roles that reward rigour, process and accountability.",
       completedAt: "2026-07-28T09:00:00.000Z",
     });
     expect(body.references).toBeNull();

@@ -5,6 +5,9 @@ const selectMock = vi.fn();
 const eqUserMock = vi.fn();
 const eqProductMock = vi.fn();
 const maybeSingleMock = vi.fn();
+const deleteMock = vi.fn();
+const deleteEqUserMock = vi.fn();
+const deleteEqProductMock = vi.fn();
 const fromMock = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
@@ -77,5 +80,35 @@ describe("isProductUnlocked", () => {
     const { isProductUnlocked } = await import("../productUnlocks");
 
     await expect(isProductUnlocked("user-1", "personality")).rejects.toThrow("Failed to check personality unlock status");
+  });
+});
+
+describe("revokeProduct", () => {
+  beforeEach(() => {
+    deleteMock.mockReset();
+    deleteEqUserMock.mockReset();
+    deleteEqProductMock.mockReset();
+    fromMock.mockReset();
+    fromMock.mockReturnValue({ delete: deleteMock });
+    deleteMock.mockReturnValue({ eq: deleteEqUserMock });
+    deleteEqUserMock.mockReturnValue({ eq: deleteEqProductMock });
+    deleteEqProductMock.mockResolvedValue({ error: null });
+  });
+
+  it("deletes the product_unlocks row for the user and product", async () => {
+    const { revokeProduct } = await import("../productUnlocks");
+
+    await revokeProduct("user-1", "personality");
+
+    expect(fromMock).toHaveBeenCalledWith("product_unlocks");
+    expect(deleteEqUserMock).toHaveBeenCalledWith("user_id", "user-1");
+    expect(deleteEqProductMock).toHaveBeenCalledWith("product", "personality");
+  });
+
+  it("throws when the delete fails", async () => {
+    deleteEqProductMock.mockResolvedValue({ error: { message: "db down" } });
+    const { revokeProduct } = await import("../productUnlocks");
+
+    await expect(revokeProduct("user-1", "references")).rejects.toThrow("Failed to revoke references");
   });
 });

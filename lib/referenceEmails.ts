@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { renderTemplate } from "@/lib/emailTemplates";
 
 type RefereeEmailParams = {
   to: string;
@@ -6,15 +7,6 @@ type RefereeEmailParams = {
   candidateName: string;
   token: string;
 };
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 function getResendClient(): Resend {
   const apiKey = process.env.RESEND_API_KEY;
@@ -39,30 +31,35 @@ function feedbackUrl(token: string): string {
 
 export async function sendRefereeInviteEmail(params: RefereeEmailParams): Promise<void> {
   const resend = getResendClient();
-  const url = feedbackUrl(params.token);
-  const safeReferee = escapeHtml(params.refereeName);
-  const safeCandidate = escapeHtml(params.candidateName);
+  const rendered = await renderTemplate("referee_invite", {
+    refereeName: params.refereeName,
+    candidateName: params.candidateName,
+    url: feedbackUrl(params.token),
+    validityDays: process.env.REFERENCE_FEEDBACK_LINK_VALIDITY_DAYS || "14",
+  });
 
   await resend.emails.send({
     from: getFromEmail(),
     to: [params.to],
-    subject: `${params.candidateName} listed you as a professional reference`,
-    text: `Hi ${params.refereeName},\n\n${params.candidateName} listed you as a reference on Merito. Please share quick feedback here:\n${url}\n\nThis link expires in ${process.env.REFERENCE_FEEDBACK_LINK_VALIDITY_DAYS || "14"} days.`,
-    html: `<p>Hi ${safeReferee},</p><p>${safeCandidate} listed you as a reference on Merito. Please share quick feedback:</p><p><a href="${url}">${url}</a></p><p>This link expires in ${process.env.REFERENCE_FEEDBACK_LINK_VALIDITY_DAYS || "14"} days.</p>`,
+    subject: rendered.subject,
+    text: rendered.bodyText,
+    html: rendered.bodyHtml,
   });
 }
 
 export async function sendRefereeReminderEmail(params: RefereeEmailParams): Promise<void> {
   const resend = getResendClient();
-  const url = feedbackUrl(params.token);
-  const safeReferee = escapeHtml(params.refereeName);
-  const safeCandidate = escapeHtml(params.candidateName);
+  const rendered = await renderTemplate("referee_reminder", {
+    refereeName: params.refereeName,
+    candidateName: params.candidateName,
+    url: feedbackUrl(params.token),
+  });
 
   await resend.emails.send({
     from: getFromEmail(),
     to: [params.to],
-    subject: `Reminder: ${params.candidateName} is waiting on your feedback`,
-    text: `Hi ${params.refereeName},\n\nJust a reminder — ${params.candidateName} is waiting on your reference feedback:\n${url}`,
-    html: `<p>Hi ${safeReferee},</p><p>Just a reminder — ${safeCandidate} is waiting on your reference feedback:</p><p><a href="${url}">${url}</a></p>`,
+    subject: rendered.subject,
+    text: rendered.bodyText,
+    html: rendered.bodyHtml,
   });
 }

@@ -13,6 +13,15 @@ export async function unlockProduct(userId: string, product: UnlockableProduct):
   }
 }
 
+export async function revokeProduct(userId: string, product: UnlockableProduct): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase.from("product_unlocks").delete().eq("user_id", userId).eq("product", product);
+
+  if (error) {
+    throw new Error(`Failed to revoke ${product}: ${error.message}`);
+  }
+}
+
 export async function isProductUnlocked(userId: string, product: UnlockableProduct): Promise<boolean> {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase

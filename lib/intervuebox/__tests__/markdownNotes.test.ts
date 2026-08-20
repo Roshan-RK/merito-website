@@ -80,4 +80,77 @@ Recommendation: The candidate should not be considered for further rounds unless
     expect(result).not.toBeNull();
     expect(result!.recommendation).toBeNull();
   });
+
+  // Real production feedbackToInterviewer string, pulled 2026-08-14 from a
+  // live Sales Strategy & Sales Operations Lead interview. Unlike REAL_NOTES
+  // above, IntervueBox here sends "#### Recommendation" as its own heading
+  // followed by a plain (non-bulleted) paragraph, not a "Recommendation: ..."
+  // line outside any section -- the parser silently dropped the paragraph
+  // and rendered an empty "Recommendation" section instead.
+  const REAL_NOTES_HEADING_STYLE = `### Strengths
+- Extensive experience in sales strategy and operations spanning 20 years across leading organizations.
+- Robust expertise in managing regional strategies and focusing on key geographies, especially in Asia Pacific.
+
+### Weaknesses
+- Lack of hands-on experience with prominent CRM tools like Salesforce during prior roles.
+
+#### Training Recommendations
+- CRM tools (e.g., Salesforce) and their use in advanced sales and client relationship tracking.
+
+#### Recommendation
+The candidate demonstrates strong leadership and sales strategy capabilities but needs further training in modern tools and techniques. Recommended for further evaluation.`;
+
+  it("parses a '#### Recommendation' heading followed by a plain paragraph", () => {
+    const result = parseEvaluatorNotes(REAL_NOTES_HEADING_STYLE);
+    expect(result).not.toBeNull();
+    expect(result!.sections.map((s) => s.heading)).toEqual(["Strengths", "Weaknesses", "Training Recommendations"]);
+    expect(result!.recommendation).toBe(
+      "The candidate demonstrates strong leadership and sales strategy capabilities but needs further training in modern tools and techniques. Recommended for further evaluation."
+    );
+  });
+
+  it("joins multiple paragraph lines under a '#### Recommendation' heading", () => {
+    const result = parseEvaluatorNotes("### Strengths\n- Good.\n\n#### Recommendation\nFirst line.\nSecond line.");
+    expect(result!.recommendation).toBe("First line. Second line.");
+  });
+
+  // Real production feedbackToInterviewer string, pulled 2026-08-20 from
+  // Yukta Wagh's Inside Sales Executive interview -- a third shape with no
+  // `#` headings at all. Sections are bold bullet labels (`- **Strengths:**`)
+  // with indented `  - item` sub-bullets, a bare `**Training Needs:**` label
+  // (no leading `-`), and an inline `**Recommendation:** ...` line. The old
+  // parser only recognized `#{2,4}` headings, so this whole string fell
+  // through to the raw-text fallback.
+  const REAL_NOTES_BOLD_BULLET_STYLE = `- **Strengths:**
+  - Familiar with various tools such as HubSpot, LinkedIn Sales Navigator, Apollo.io, and ChatGPT for outreach and client research.
+  - Basic understanding of personalized communication and lead nurturing techniques.
+- **Weaknesses:**
+  - Lack of clear examples or details to showcase strong operational experience in end-to-end sales.
+- **Opportunities:**
+  - Structured mentoring on global sales strategies and effective client research techniques could rapidly improve capabilities.
+- **Threats:**
+  - Current limitations in articulating and showcasing expertise could hinder their candidacy for roles requiring high autonomy and strategic planning.
+
+**Training Needs:**
+  - Advanced CRM usage, including lead scoring and pipeline management.
+  - Personalized engagement strategies for cross-cultural accounts.
+
+**Recommendation:** Proceed to further rounds only if the candidate demonstrates improved depth and specificity in their responses during follow-ups.`;
+
+  it("parses bold-bullet-label sections with no '#' headings", () => {
+    const result = parseEvaluatorNotes(REAL_NOTES_BOLD_BULLET_STYLE);
+    expect(result).not.toBeNull();
+    expect(result!.sections.map((s) => s.heading)).toEqual([
+      "Strengths",
+      "Weaknesses",
+      "Opportunities",
+      "Threats",
+      "Training Needs",
+    ]);
+    expect(result!.sections[0].items).toHaveLength(2);
+    expect(result!.sections[4].items).toHaveLength(2);
+    expect(result!.recommendation).toBe(
+      "Proceed to further rounds only if the candidate demonstrates improved depth and specificity in their responses during follow-ups."
+    );
+  });
 });

@@ -55,8 +55,8 @@ export async function isRecruiterEmailVerified(email: string): Promise<boolean> 
   const admin = getSupabaseServerClient();
   const { data } = await admin
     .from("recruiter_identities")
-    .select("verified_at")
+    .select("verified_at, banned_at")
     .eq("email", email.trim().toLowerCase())
     .maybeSingle();
-  return Boolean(data?.verified_at);
+  return Boolean(data?.verified_at) && !data?.banned_at;
 }

@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { getApplicant } from "@/lib/intervuebox/applicants";
 import { createInterviewAgent, type CandidateLevel } from "@/lib/intervuebox/agents";
 import { sendInterviewInvitation } from "@/lib/intervuebox/invitations";
+import { recordPipelineFailure } from "@/lib/pipelineFailures";
 
 export const runtime = "nodejs";
 
@@ -73,12 +74,13 @@ export async function POST(request: Request) {
     return Response.json(
       {
         error:
-          "You've already completed an AI interview for this role. Each role can only be interviewed once — change your target role to interview again.",
+          "You've already completed an AI interview for this role. Each role can only be interviewed once. Change your target role to interview again.",
       },
       { status: 409 }
     );
   }
 
+  let consumedOrderId: string | null = null;
   if (!isRazorpayBypassed()) {
     const { data: credit } = await admin
       .from("razorpay_transactions")
@@ -93,11 +95,12 @@ export async function POST(request: Request) {
 
     if (!credit) {
       return Response.json(
-        { error: "Payment required to start a mock interview — please pay first." },
+        { error: "Payment required to start a mock interview. Please pay first." },
         { status: 402 }
       );
     }
 
+    consumedOrderId = credit.order_id;
     await admin
       .from("razorpay_transactions")
       .update({ consumed_at: new Date().toISOString() })
@@ -117,31 +120,67 @@ export async function POST(request: Request) {
     return Response.json({ error: "No fitment check found for this role." }, { status: 400 });
   }
 
-  let candidateId: string;
-  let ibAgentId: string;
+  let candidateId: string | undefined;
+  let ibAgentId: string | undefined;
+  let magicLink: string | null = null;
+  let magicLinkExpiresAt: string | null = null;
+  let stage: "getApplicant" | "createInterviewAgent" | "sendInterviewInvitation" = "getApplicant";
   const ibJobId = lead.ib_job_id;
+
+  // Payment was already consumed above (before this fallible chain runs, so
+  // a candidate never sees "pay again" while we retry) — if the chain fails
+  // here, the credit must be un-consumed so their next click is free, and
+  // the failure recorded so ops isn't blind to it (previously this only hit
+  // console.error, which is how a candidate ended up paying twice for zero
+  // interviews with nobody noticing). kind is "interview_invite_failed", not
+  // the "interview_invite_after_payment" kind used below after a genuinely
+  // successful invite — that kind's admin "Retry interview" action assumes
+  // the vendor invite already went through and just inserts a local row, so
+  // reusing it here would let an admin mark a candidate "invited" when
+  // IntervueBox was never actually confirmed to have sent anything.
+  const userId = user.id;
+  async function recordFailedInviteAttempt(detail: Record<string, unknown>) {
+    await recordPipelineFailure({
+      kind: "interview_invite_failed",
+      userId,
+      leadId: null,
+      orderId: consumedOrderId,
+      detail: { stage, roleTitle, ibJobId, candidateId, ibAgentId, ...detail },
+    });
+    if (consumedOrderId) {
+      await admin.from("razorpay_transactions").update({ consumed_at: null }).eq("order_id", consumedOrderId);
+    }
+  }
+
   try {
     ({ candidateId } = await getApplicant(lead.ib_applied_job_id));
 
+    stage = "createInterviewAgent";
     const candidateLevel = (lead.candidate_level as CandidateLevel) || "mid";
 
     ({ ibAgentId } = await createInterviewAgent(ibJobId, roleTitle, candidateLevel));
 
-    const { invited } = await sendInterviewInvitation(ibAgentId, [candidateId]);
+    stage = "sendInterviewInvitation";
+    const inviteResult = await sendInterviewInvitation(ibAgentId, [candidateId]);
+    const invited = inviteResult.invited;
+    magicLink = inviteResult.magicLink;
+    magicLinkExpiresAt = inviteResult.magicLinkExpiresAt;
     if (invited === 0) {
       console.error("IntervueBox interview-invite chain failed", {
         jobId: ibJobId,
         error: "sendInterviewInvitation reported zero invited",
       });
+      await recordFailedInviteAttempt({ invited: 0 });
       return Response.json(
-        { error: "Something went wrong starting your AI interview — please try again." },
+        { error: "Something went wrong starting your AI interview. Please try again." },
         { status: 500 }
       );
     }
   } catch (err) {
     console.error("IntervueBox interview-invite chain failed", { jobId: ibJobId, error: err });
+    await recordFailedInviteAttempt({ error: err instanceof Error ? err.message : String(err) });
     return Response.json(
-      { error: "Something went wrong starting your AI interview — please try again." },
+      { error: "Something went wrong starting your AI interview. Please try again." },
       { status: 500 }
     );
   }
@@ -153,6 +192,8 @@ export async function POST(request: Request) {
     ib_agent_id: ibAgentId,
     ib_candidate_id: candidateId,
     status: "invited",
+    magic_link: magicLink,
+    magic_link_expires_at: magicLinkExpiresAt,
   });
 
   if (insertError) {
@@ -184,8 +225,15 @@ export async function POST(request: Request) {
       ib_candidate_id: candidateId,
       error: insertError,
     });
+    await recordPipelineFailure({
+      kind: "interview_invite_after_payment",
+      userId: user.id,
+      leadId: null,
+      orderId: consumedOrderId,
+      detail: { roleTitle, ibJobId, ibAgentId, ibCandidateId: candidateId, error: insertError.message },
+    });
     return Response.json(
-      { error: "Invitation sent, but we couldn't save the status — please refresh." },
+      { error: "Invitation sent, but we couldn't save the status. Please refresh." },
       { status: 500 }
     );
   }

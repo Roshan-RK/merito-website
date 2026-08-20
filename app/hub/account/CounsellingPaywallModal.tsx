@@ -67,7 +67,7 @@ export default function CounsellingPaywallModal({
       const data = await res.json();
       if (!res.ok) {
         setPaying(false);
-        setError(data.error || "Something went wrong — please try again.");
+        setError(data.error || "Something went wrong. Please try again.");
         return;
       }
 
@@ -75,12 +75,12 @@ export default function CounsellingPaywallModal({
         await loadRazorpayCheckoutScript();
       } catch {
         setPaying(false);
-        setError("Could not load the payment form — please try again.");
+        setError("Could not load the payment form. Please try again.");
         return;
       }
       if (!window.Razorpay) {
         setPaying(false);
-        setError("Could not load the payment form — please try again.");
+        setError("Could not load the payment form. Please try again.");
         return;
       }
 
@@ -106,13 +106,13 @@ export default function CounsellingPaywallModal({
             const verifyData = await verifyRes.json();
             setPaying(false);
             if (!verifyRes.ok) {
-              setError(verifyData.error || "Payment succeeded but verification failed — please contact support.");
+              setError(verifyData.error || "Payment succeeded, but verification failed. Please contact support.");
               return;
             }
             onRequested();
           } catch {
             setPaying(false);
-            setError("Payment succeeded but verification failed — please refresh.");
+            setError("Payment succeeded, but verification failed. Please refresh.");
           }
         },
         modal: {
@@ -122,7 +122,7 @@ export default function CounsellingPaywallModal({
       rzp.open();
     } catch {
       setPaying(false);
-      setError("Something went wrong — please try again.");
+      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -163,7 +163,7 @@ export default function CounsellingPaywallModal({
           className="w-full font-[family-name:var(--font-poppins)] font-semibold text-white"
           style={{ height: 50, borderRadius: 8, fontSize: 15, background: paying ? "#dcdcdc" : "#ed1a24", border: "none", cursor: paying ? "default" : "pointer", boxShadow: paying ? "none" : "0 4px 6px rgba(236,34,40,0.3)" }}
         >
-          {paying ? "Redirecting…" : `Book my expert call — ${priceLabel}`}
+          {paying ? "Redirecting…" : `Book my expert call for ${priceLabel}`}
         </button>
         <p className="text-[#9c9c9c]" style={{ fontSize: 11.5, textAlign: "center", margin: "10px 0 0" }}>
           One-time payment · No subscription · UPI, card & netbanking
