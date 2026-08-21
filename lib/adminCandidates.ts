@@ -7,6 +7,7 @@ import { logAdminAction, listActionsForTarget, type AdminActionRow } from "@/lib
 import type { ReportType } from "@/app/hub/account/reportSections";
 import type { HubNotificationCategory } from "@/lib/hubNotifications";
 import { getAbsoluteUrl } from "@/lib/site";
+import { randomUUID } from "node:crypto";
 
 const BAN_DURATION_INDEFINITE = "876000h"; // ~100 years, matches Supabase's ban_duration API shape for "indefinite"
 const DELETION_PURGE_WINDOW_DAYS = 30;
@@ -595,6 +596,50 @@ export async function sendCandidateNotification(
     priorValue: null,
     newValue: { message, category },
   });
+}
+
+export type BroadcastResult = { sent: number; failed: number };
+
+const BROADCAST_CHUNK_SIZE = 500;
+
+export async function broadcastCandidateNotification(
+  filters: BroadcastFilters,
+  message: string,
+  category: HubNotificationCategory,
+  adminEmail: string
+): Promise<BroadcastResult> {
+  const supabase = getSupabaseServerClient();
+  const audience = await resolveBroadcastAudience(filters);
+
+  let sent = 0;
+  let failed = 0;
+  for (let i = 0; i < audience.length; i += BROADCAST_CHUNK_SIZE) {
+    const chunk = audience.slice(i, i + BROADCAST_CHUNK_SIZE);
+    const { error } = await supabase.from("hub_notifications").insert(
+      chunk.map((c) => ({
+        user_id: c.userId,
+        message,
+        category,
+        created_by: adminEmail,
+      }))
+    );
+    if (error) {
+      failed += chunk.length;
+    } else {
+      sent += chunk.length;
+    }
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "notification.broadcast",
+    targetType: "broadcast",
+    targetId: randomUUID(),
+    priorValue: null,
+    newValue: { filters, message, category, sent, failed },
+  });
+
+  return { sent, failed };
 }
 
 const VALID_REPORT_SECTIONS: ReportType[] = ["fitment", "personality", "interview", "references"];

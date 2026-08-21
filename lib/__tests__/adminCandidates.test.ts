@@ -935,3 +935,97 @@ describe("resolveBroadcastAudience", () => {
     await expect(resolveBroadcastAudience({})).rejects.toThrow("Failed to load pending deletions: query timeout");
   });
 });
+
+describe("broadcastCandidateNotification", () => {
+  const candidateDeletionsIs = vi.fn();
+  const fitmentInterviewsEq = vi.fn();
+  const referenceChecksEq = vi.fn();
+
+  function stubCandidates(count: number) {
+    fitmentLeadsSelectMock.mockReturnValue({
+      order: () =>
+        Promise.resolve({
+          data: Array.from({ length: count }, (_, i) => ({
+            user_id: `user-${i}`,
+            email: `user${i}@example.com`,
+            name: `User ${i}`,
+            role_title: "Product Manager",
+            created_at: new Date(2026, 0, i + 1).toISOString(),
+          })),
+        }),
+    });
+    reportUnlocksSelectMock.mockResolvedValue({ data: [] });
+    fitmentInterviewsSelectMock.mockReturnValue({ eq: fitmentInterviewsEq });
+    fitmentInterviewsEq.mockResolvedValue({ data: [] });
+    personalityTestsSelectMock.mockResolvedValue({ data: [] });
+    referenceChecksSelectMock.mockReturnValue({ eq: referenceChecksEq });
+    referenceChecksEq.mockResolvedValue({ data: [] });
+  }
+
+  beforeEach(() => {
+    fitmentLeadsSelectMock.mockReset();
+    reportUnlocksSelectMock.mockReset();
+    fitmentInterviewsSelectMock.mockReset();
+    fitmentInterviewsEq.mockReset();
+    personalityTestsSelectMock.mockReset();
+    referenceChecksSelectMock.mockReset();
+    referenceChecksEq.mockReset();
+    candidateDeletionsSelectMock.mockReset();
+    candidateDeletionsIs.mockReset();
+    candidateDeletionsSelectMock.mockReturnValue({ is: candidateDeletionsIs });
+    candidateDeletionsIs.mockResolvedValue({ data: [] });
+    listUsersMock.mockReset();
+    listUsersMock.mockResolvedValue({ data: { users: [] }, error: null });
+    hubNotificationsInsertMock.mockReset();
+    hubNotificationsInsertMock.mockResolvedValue({ error: null });
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+  });
+
+  it("sends to every matching candidate in one chunk and logs one aggregate audit row", async () => {
+    stubCandidates(3);
+    const { broadcastCandidateNotification } = await import("../adminCandidates");
+
+    const result = await broadcastCandidateNotification({}, "Hello all", "general", "roshan@merito.in");
+
+    expect(result).toEqual({ sent: 3, failed: 0 });
+    expect(hubNotificationsInsertMock).toHaveBeenCalledTimes(1);
+    expect(hubNotificationsInsertMock).toHaveBeenCalledWith([
+      { user_id: "user-2", message: "Hello all", category: "general", created_by: "roshan@merito.in" },
+      { user_id: "user-1", message: "Hello all", category: "general", created_by: "roshan@merito.in" },
+      { user_id: "user-0", message: "Hello all", category: "general", created_by: "roshan@merito.in" },
+    ]);
+    expect(logAdminActionMock).toHaveBeenCalledWith({
+      adminEmail: "roshan@merito.in",
+      action: "notification.broadcast",
+      targetType: "broadcast",
+      targetId: expect.any(String),
+      priorValue: null,
+      newValue: { filters: {}, message: "Hello all", category: "general", sent: 3, failed: 0 },
+    });
+  });
+
+  it("splits sends into 500-row chunks", async () => {
+    stubCandidates(501);
+    const { broadcastCandidateNotification } = await import("../adminCandidates");
+
+    const result = await broadcastCandidateNotification({}, "Big send", "general", "roshan@merito.in");
+
+    expect(result).toEqual({ sent: 501, failed: 0 });
+    expect(hubNotificationsInsertMock).toHaveBeenCalledTimes(2);
+    expect(hubNotificationsInsertMock.mock.calls[0][0]).toHaveLength(500);
+    expect(hubNotificationsInsertMock.mock.calls[1][0]).toHaveLength(1);
+  });
+
+  it("continues past a failed chunk and reports partial failure", async () => {
+    stubCandidates(501);
+    hubNotificationsInsertMock.mockResolvedValueOnce({ error: { message: "db error" } }).mockResolvedValueOnce({ error: null });
+    const { broadcastCandidateNotification } = await import("../adminCandidates");
+
+    const result = await broadcastCandidateNotification({}, "Big send", "general", "roshan@merito.in");
+
+    expect(result).toEqual({ sent: 1, failed: 500 });
+    expect(hubNotificationsInsertMock).toHaveBeenCalledTimes(2);
+    expect(logAdminActionMock).toHaveBeenCalledWith(expect.objectContaining({ newValue: expect.objectContaining({ sent: 1, failed: 500 }) }));
+  });
+});
