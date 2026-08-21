@@ -223,7 +223,7 @@ export default function InterviewPaywallModal({
               className="w-full font-[family-name:var(--font-poppins)] font-semibold text-white"
               style={{ height: 50, borderRadius: 8, fontSize: 15, background: paying ? "#dcdcdc" : "#ed1a24", border: "none", cursor: paying ? "default" : "pointer", boxShadow: paying ? "none" : "0 4px 6px rgba(236,34,40,0.3)" }}
             >
-              {paying ? "Processing…" : `Pay ${formatPrice(PRODUCT_PRICING.interview[level])} and send me my interview invite`}
+              {paying ? "Processing…" : `Pay ${formatPrice(PRODUCT_PRICING.interview[level])}`}
             </button>
             <p className="text-[#9c9c9c]" style={{ fontSize: 11.5, textAlign: "center", margin: "10px 0 0" }}>
               One-time payment per attempt · UPI, card & netbanking

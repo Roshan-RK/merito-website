@@ -1,20 +1,11 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import type { ComponentType } from "react";
-import { FileText, Brain, Users, Mic, UserRound, Package } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
+import { isReportUnlocked } from "@/lib/reportUnlocks";
+import { isProductUnlocked } from "@/lib/productUnlocks";
 import { DEFAULT_LEVEL, type CandidateLevel } from "@/lib/razorpay/pricing";
-import { buildPricingCards, buildBundleSummary, type PricingCardKey } from "./pricingCatalog";
-
-const EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40";
-
-const CARD_ICONS: Record<PricingCardKey, ComponentType<{ size?: number; strokeWidth?: number }>> = {
-  report: FileText,
-  personality: Brain,
-  references: Users,
-  interview: Mic,
-  counselling: UserRound,
-};
+import type { InterviewStatus } from "@/app/hub/account/ProgressRail";
+import { buildPricingCards, buildBundleSummary } from "./pricingCatalog";
+import PricingCardsClient from "./PricingCardsClient";
 
 export default async function PricingPage() {
   const supabase = await createSupabaseServerClient();
@@ -32,7 +23,7 @@ export default async function PricingPage() {
   // renders -- at the default tier -- rather than redirecting away).
   const { data: lead } = await supabase
     .from("fitment_leads")
-    .select("candidate_level")
+    .select("id, role_title, candidate_level")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -44,139 +35,75 @@ export default async function PricingPage() {
   const cards = buildPricingCards(level);
   const bundle = buildBundleSummary(level);
 
+  // Purchasing needs a real lead/role to attach the unlock to -- without one
+  // there's nothing to buy yet, so every card falls back to the read-only
+  // "View on Overview" link (Overview itself handles the "no fitment score
+  // yet" empty state).
+  if (!lead) {
+    return (
+      <PricingCardsClient
+        cards={cards}
+        bundle={bundle}
+        levelLabel={levelLabel}
+        level={level}
+        purchasable={false}
+        leadId={null}
+        roleTitle={null}
+        userEmail={user.email ?? ""}
+        reportUnlocked={false}
+        personalityUnlocked={false}
+        referencesUnlocked={false}
+        interviewStatus="not_started"
+        counsellingRequested={false}
+      />
+    );
+  }
+
+  const [reportUnlocked, personalityUnlocked, referencesUnlocked] = await Promise.all([
+    isReportUnlocked(user.id, lead.role_title),
+    isProductUnlocked(user.id, "personality"),
+    isProductUnlocked(user.id, "references"),
+  ]);
+
+  const { data: interviewRow } = await supabase
+    .from("fitment_interviews")
+    .select("status")
+    .eq("user_id", user.id)
+    .eq("role_title", lead.role_title)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  // Deliberately simpler than Overview's version of this derivation: no
+  // stuck_at/self-heal handling here (that's a live-status concern for the
+  // dashboard, which the candidate is already on if any of that matters --
+  // this page only needs to know "is there already an interview in flight,
+  // yes or no" to decide whether to show a pay button or a view link).
+  const interviewStatus: InterviewStatus = !interviewRow
+    ? "not_started"
+    : interviewRow.status === "ready"
+      ? "ready"
+      : interviewRow.status === "terminated"
+        ? "terminated"
+        : "invited";
+
+  const { data: counsellingRequest } = await supabase.from("counselling_requests").select("id").eq("user_id", user.id).maybeSingle();
+
   return (
-    <main>
-      <div className="mx-auto" style={{ maxWidth: 1040, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
-        <div>
-          <p className={EYEBROW} style={{ fontSize: 10.5, letterSpacing: "0.08em", margin: "0 0 6px" }}>
-            Account
-          </p>
-          <h1 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: "1.7rem", margin: 0 }}>
-            Pricing
-          </h1>
-          <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 13.5, margin: "6px 0 0" }}>
-            Priced for where you are in your career right now.
-          </p>
-
-          <div
-            className="inline-flex items-center bg-[#ed1a24]/10 border border-[#ed1a24]/25"
-            style={{ gap: 8, borderRadius: 50, padding: "7px 14px", marginTop: 14 }}
-          >
-            <span className="bg-[#ed1a24]" style={{ width: 6, height: 6, borderRadius: "50%" }} />
-            <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 12.5 }}>
-              Your pricing tier: {levelLabel}-level
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" style={{ gap: 14 }}>
-          {cards.map((card) => {
-            const Icon = CARD_ICONS[card.key];
-            return (
-              <div
-                key={card.key}
-                className="bg-[#141416] border border-white/[0.08] flex flex-col"
-                style={{ borderRadius: 14, padding: 18 }}
-              >
-                <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
-                  <div
-                    className="flex items-center justify-center bg-[#ed1a24]/12 text-[#ed1a24]"
-                    style={{ width: 36, height: 36, borderRadius: 10 }}
-                  >
-                    <Icon size={16} strokeWidth={2} />
-                  </div>
-                  {card.inBundle && (
-                    <span
-                      className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40 bg-white/[0.06]"
-                      style={{ fontSize: 9.5, letterSpacing: "0.05em", borderRadius: 50, padding: "3px 9px" }}
-                    >
-                      In bundle
-                    </span>
-                  )}
-                </div>
-
-                <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: 15, margin: "0 0 4px" }}>
-                  {card.label}
-                </h3>
-                <p
-                  className="font-[family-name:var(--font-poppins)] text-white/50"
-                  style={{ fontSize: 12.5, lineHeight: 1.6, margin: "0 0 16px", flex: 1 }}
-                >
-                  {card.description}
-                </p>
-
-                <div className="flex items-baseline" style={{ gap: 6, marginBottom: 12 }}>
-                  <span className="font-[family-name:var(--font-gabarito)] font-bold text-white" style={{ fontSize: 20 }}>
-                    {card.priceLabel}
-                  </span>
-                  {card.bundlePriceLabel && (
-                    <span className="text-white/40" style={{ fontSize: 11.5 }}>
-                      · {card.bundlePriceLabel} bundled
-                    </span>
-                  )}
-                </div>
-
-                <Link
-                  href="/hub/account"
-                  className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
-                  style={{ fontSize: 12.5 }}
-                >
-                  Get this on Overview →
-                </Link>
-              </div>
-            );
-          })}
-
-          <div
-            className="border border-[#ed1a24]/30 flex flex-col"
-            style={{ background: "linear-gradient(to bottom right, #1a0507, #141416)", borderRadius: 14, padding: 20 }}
-          >
-            <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
-              <div className="flex items-center justify-center bg-[#ed1a24]/15 text-[#ed1a24]" style={{ width: 40, height: 40, borderRadius: 10 }}>
-                <Package size={18} strokeWidth={2} />
-              </div>
-              <span
-                className="font-[family-name:var(--font-poppins)] font-bold uppercase bg-[#ed1a24] text-white"
-                style={{ fontSize: 9.5, letterSpacing: "0.05em", borderRadius: 50, padding: "4px 10px" }}
-              >
-                Best value
-              </span>
-            </div>
-
-            <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-white" style={{ fontSize: 15, margin: "0 0 4px" }}>
-              Full Profile Bundle
-            </h3>
-            <p className="font-[family-name:var(--font-poppins)] text-white/55" style={{ fontSize: 12.5, lineHeight: 1.6, margin: "0 0 16px" }}>
-              Report, personality test, and reference checks together.
-            </p>
-
-            <div className="flex items-baseline" style={{ gap: 8, marginBottom: 6 }}>
-              <span className="font-[family-name:var(--font-gabarito)] font-bold text-white" style={{ fontSize: 24 }}>
-                {bundle.bundlePriceLabel}
-              </span>
-              <span className="text-white/35" style={{ fontSize: 12.5, textDecoration: "line-through" }}>
-                {bundle.soloTotalLabel}
-              </span>
-            </div>
-            <p className="font-[family-name:var(--font-poppins)] font-semibold" style={{ fontSize: 11.5, color: "#3FCB8C", margin: "0 0 16px" }}>
-              You save {bundle.savingsLabel}
-            </p>
-
-            <Link
-              href="/hub/account"
-              className="text-center font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
-              style={{ borderRadius: 8, padding: "11px 16px", fontSize: 13.5 }}
-            >
-              Get the bundle on Overview →
-            </Link>
-          </div>
-        </div>
-
-        <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 12, lineHeight: 1.6, maxWidth: 640, margin: 0 }}>
-          Only the personality test is discounted inside the bundle. Report and reference pricing stay identical either
-          way, so bundling never costs more than buying separately.
-        </p>
-      </div>
-    </main>
+    <PricingCardsClient
+      cards={cards}
+      bundle={bundle}
+      levelLabel={levelLabel}
+      level={level}
+      purchasable
+      leadId={lead.id}
+      roleTitle={lead.role_title}
+      userEmail={user.email ?? ""}
+      reportUnlocked={reportUnlocked}
+      personalityUnlocked={personalityUnlocked}
+      referencesUnlocked={referencesUnlocked}
+      interviewStatus={interviewStatus}
+      counsellingRequested={Boolean(counsellingRequest)}
+    />
   );
 }
