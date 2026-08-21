@@ -353,6 +353,124 @@ describe("retryResumeMatch", () => {
       "IntervueBox still hasn't produced a result for this candidate."
     );
   });
+
+  it("refuses to retry when the lead's fitment report was manually overridden", async () => {
+    leadSelectMaybeSingle.mockResolvedValue({
+      data: { user_id: "user-1", ib_applied_job_id: "applied-1", resume_match_status: "READY", resume_match_overridden: true },
+      error: null,
+    });
+
+    const { retryResumeMatch } = await import("../adminCandidates");
+    await expect(retryResumeMatch("lead-1", "roshan@merito.in")).rejects.toThrow(/manually overridden/);
+    expect(getResumeMatchReportMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("overrideFitmentReport", () => {
+  const leadSelectMaybeSingle = vi.fn();
+  const leadUpdateEq = vi.fn();
+
+  beforeEach(() => {
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+    leadSelectMaybeSingle.mockReset();
+    leadUpdateEq.mockReset();
+    leadUpdateEq.mockResolvedValue({ error: null });
+    fitmentLeadsSelectMock.mockReset();
+    fitmentLeadsSelectMock.mockReturnValue({ eq: () => ({ maybeSingle: leadSelectMaybeSingle }) });
+    fitmentLeadsUpdateMock.mockReset();
+    fitmentLeadsUpdateMock.mockReturnValue({ eq: leadUpdateEq });
+  });
+
+  it("merges the override into resume_match_raw and logs prior/new values", async () => {
+    leadSelectMaybeSingle.mockResolvedValue({
+      data: {
+        user_id: "user-1",
+        resume_match_status: "READY",
+        resume_match_raw: { overallScore: 60, rank: "Fit", categories: [], summary: "Old summary", strongPoints: [], weakPoints: [] },
+      },
+      error: null,
+    });
+
+    const { overrideFitmentReport } = await import("../adminCandidates");
+    await overrideFitmentReport("lead-1", { overallScore: 90, summary: "Better summary" }, "roshan@merito.in", "resume was misparsed");
+
+    expect(leadUpdateEq).toHaveBeenCalledWith("id", "lead-1");
+    expect(fitmentLeadsUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resume_match_raw: expect.objectContaining({ overallScore: 90, summary: "Better summary", rank: "Fit" }),
+        resume_match_overridden: true,
+      })
+    );
+    expect(logAdminActionMock).toHaveBeenCalledWith({
+      adminEmail: "roshan@merito.in",
+      action: "candidate.fitment_override",
+      targetType: "candidate",
+      targetId: "user-1",
+      priorValue: { overallScore: 60, summary: "Old summary" },
+      newValue: { leadId: "lead-1", overallScore: 90, summary: "Better summary", reason: "resume was misparsed" },
+    });
+  });
+
+  it("throws when the report isn't ready yet", async () => {
+    leadSelectMaybeSingle.mockResolvedValue({ data: { user_id: "user-1", resume_match_status: "PENDING" }, error: null });
+
+    const { overrideFitmentReport } = await import("../adminCandidates");
+    await expect(
+      overrideFitmentReport("lead-1", { overallScore: 90, summary: "x" }, "roshan@merito.in", "x")
+    ).rejects.toThrow(/isn't ready/);
+    expect(fitmentLeadsUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it("throws on an out-of-range score", async () => {
+    const { overrideFitmentReport } = await import("../adminCandidates");
+    await expect(
+      overrideFitmentReport("lead-1", { overallScore: 150, summary: "x" }, "roshan@merito.in", "x")
+    ).rejects.toThrow(/between 0 and 100/);
+    expect(leadSelectMaybeSingle).not.toHaveBeenCalled();
+  });
+});
+
+describe("clearFitmentOverride", () => {
+  const leadSelectMaybeSingle = vi.fn();
+  const leadUpdateEq = vi.fn();
+
+  beforeEach(() => {
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+    leadSelectMaybeSingle.mockReset();
+    leadUpdateEq.mockReset();
+    leadUpdateEq.mockResolvedValue({ error: null });
+    fitmentLeadsSelectMock.mockReset();
+    fitmentLeadsSelectMock.mockReturnValue({ eq: () => ({ maybeSingle: leadSelectMaybeSingle }) });
+    fitmentLeadsUpdateMock.mockReset();
+    fitmentLeadsUpdateMock.mockReturnValue({ eq: leadUpdateEq });
+  });
+
+  it("resets the flag and logs the reason", async () => {
+    leadSelectMaybeSingle.mockResolvedValue({ data: { user_id: "user-1" }, error: null });
+
+    const { clearFitmentOverride } = await import("../adminCandidates");
+    await clearFitmentOverride("lead-1", "roshan@merito.in", "resync needed");
+
+    expect(fitmentLeadsUpdateMock).toHaveBeenCalledWith({ resume_match_overridden: false });
+    expect(logAdminActionMock).toHaveBeenCalledWith({
+      adminEmail: "roshan@merito.in",
+      action: "candidate.fitment_override_cleared",
+      targetType: "candidate",
+      targetId: "user-1",
+      priorValue: { overridden: true },
+      newValue: { leadId: "lead-1", overridden: false, reason: "resync needed" },
+    });
+  });
+
+  it("throws when the lead doesn't exist", async () => {
+    leadSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
+
+    const { clearFitmentOverride } = await import("../adminCandidates");
+    await expect(clearFitmentOverride("lead-1", "roshan@merito.in", "x")).rejects.toThrow("Lead not found.");
+    expect(fitmentLeadsUpdateMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("sendCandidateNotification", () => {

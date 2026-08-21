@@ -106,6 +106,8 @@ export type CandidateLeadDetail = {
   roleTitle: string;
   createdAt: string;
   fitmentReport: ResumeMatchReportReady | null;
+  fitmentOverridden: boolean;
+  fitmentOverrideHistory: AdminActionRow[];
   candidateDetails: CandidateResumeDetails | null;
   interviewReport: InterviewReportReady | null;
   // Present whenever an interview was invited for this role, ready or not --
@@ -150,7 +152,9 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
 
   const { data: leadRows } = await supabase
     .from("fitment_leads")
-    .select("id, role_title, score, name, email, resume_match_status, resume_match_raw, ib_applied_job_id, created_at")
+    .select(
+      "id, role_title, score, name, email, resume_match_status, resume_match_raw, resume_match_overridden, ib_applied_job_id, created_at"
+    )
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
@@ -225,6 +229,12 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
         roleTitle: lead.role_title,
         createdAt: lead.created_at,
         fitmentReport: lead.resume_match_status === "READY" ? (lead.resume_match_raw as ResumeMatchReportReady) : null,
+        fitmentOverridden: lead.resume_match_overridden,
+        fitmentOverrideHistory: candidateActions.filter(
+          (a) =>
+            (a.action === "candidate.fitment_override" || a.action === "candidate.fitment_override_cleared") &&
+            (a.newValue as { leadId?: string } | null)?.leadId === lead.id
+        ),
         candidateDetails,
         interviewReport: interviewByRole.get(lead.role_title) ?? null,
         interviewRow: interviewRow
@@ -426,12 +436,16 @@ export async function retryResumeMatch(leadId: string, adminEmail: string): Prom
 
   const { data: lead } = await supabase
     .from("fitment_leads")
-    .select("user_id, ib_applied_job_id, resume_match_status")
+    .select("user_id, ib_applied_job_id, resume_match_status, resume_match_overridden")
     .eq("id", leadId)
     .maybeSingle();
 
   if (!lead || !lead.ib_applied_job_id) {
     throw new Error("Lead not found or has no linked IntervueBox application.");
+  }
+
+  if (lead.resume_match_overridden) {
+    throw new Error("Fitment report was manually overridden by an admin — clear the override before retrying.");
   }
 
   const report = await getResumeMatchReport(lead.ib_applied_job_id);
@@ -542,5 +556,77 @@ export async function updateRecruiterPreviewOverride(
     targetId: userId,
     priorValue,
     newValue: { enabled: updates.enabled, sections: updates.sections, reason },
+  });
+}
+
+export async function overrideFitmentReport(
+  leadId: string,
+  updates: { overallScore: number; summary: string },
+  adminEmail: string,
+  reason: string
+): Promise<void> {
+  if (!Number.isFinite(updates.overallScore) || updates.overallScore < 0 || updates.overallScore > 100) {
+    throw new Error("overallScore must be a number between 0 and 100.");
+  }
+
+  const supabase = getSupabaseServerClient();
+  const { data: lead } = await supabase
+    .from("fitment_leads")
+    .select("user_id, resume_match_status, resume_match_raw")
+    .eq("id", leadId)
+    .maybeSingle();
+
+  if (!lead || lead.resume_match_status !== "READY") {
+    throw new Error("Fitment report isn't ready yet — nothing to override.");
+  }
+
+  const existingRaw = lead.resume_match_raw as ResumeMatchReportReady;
+  const priorValue = { overallScore: existingRaw.overallScore, summary: existingRaw.summary };
+  const mergedRaw: ResumeMatchReportReady = { ...existingRaw, overallScore: updates.overallScore, summary: updates.summary };
+
+  const { error } = await supabase
+    .from("fitment_leads")
+    .update({
+      resume_match_raw: mergedRaw,
+      resume_match_score: updates.overallScore,
+      resume_match_overridden: true,
+      score: scoreOutOfTen(updates.overallScore),
+      verdict: updates.summary || "No summary available.",
+    })
+    .eq("id", leadId);
+  if (error) {
+    throw new Error(`Failed to override fitment report: ${error.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "candidate.fitment_override",
+    targetType: "candidate",
+    targetId: lead.user_id ?? leadId,
+    priorValue,
+    newValue: { leadId, overallScore: updates.overallScore, summary: updates.summary, reason },
+  });
+}
+
+export async function clearFitmentOverride(leadId: string, adminEmail: string, reason: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const { data: lead } = await supabase.from("fitment_leads").select("user_id").eq("id", leadId).maybeSingle();
+
+  if (!lead) {
+    throw new Error("Lead not found.");
+  }
+
+  const { error } = await supabase.from("fitment_leads").update({ resume_match_overridden: false }).eq("id", leadId);
+  if (error) {
+    throw new Error(`Failed to clear fitment override: ${error.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "candidate.fitment_override_cleared",
+    targetType: "candidate",
+    targetId: lead.user_id ?? leadId,
+    priorValue: { overridden: true },
+    newValue: { leadId, overridden: false, reason },
   });
 }

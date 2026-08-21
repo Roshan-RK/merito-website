@@ -21,6 +21,7 @@ import AccountActions from "./AccountActions";
 import ResumeMatchRetry from "./ResumeMatchRetry";
 import SendNotificationAction from "./SendNotificationAction";
 import RecruiterPreviewOverrideForm from "./RecruiterPreviewOverrideForm";
+import FitmentOverrideForm from "./FitmentOverrideForm";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -94,6 +95,13 @@ export default async function AdminCandidateDetailPage({
                   <ResumeMatchCategoryCard key={category.key} category={category} />
                 ))}
               </div>
+              <FitmentOverrideForm
+                leadId={lead.id}
+                overallScore={lead.fitmentReport.overallScore}
+                summary={lead.fitmentReport.summary}
+                overridden={lead.fitmentOverridden}
+                overrideHistory={lead.fitmentOverrideHistory}
+              />
             </div>
           ) : (
             <div style={{ marginBottom: 20 }}>
