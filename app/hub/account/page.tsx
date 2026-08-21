@@ -12,8 +12,13 @@ import { isProductUnlocked } from "@/lib/productUnlocks";
 import { getRecruiterViewCount } from "@/lib/recruiterActivity";
 import RecruiterActivityPanel from "./RecruiterActivityPanel";
 import AuthenticatedFitmentChecker from "./AuthenticatedFitmentChecker";
+import { resolveActiveLead } from "@/lib/activeLead";
 
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ lead?: string }>;
+}) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -43,8 +48,13 @@ export default async function AccountPage() {
     );
   }
 
-  const current = leads[0];
-  const prevForSameRole = leads.find((l, i) => i > 0 && l.role_title === current.role_title);
+  const { lead: requestedLeadId } = await searchParams;
+  const current = resolveActiveLead(leads, requestedLeadId);
+  if (!current) {
+    redirect("/hub/account");
+  }
+  const currentIndex = leads.indexOf(current);
+  const prevForSameRole = leads.find((l, i) => i > currentIndex && l.role_title === current.role_title);
 
   const reportUnlocked = await isReportUnlocked(user.id, current.role_title);
 

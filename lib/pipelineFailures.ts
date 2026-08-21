@@ -114,7 +114,7 @@ export async function retryInterviewFromFailure(failureId: string, adminEmail: s
 
   const { data: failure } = await supabase
     .from("pipeline_failures")
-    .select("id, kind, user_id, detail, resolved_at")
+    .select("id, kind, user_id, lead_id, detail, resolved_at")
     .eq("id", failureId)
     .maybeSingle();
 
@@ -127,6 +127,7 @@ export async function retryInterviewFromFailure(failureId: string, adminEmail: s
   const { error: insertError } = await supabase.from("fitment_interviews").insert({
     user_id: failure.user_id,
     role_title: detail.roleTitle,
+    lead_id: failure.lead_id,
     ib_job_id: detail.ibJobId,
     ib_agent_id: detail.ibAgentId,
     ib_candidate_id: detail.ibCandidateId,

@@ -197,7 +197,12 @@ describe("POST /api/hub/start-ai-interview", () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     leadMaybeSingleMock.mockResolvedValue({
-      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "senior" },
+      data: {
+        id: "lead-abc-123",
+        ib_job_id: "JOB_123",
+        ib_applied_job_id: "APJ_123",
+        candidate_level: "senior",
+      },
       error: null,
     });
     getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
@@ -215,6 +220,7 @@ describe("POST /api/hub/start-ai-interview", () => {
       expect.objectContaining({
         user_id: "user-1",
         role_title: "Senior Product Manager",
+        lead_id: "lead-abc-123",
         ib_job_id: "JOB_123",
         ib_agent_id: "INT_123",
         ib_candidate_id: "USR_123",
