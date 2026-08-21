@@ -31,7 +31,7 @@ Explicitly out of scope for this roadmap: ATS integration (separate product, not
 ## Open decisions (resolve before the phase that needs them)
 
 - **RBAC (Phase 3):** only one admin account exists today (`roshan@merito.in`). Confirm actual need for multi-admin before building — don't build speculatively.
-- **Resync-lock vs. reinvite-unlock (blocks Phase 4/5):** if an admin overrides an interview-report field, then a legit reinvite happens, should the override be respected or overwritten? Unresolved — needs a real decision, not just a "lock the field" gesture.
+- ~~Resync-lock vs. reinvite-unlock~~ — **resolved 2026-08-21: manual override always wins.** Reinvite on an already-`'ready'` interview row was already found to never touch `report_raw` (see Phase 4), so this only needed real enforcement for fitment (`resume_match_overridden` flag blocks `retryResumeMatch()`). Candidate profile fields needed a third mechanism entirely (override table wins on read, nothing to lock since nothing is cached).
 - **Impersonate-as-candidate:** highest-liability item on the list, marginal value since the candidate-detail page already shows the same data read-only. Reconsider before building, not default-yes.
 - **Command palette / sticky filters / other power-user UI:** contradicts the admin's current deliberately minimalist styling (see the recent reskin work). Decide as a philosophy call before adding.
 - **Terms/consent version tracking:** more a legal/compliance-ownership question than an engineering one — raise with whoever owns ToS rather than sequencing as a normal build item.
@@ -71,25 +71,24 @@ Explicitly out of scope for this roadmap: ATS integration (separate product, not
 - Concurrency/collision handling for simultaneous edits (only matters once >1 admin exists)
 - If not needed: skip entirely, revisit when it becomes real
 
-## Phase 4 — Data CRUD, low-conflict fields first
+## Phase 4 — Data CRUD, low-conflict fields first — **COMPLETE 2026-08-21**
 
-Resolve the resync-lock open decision before this phase starts (still applies to interview/candidate-profile fields below).
+Resync-lock decision resolved 2026-08-21: **manual admin edit wins, resync must never silently overwrite it.** Applied per-slice below, mechanism chosen to match what each table actually needed rather than one forced pattern.
 
 - ~~Shared pattern~~ — **shipped 2026-08-20, reused existing infra instead of new schema.** `admin_audit_log` (already existed) doubles as the override history — no new `admin_field_overrides` table needed. `listActionsForTarget(targetType, targetId)` (`lib/adminAuditLog.ts`) fetches full unpaginated history for one record; reason folds into `newValue` jsonb, matching how ban/delete/refund already log reasons. "Admin-overridden" badge = any history rows exist for that action.
 - ~~recruiter_preview_settings~~ — **shipped 2026-08-20.** `updateRecruiterPreviewOverride()` (`lib/adminCandidates.ts`) — admin can override `enabled`/`sections` with a mandatory reason; blocks enabling if the candidate has no LinkedIn URL on file yet (same rule the candidate-facing PUT enforces). Candidate detail page's Recruiter Preview section is now an edit form + collapsible history, not static text.
-- **Correction — candidate profile fields (phone/location/experience/education/projects) are NOT safe/local as the roadmap assumed.** `getCandidateResumeDetails()` fetches live from IntervueBox's API on every page load — nothing is stored in Merito's DB. Editing these needs the same resync-lock handling as interview report fields (Phase 5), not a simple local-table edit. Moved out of the "safe" grouping.
 - Personality report fields — **narrow edit surface, deferred.** Only `scores`/`validity` are stored (raw/pct/band per trait); all narrative text is computed from static lookup tables, nothing to edit there. Editing raw trait numbers risks internal inconsistency (raw vs. pct vs. band drifting) for an unclear real use case. Revisit if a concrete need shows up.
 - ~~References~~ — **shipped 2026-08-20, scope narrowed after checking the actual schema.** `referees.ratings`/`overall_feedback` are the referee's own submitted testimony — same integrity concern as the raw interview transcript rule below, so those stay view-only, no edit built. What shipped instead: referee **contact/metadata** fixes (name, email, phone, organization) via `updateRefereeContact()` (`lib/referenceChecks.ts`) — real gap, since a typo'd referee email blocked reminders/tokens with no fix available (`reset-reminders` only zeroes the counter, not the address). Added `"referee"` to `AuditTargetType` so history is scoped per-referee, not folded into the candidate's own log.
-- Fitment report fields, lead/role record
-- Interview report fields — **last**, since this is the field set that actually collides with IntervueBox resync (Phase 5)
-- Candidate profile fields — moved next to interview report fields, same resync-lock dependency
+- ~~Fitment report fields~~ — **shipped 2026-08-21.** `overrideFitmentReport()`/`clearFitmentOverride()` (`lib/adminCandidates.ts`) — admin can correct `overallScore`/`summary` on a ready `fitment_leads` row. Needed a real lock: `retryResumeMatch()` unconditionally overwrote `resume_match_raw` on every retry, so migration `0047` adds `resume_match_overridden boolean`, and retry now refuses to run while it's set — admin must explicitly clear the override first.
+- ~~Interview report fields~~ — **shipped 2026-08-21, simpler than the roadmap feared.** `overrideInterviewReport()` — admin can correct `overallScore`/`overallSummary` on a ready `fitment_interviews` row. Investigation found no lock column was actually needed: `sweepPendingInterviews()` only ever touches rows still in `status = 'invited'`, and the admin reinvite route already skips resetting status on an already-`'ready'` row (fixed previously for an unrelated stuck-state bug) — so nothing in this codebase can silently overwrite a manually-edited `report_raw`. Reused the lighter recruiter-preview-style pattern (audit-log history is the only signal) instead of the fitment slice's boolean-flag pattern.
+- ~~Candidate profile fields~~ — **shipped 2026-08-21, different mechanism than fitment/interview.** `getCandidateResumeDetails()` fetches live from IntervueBox on every page load — nothing is cached in Merito's DB at all, so there was no local row to flag as "overridden." New `candidate_profile_overrides` table (migration `0048`, `overrideCandidateProfile()`) sits on top of the live fetch and wins unconditionally on read whenever a row exists — phone/location/total-experience only, education/experience/skills/projects/certifications left untouched (narrow scope, matches the 1-2-field precedent set by every other slice).
 - Raw answer transcript stays view-only always — integrity-sensitive, fix via re-run not hand-edit
 
 ## Phase 5 — IntervueBox mirror/sync
 
 - Side-by-side raw-vendor vs. mirror view + manual resync button
 - Webhook payload inspector/history
-- Resync-lock respecting admin overrides (now that both the lock decision and interview-report editing exist)
+- ~~Resync-lock respecting admin overrides~~ — done as part of Phase 4 itself (fitment/interview/profile), not deferred to here as originally planned.
 - Automated drift-reconciliation — **held**, not sequenced. IntervueBox has a history of correctness bugs; an auto-detector built on a shaky foundation will throw constant false positives. Revisit once the integration itself is more stable.
 
 ## Phase 6 — Support tooling
