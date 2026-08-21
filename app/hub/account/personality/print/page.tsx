@@ -84,7 +84,6 @@ export default async function PersonalityPrintPage({
     .from("personality_tests")
     .select("scores, validity")
     .eq("user_id", user.id)
-    .eq("role_title", roleTitle)
     .maybeSingle();
 
   if (!unlocked || !existing?.scores || !existing?.validity) {
