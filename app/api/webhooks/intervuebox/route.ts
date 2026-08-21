@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { sweepPendingInterviews } from "@/lib/intervuebox/sweepPendingInterviews";
+import { recordWebhookEvent } from "@/lib/intervueboxWebhookEvents";
 
 export const runtime = "nodejs";
 
@@ -39,7 +40,25 @@ export async function POST(request: Request) {
   // The webhook delivery body's per-event JSON shape isn't documented by
   // IntervueBox -- sweepPendingInterviews() re-checks every "invited" row
   // instead of trying to parse identifiers out of this payload.
-  await sweepPendingInterviews();
+  let rawPayload: unknown = rawBody;
+  try {
+    rawPayload = JSON.parse(rawBody);
+  } catch {
+    // Not JSON -- store the raw text as-is.
+  }
 
+  let sweepResult = null;
+  let sweepError: string | null = null;
+  try {
+    sweepResult = await sweepPendingInterviews();
+  } catch (err) {
+    sweepError = err instanceof Error ? err.message : String(err);
+  }
+
+  await recordWebhookEvent({ rawPayload, sweepResult, sweepError });
+
+  if (sweepError) {
+    return Response.json({ error: sweepError }, { status: 500 });
+  }
   return Response.json({ received: true });
 }

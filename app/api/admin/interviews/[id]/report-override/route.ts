@@ -1,10 +1,14 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/adminAuth";
-import { overrideInterviewReport } from "@/lib/adminCandidates";
+import { overrideInterviewReport, clearInterviewOverride } from "@/lib/adminCandidates";
 
 const PostSchema = z.object({
   overallScore: z.number().min(0).max(10),
   overallSummary: z.string(),
+  reason: z.string().min(1),
+});
+
+const DeleteSchema = z.object({
   reason: z.string().min(1),
 });
 
@@ -35,6 +39,32 @@ export async function POST(request: Request, { params }: RouteContext) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to override interview report.";
+    return Response.json({ error: message }, { status: 409 });
+  }
+
+  return Response.json({ ok: true });
+}
+
+export async function DELETE(request: Request, { params }: RouteContext) {
+  const admin = await requireAdmin();
+  const { id } = await params;
+
+  let json: unknown;
+  try {
+    json = await request.json();
+  } catch {
+    return Response.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  const parsed = DeleteSchema.safeParse(json);
+  if (!parsed.success) {
+    return Response.json({ error: "reason is required." }, { status: 400 });
+  }
+
+  try {
+    await clearInterviewOverride(id, admin.email as string, parsed.data.reason);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to clear interview override.";
     return Response.json({ error: message }, { status: 409 });
   }
 

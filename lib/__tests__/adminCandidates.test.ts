@@ -47,6 +47,11 @@ vi.mock("@/lib/intervuebox/reports", () => ({
   scoreOutOfTen: (n: number) => Math.round((n / 100) * 10 * 10) / 10,
 }));
 
+const getInterviewReportMock = vi.fn();
+vi.mock("@/lib/intervuebox/interviewReports", () => ({
+  getInterviewReport: getInterviewReportMock,
+}));
+
 const listActionsForTargetMock = vi.fn();
 vi.mock("@/lib/adminAuditLog", () => ({
   logAdminAction: logAdminActionMock,
@@ -717,6 +722,7 @@ describe("overrideInterviewReport", () => {
     expect(rowUpdateEq).toHaveBeenCalledWith("id", "row-1");
     expect(fitmentInterviewsUpdateMock).toHaveBeenCalledWith({
       report_raw: expect.objectContaining({ overallScore: 9, overallSummary: "Better summary", skillMetrics: { comms: 7 } }),
+      report_overridden: true,
     });
     expect(logAdminActionMock).toHaveBeenCalledWith({
       adminEmail: "roshan@merito.in",
@@ -744,6 +750,124 @@ describe("overrideInterviewReport", () => {
       overrideInterviewReport("row-1", { overallScore: 15, overallSummary: "x" }, "roshan@merito.in", "x")
     ).rejects.toThrow(/between 0 and 10/);
     expect(rowSelectMaybeSingle).not.toHaveBeenCalled();
+  });
+});
+
+describe("clearInterviewOverride", () => {
+  const rowSelectMaybeSingle = vi.fn();
+  const rowUpdateEq = vi.fn();
+
+  beforeEach(() => {
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+    rowSelectMaybeSingle.mockReset();
+    rowUpdateEq.mockReset();
+    rowUpdateEq.mockResolvedValue({ error: null });
+    fitmentInterviewsSelectMock.mockReset();
+    fitmentInterviewsSelectMock.mockReturnValue({ eq: () => ({ maybeSingle: rowSelectMaybeSingle }) });
+    fitmentInterviewsUpdateMock.mockReset();
+    fitmentInterviewsUpdateMock.mockReturnValue({ eq: rowUpdateEq });
+  });
+
+  it("resets the flag and logs the reason", async () => {
+    rowSelectMaybeSingle.mockResolvedValue({ data: { id: "row-1" }, error: null });
+
+    const { clearInterviewOverride } = await import("../adminCandidates");
+    await clearInterviewOverride("row-1", "roshan@merito.in", "resync needed");
+
+    expect(fitmentInterviewsUpdateMock).toHaveBeenCalledWith({ report_overridden: false });
+    expect(logAdminActionMock).toHaveBeenCalledWith({
+      adminEmail: "roshan@merito.in",
+      action: "interview.report_override_cleared",
+      targetType: "interview",
+      targetId: "row-1",
+      priorValue: { overridden: true },
+      newValue: { overridden: false, reason: "resync needed" },
+    });
+  });
+
+  it("throws when the interview doesn't exist", async () => {
+    rowSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
+
+    const { clearInterviewOverride } = await import("../adminCandidates");
+    await expect(clearInterviewOverride("row-1", "roshan@merito.in", "x")).rejects.toThrow("Interview not found.");
+    expect(fitmentInterviewsUpdateMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("resyncInterviewReport", () => {
+  const rowSelectMaybeSingle = vi.fn();
+  const rowUpdateEq = vi.fn();
+
+  beforeEach(() => {
+    getInterviewReportMock.mockReset();
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+    rowSelectMaybeSingle.mockReset();
+    rowUpdateEq.mockReset();
+    rowUpdateEq.mockResolvedValue({ error: null });
+    fitmentInterviewsSelectMock.mockReset();
+    fitmentInterviewsSelectMock.mockReturnValue({ eq: () => ({ maybeSingle: rowSelectMaybeSingle }) });
+    fitmentInterviewsUpdateMock.mockReset();
+    fitmentInterviewsUpdateMock.mockReturnValue({ eq: rowUpdateEq });
+  });
+
+  it("overwrites report_raw when the vendor still reports READY", async () => {
+    rowSelectMaybeSingle.mockResolvedValue({
+      data: { status: "ready", report_overridden: false, ib_agent_id: "agent-1", ib_candidate_id: "cand-1" },
+      error: null,
+    });
+    getInterviewReportMock.mockResolvedValue({
+      status: "READY",
+      overallScore: 7,
+      skillMetrics: {},
+      overallSummary: "Updated",
+      strengths: [],
+      areasOfImprovement: [],
+      shareableReportLink: null,
+      approxDurationMinutes: 10,
+      flagForSuspiciousActivity: false,
+      integrityCheck: null,
+      videoReport: null,
+      feedbackToInterviewer: null,
+      roadmap: null,
+      criteriaEvaluationTable: [],
+      interviewTitle: "Title",
+      skillReport: {},
+      overallSkillScore: 7,
+      answers: [],
+      knowledgeAnswers: [],
+    });
+
+    const { resyncInterviewReport } = await import("../adminCandidates");
+    await resyncInterviewReport("row-1", "roshan@merito.in");
+
+    expect(getInterviewReportMock).toHaveBeenCalledWith("agent-1", "cand-1");
+    expect(rowUpdateEq).toHaveBeenCalledWith("id", "row-1");
+    expect(fitmentInterviewsUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ report_raw: expect.objectContaining({ overallScore: 7, overallSummary: "Updated" }) })
+    );
+    expect(logAdminActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "interview.report_resynced", targetId: "row-1" })
+    );
+  });
+
+  it("refuses to resync when the report was manually overridden", async () => {
+    rowSelectMaybeSingle.mockResolvedValue({
+      data: { status: "ready", report_overridden: true, ib_agent_id: "agent-1", ib_candidate_id: "cand-1" },
+      error: null,
+    });
+
+    const { resyncInterviewReport } = await import("../adminCandidates");
+    await expect(resyncInterviewReport("row-1", "roshan@merito.in")).rejects.toThrow(/manually overridden/);
+    expect(getInterviewReportMock).not.toHaveBeenCalled();
+  });
+
+  it("throws when the interview isn't ready yet", async () => {
+    rowSelectMaybeSingle.mockResolvedValue({ data: { status: "invited", report_overridden: false }, error: null });
+
+    const { resyncInterviewReport } = await import("../adminCandidates");
+    await expect(resyncInterviewReport("row-1", "roshan@merito.in")).rejects.toThrow(/isn't ready/);
   });
 });
 
@@ -948,6 +1072,102 @@ describe("resolveBroadcastAudience", () => {
     const { resolveBroadcastAudience } = await import("../adminCandidates");
 
     await expect(resolveBroadcastAudience({})).rejects.toThrow("Failed to load fitment leads: query timeout");
+  });
+});
+
+describe("findDuplicateCandidates", () => {
+  const fitmentInterviewsEq = vi.fn();
+  const referenceChecksEq = vi.fn();
+  const candidateDeletionsIs = vi.fn();
+
+  function stubCandidates(rows: Array<{ userId: string; email: string; name: string | null; roleTitle?: string }>) {
+    fitmentLeadsSelectMock.mockReturnValue({
+      order: () =>
+        Promise.resolve({
+          data: rows.map((r, i) => ({
+            user_id: r.userId,
+            email: r.email,
+            name: r.name,
+            role_title: r.roleTitle ?? "Software Engineer",
+            created_at: new Date(2026, 0, i + 1).toISOString(),
+          })),
+        }),
+    });
+    reportUnlocksSelectMock.mockResolvedValue({ data: [] });
+    fitmentInterviewsSelectMock.mockReturnValue({ eq: fitmentInterviewsEq });
+    fitmentInterviewsEq.mockResolvedValue({ data: [] });
+    personalityTestsSelectMock.mockResolvedValue({ data: [] });
+    referenceChecksSelectMock.mockReturnValue({ eq: referenceChecksEq });
+    referenceChecksEq.mockResolvedValue({ data: [] });
+  }
+
+  beforeEach(() => {
+    fitmentLeadsSelectMock.mockReset();
+    reportUnlocksSelectMock.mockReset();
+    fitmentInterviewsSelectMock.mockReset();
+    fitmentInterviewsEq.mockReset();
+    personalityTestsSelectMock.mockReset();
+    referenceChecksSelectMock.mockReset();
+    referenceChecksEq.mockReset();
+    candidateDeletionsSelectMock.mockReset();
+    candidateDeletionsIs.mockReset();
+    candidateDeletionsSelectMock.mockReturnValue({ is: candidateDeletionsIs });
+    candidateDeletionsIs.mockResolvedValue({ data: [] });
+    listUsersMock.mockReset();
+    listUsersMock.mockResolvedValue({ data: { users: [] }, error: null });
+  });
+
+  it("groups gmail addresses that only differ by dots or a +alias", async () => {
+    stubCandidates([
+      { userId: "user-0", email: "j.doe+work@gmail.com", name: "Alpha" },
+      { userId: "user-1", email: "jdoe@gmail.com", name: "Beta" },
+      { userId: "user-2", email: "unrelated@gmail.com", name: "Gamma" },
+    ]);
+    const { findDuplicateCandidates } = await import("../adminCandidates");
+
+    const { byEmail } = await findDuplicateCandidates();
+
+    expect(byEmail).toHaveLength(1);
+    expect(byEmail[0].candidates.map((c) => c.userId).sort()).toEqual(["user-0", "user-1"]);
+  });
+
+  it("does not conflate dot-stripping across non-gmail domains", async () => {
+    stubCandidates([
+      { userId: "user-0", email: "j.doe@example.com", name: "Alpha" },
+      { userId: "user-1", email: "jdoe@example.com", name: "Beta" },
+    ]);
+    const { findDuplicateCandidates } = await import("../adminCandidates");
+
+    const { byEmail } = await findDuplicateCandidates();
+
+    expect(byEmail).toHaveLength(0);
+  });
+
+  it("groups candidates with the same name, case-insensitively", async () => {
+    stubCandidates([
+      { userId: "user-0", email: "a@example.com", name: "Priya Shah" },
+      { userId: "user-1", email: "b@example.com", name: "priya shah" },
+    ]);
+    const { findDuplicateCandidates } = await import("../adminCandidates");
+
+    const { byName } = await findDuplicateCandidates();
+
+    expect(byName).toHaveLength(1);
+    expect(byName[0].candidates.map((c) => c.userId).sort()).toEqual(["user-0", "user-1"]);
+  });
+
+  it("excludes banned and pending-deletion accounts from both signals", async () => {
+    stubCandidates([
+      { userId: "user-0", email: "jdoe@gmail.com", name: "Priya Shah" },
+      { userId: "user-1", email: "j.doe@gmail.com", name: "priya shah" },
+    ]);
+    candidateDeletionsIs.mockResolvedValue({ data: [{ user_id: "user-1" }] });
+    const { findDuplicateCandidates } = await import("../adminCandidates");
+
+    const { byEmail, byName } = await findDuplicateCandidates();
+
+    expect(byEmail).toHaveLength(0);
+    expect(byName).toHaveLength(0);
   });
 });
 

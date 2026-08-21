@@ -17,11 +17,13 @@ export default function InterviewOverrideForm({
   interviewRowId,
   overallScore,
   overallSummary,
+  overridden,
   overrideHistory,
 }: {
   interviewRowId: string;
   overallScore: number;
   overallSummary: string;
+  overridden: boolean;
   overrideHistory: AdminActionRow[];
 }) {
   const router = useRouter();
@@ -58,10 +60,34 @@ export default function InterviewOverrideForm({
     }
   }
 
+  async function clearOverride() {
+    if (!reason.trim()) return;
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/admin/interviews/${interviewRowId}/report-override`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        showToast("error", data?.error || "Something went wrong — try again.");
+        return;
+      }
+      setReason("");
+      showToast("success", "Override cleared — resync is available again.");
+      router.refresh();
+    } catch {
+      showToast("error", "Something went wrong — try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div style={{ marginTop: 10 }}>
       <div className="flex items-center" style={{ gap: 10 }}>
-        {overrideHistory.length > 0 && <Badge variant="warning">Admin-overridden</Badge>}
+        {overridden && <Badge variant="warning">Admin-overridden</Badge>}
         <button
           onClick={() => setOpen((v) => !v)}
           className="font-[family-name:var(--font-poppins)] text-[#ed1a24]"
@@ -88,10 +114,15 @@ export default function InterviewOverrideForm({
             className="font-[family-name:var(--font-poppins)]"
             style={inputStyle}
           />
-          <div>
+          <div className="flex items-center" style={{ gap: 8 }}>
             <Button variant="secondary" onClick={save} disabled={busy || !reason.trim()} loading={busy}>
               Save override
             </Button>
+            {overridden && (
+              <Button variant="danger" onClick={clearOverride} disabled={busy || !reason.trim()}>
+                Clear override
+              </Button>
+            )}
           </div>
         </div>
       )}

@@ -17,6 +17,8 @@ import InterviewRecoveryActions from "./InterviewRecoveryActions";
 import ResumeMatchRetry from "./ResumeMatchRetry";
 import FitmentOverrideForm from "./FitmentOverrideForm";
 import InterviewOverrideForm from "./InterviewOverrideForm";
+import InterviewResync from "./InterviewResync";
+import VendorCompare from "./VendorCompare";
 import type { CandidateLeadDetail } from "@/lib/adminCandidates";
 import type { Scores, Validity } from "@/lib/personality";
 
@@ -118,6 +120,8 @@ export default function ReportsTab({
                 overridden={lead.fitmentOverridden}
                 overrideHistory={lead.fitmentOverrideHistory}
               />
+              {!lead.fitmentOverridden && <ResumeMatchRetry leadId={lead.id} />}
+              <VendorCompare compareUrl={`/api/admin/leads/${lead.id}/vendor-compare`} />
             </div>
           ) : (
             <div style={{ marginBottom: 20 }}>
@@ -154,12 +158,17 @@ export default function ReportsTab({
               {lead.interviewReport.feedbackToInterviewer && <EvaluatorNotes notes={lead.interviewReport.feedbackToInterviewer} />}
               <AnswerTranscript answers={lead.interviewReport.answers} />
               {lead.interviewRow && (
-                <InterviewOverrideForm
-                  interviewRowId={lead.interviewRow.id}
-                  overallScore={lead.interviewReport.overallScore}
-                  overallSummary={lead.interviewReport.overallSummary}
-                  overrideHistory={lead.interviewOverrideHistory}
-                />
+                <>
+                  <InterviewOverrideForm
+                    interviewRowId={lead.interviewRow.id}
+                    overallScore={lead.interviewReport.overallScore}
+                    overallSummary={lead.interviewReport.overallSummary}
+                    overridden={lead.interviewOverridden}
+                    overrideHistory={lead.interviewOverrideHistory}
+                  />
+                  {!lead.interviewOverridden && <InterviewResync interviewRowId={lead.interviewRow.id} />}
+                  <VendorCompare compareUrl={`/api/admin/interviews/${lead.interviewRow.id}/vendor-compare`} />
+                </>
               )}
             </div>
           ) : lead.interviewRow ? (

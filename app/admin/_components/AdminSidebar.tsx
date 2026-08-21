@@ -15,10 +15,12 @@ const NAV_ITEMS = [
   { label: "Recruiters", href: "/admin/recruiters" },
   { label: "Recruiter Activity", href: "/admin/recruiter-activity" },
   { label: "Contact Requests", href: "/admin/contact-requests" },
+  { label: "Duplicates", href: "/admin/duplicates" },
   { label: "Payments", href: "/admin/payments" },
   { label: "Counselling", href: "/admin/counselling" },
   { label: "Extension", href: "/admin/extension" },
   { label: "Pipeline Failures", href: "/admin/pipeline-failures" },
+  { label: "Webhook Events", href: "/admin/webhook-events" },
   { label: "Learned Skills", href: "/admin/learned-skills" },
   { label: "Email Templates", href: "/admin/email-templates" },
 ];

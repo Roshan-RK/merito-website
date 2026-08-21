@@ -1,7 +1,7 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { getReferenceCheckStatus, computeReferenceReport, listRefereeOverrideHistory, type ReferenceReport, type RefereeRow } from "@/lib/referenceChecks";
 import { getCandidateResumeDetails, getResumeMatchReport, scoreOutOfTen, type CandidateResumeDetails, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
-import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
+import { getInterviewReport, type InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import type { Scores, Validity } from "@/lib/personality";
 import { logAdminAction, listActionsForTarget, type AdminActionRow } from "@/lib/adminAuditLog";
 import type { ReportType } from "@/app/hub/account/reportSections";
@@ -184,6 +184,61 @@ export async function searchCandidates(query: string): Promise<CandidateListRow[
   return all.filter((c) => c.email.toLowerCase().includes(q) || (c.name ?? "").toLowerCase().includes(q)).slice(0, SEARCH_RESULT_LIMIT);
 }
 
+// Gmail ignores dots and anything after "+" in the local part; other
+// providers generally don't, but "+alias" stripping is safe everywhere
+// (it's the standard subaddressing convention, not Gmail-specific).
+function normalizeEmailForDuplicateMatch(email: string): string {
+  const [local, domain] = email.trim().toLowerCase().split("@");
+  if (!domain) return email.trim().toLowerCase();
+  const withoutAlias = local.split("+")[0];
+  const normalizedLocal = domain === "gmail.com" ? withoutAlias.replace(/\./g, "") : withoutAlias;
+  return `${normalizedLocal}@${domain}`;
+}
+
+export type DuplicateCandidateGroup = { key: string; reason: "email" | "name"; candidates: CandidateListRow[] };
+
+// Heuristic, human-reviewed surfacing -- not an auto-merge. Two independent
+// signals (normalized email, exact name) rather than one combined score:
+// keeps the "why flagged" obvious to the admin reviewing the list, and a
+// common name alone is a much weaker signal than a matching email, so
+// conflating them into one confidence number would hide that difference.
+export async function findDuplicateCandidates(): Promise<{ byEmail: DuplicateCandidateGroup[]; byName: DuplicateCandidateGroup[] }> {
+  const supabase = getSupabaseServerClient();
+  const [all, { data: deletionRows, error }, bannedIds] = await Promise.all([
+    fetchAllCandidates(),
+    supabase.from("candidate_deletions").select("user_id").is("purged_at", null),
+    fetchBannedUserIds(supabase),
+  ]);
+  if (error) {
+    throw new Error(`Failed to load pending deletions: ${error.message}`);
+  }
+
+  const pendingDeletionIds = new Set((deletionRows ?? []).map((r) => r.user_id));
+  // Already-resolved (banned or pending-deletion) accounts are almost
+  // always the losing side of a merge an admin already did -- resurfacing
+  // them as "still a duplicate" would just be noise on every future load.
+  const live = all.filter((c) => !pendingDeletionIds.has(c.userId) && !bannedIds.has(c.userId));
+
+  function groupBy(keyFn: (c: CandidateListRow) => string | null, reason: "email" | "name"): DuplicateCandidateGroup[] {
+    const groups = new Map<string, CandidateListRow[]>();
+    for (const c of live) {
+      const key = keyFn(c);
+      if (!key) continue;
+      const bucket = groups.get(key);
+      if (bucket) bucket.push(c);
+      else groups.set(key, [c]);
+    }
+    return Array.from(groups.entries())
+      .filter(([, candidates]) => candidates.length > 1)
+      .map(([key, candidates]) => ({ key, reason, candidates }));
+  }
+
+  return {
+    byEmail: groupBy((c) => normalizeEmailForDuplicateMatch(c.email), "email"),
+    byName: groupBy((c) => (c.name ? c.name.trim().toLowerCase() : null), "name"),
+  };
+}
+
 export type CandidateLeadDetail = {
   id: string;
   roleTitle: string;
@@ -194,6 +249,7 @@ export type CandidateLeadDetail = {
   fitmentOverrideHistory: AdminActionRow[];
   candidateDetails: CandidateResumeDetails | null;
   interviewReport: InterviewReportReady | null;
+  interviewOverridden: boolean;
   interviewOverrideHistory: AdminActionRow[];
   // Present whenever an interview was invited for this role, ready or not --
   // lets the admin UI offer a manual generate/reinvite action on a stuck
@@ -250,7 +306,7 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
 
   const { data: interviewRows } = await supabase
     .from("fitment_interviews")
-    .select("id, role_title, status, report_raw, ib_agent_id, ib_candidate_id, updated_at")
+    .select("id, role_title, status, report_raw, report_overridden, ib_agent_id, ib_candidate_id, updated_at")
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
 
@@ -347,7 +403,10 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
         ),
         candidateDetails,
         interviewReport: interviewByRole.get(lead.role_title) ?? null,
-        interviewOverrideHistory: interviewOverrideHistory.filter((a) => a.action === "interview.report_override"),
+        interviewOverridden: interviewRow?.report_overridden ?? false,
+        interviewOverrideHistory: interviewOverrideHistory.filter(
+          (a) => a.action === "interview.report_override" || a.action === "interview.report_override_cleared"
+        ),
         interviewRow: interviewRow
           ? { id: interviewRow.id, status: interviewRow.status, ibAgentId: interviewRow.ib_agent_id, ibCandidateId: interviewRow.ib_candidate_id }
           : null,
@@ -875,12 +934,11 @@ export async function clearFitmentOverride(leadId: string, adminEmail: string, r
   });
 }
 
-// No lock flag needed here (unlike overrideFitmentReport/retryResumeMatch):
-// the sweep that populates report_raw only ever touches rows with
-// status "invited" (lib/intervuebox/sweepPendingInterviews.ts), and the
-// admin reinvite route explicitly skips resetting status on a row that's
-// already "ready" -- so nothing in this codebase can silently overwrite a
-// report_raw an admin has manually edited.
+// Unlike the old assumption here (see git blame): the sweep only touching
+// "invited" rows and reinvite skipping "ready" rows made this override safe
+// from silent overwrite *before* Phase 5 added a manual resync button
+// (resyncInterviewReport, below). report_overridden now blocks resync the
+// same way resume_match_overridden blocks retryResumeMatch.
 export async function overrideInterviewReport(
   interviewRowId: string,
   updates: { overallScore: number; overallSummary: string },
@@ -906,7 +964,10 @@ export async function overrideInterviewReport(
   const priorValue = { overallScore: existingRaw.overallScore, overallSummary: existingRaw.overallSummary };
   const mergedRaw: InterviewReportReady = { ...existingRaw, overallScore: updates.overallScore, overallSummary: updates.overallSummary };
 
-  const { error } = await supabase.from("fitment_interviews").update({ report_raw: mergedRaw }).eq("id", interviewRowId);
+  const { error } = await supabase
+    .from("fitment_interviews")
+    .update({ report_raw: mergedRaw, report_overridden: true })
+    .eq("id", interviewRowId);
   if (error) {
     throw new Error(`Failed to override interview report: ${error.message}`);
   }
@@ -918,5 +979,91 @@ export async function overrideInterviewReport(
     targetId: interviewRowId,
     priorValue,
     newValue: { overallScore: updates.overallScore, overallSummary: updates.overallSummary, reason },
+  });
+}
+
+export async function clearInterviewOverride(interviewRowId: string, adminEmail: string, reason: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const { data: row } = await supabase.from("fitment_interviews").select("id").eq("id", interviewRowId).maybeSingle();
+  if (!row) {
+    throw new Error("Interview not found.");
+  }
+
+  const { error } = await supabase.from("fitment_interviews").update({ report_overridden: false }).eq("id", interviewRowId);
+  if (error) {
+    throw new Error(`Failed to clear interview override: ${error.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "interview.report_override_cleared",
+    targetType: "interview",
+    targetId: interviewRowId,
+    priorValue: { overridden: true },
+    newValue: { overridden: false, reason },
+  });
+}
+
+// Manual resync (Phase 5): re-pulls the vendor's current report and
+// overwrites report_raw, same fields sweepPendingInterviews() writes on the
+// happy path. Only valid once a row is already "ready" -- a not-ready row
+// goes through the existing reinvite/recovery flow instead.
+export async function resyncInterviewReport(interviewRowId: string, adminEmail: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const { data: row } = await supabase
+    .from("fitment_interviews")
+    .select("status, report_overridden, ib_agent_id, ib_candidate_id")
+    .eq("id", interviewRowId)
+    .maybeSingle();
+
+  if (!row || row.status !== "ready") {
+    throw new Error("Interview report isn't ready yet — nothing to resync.");
+  }
+  if (row.report_overridden) {
+    throw new Error("Interview report was manually overridden by an admin — clear the override before resyncing.");
+  }
+
+  const report = await getInterviewReport(row.ib_agent_id, row.ib_candidate_id);
+  if (report.status !== "READY") {
+    throw new Error("IntervueBox no longer reports this interview as ready.");
+  }
+
+  const { error } = await supabase
+    .from("fitment_interviews")
+    .update({
+      report_raw: {
+        overallScore: report.overallScore,
+        skillMetrics: report.skillMetrics,
+        overallSummary: report.overallSummary,
+        strengths: report.strengths,
+        areasOfImprovement: report.areasOfImprovement,
+        shareableReportLink: report.shareableReportLink,
+        approxDurationMinutes: report.approxDurationMinutes,
+        flagForSuspiciousActivity: report.flagForSuspiciousActivity,
+        integrityCheck: report.integrityCheck,
+        videoReport: report.videoReport,
+        feedbackToInterviewer: report.feedbackToInterviewer,
+        roadmap: report.roadmap,
+        criteriaEvaluationTable: report.criteriaEvaluationTable,
+        interviewTitle: report.interviewTitle,
+        skillReport: report.skillReport,
+        overallSkillScore: report.overallSkillScore,
+        answers: report.answers,
+        knowledgeAnswers: report.knowledgeAnswers,
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", interviewRowId);
+  if (error) {
+    throw new Error(`Failed to resync interview report: ${error.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "interview.report_resynced",
+    targetType: "interview",
+    targetId: interviewRowId,
+    priorValue: null,
+    newValue: { overallScore: report.overallScore },
   });
 }

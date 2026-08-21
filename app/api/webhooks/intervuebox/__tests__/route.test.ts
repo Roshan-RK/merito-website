@@ -6,6 +6,11 @@ vi.mock("@/lib/intervuebox/sweepPendingInterviews", () => ({
   sweepPendingInterviews: sweepPendingInterviewsMock,
 }));
 
+const recordWebhookEventMock = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/lib/intervueboxWebhookEvents", () => ({
+  recordWebhookEvent: recordWebhookEventMock,
+}));
+
 async function importRoute() {
   return await import("../route");
 }
@@ -19,6 +24,8 @@ describe("POST /api/webhooks/intervuebox", () => {
   beforeEach(() => {
     vi.stubEnv("INTERVUEBOX_WEBHOOK_SECRET", "whsec_test");
     sweepPendingInterviewsMock.mockClear();
+    sweepPendingInterviewsMock.mockResolvedValue({ ready: 0, appeared: 0, terminated: 0, errors: 0 });
+    recordWebhookEventMock.mockClear();
   });
 
   afterEach(() => {
@@ -74,5 +81,29 @@ describe("POST /api/webhooks/intervuebox", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ received: true });
     expect(sweepPendingInterviewsMock).toHaveBeenCalledTimes(1);
+    expect(recordWebhookEventMock).toHaveBeenCalledWith({
+      rawPayload: { eventType: "AIInterviewReportGenerated" },
+      sweepResult: { ready: 0, appeared: 0, terminated: 0, errors: 0 },
+      sweepError: null,
+    });
+  });
+
+  it("records the event and returns 500 when the sweep throws", async () => {
+    sweepPendingInterviewsMock.mockRejectedValueOnce(new Error("boom"));
+    const { POST } = await importRoute();
+    const rawBody = JSON.stringify({ eventType: "AIInterviewReportGenerated" });
+    const request = new Request("http://localhost/api/webhooks/intervuebox", {
+      method: "POST",
+      headers: { "x-ib-signature": sign("whsec_test", rawBody) },
+      body: rawBody,
+    });
+    const response = await POST(request);
+
+    expect(response.status).toBe(500);
+    expect(recordWebhookEventMock).toHaveBeenCalledWith({
+      rawPayload: { eventType: "AIInterviewReportGenerated" },
+      sweepResult: null,
+      sweepError: "boom",
+    });
   });
 });
