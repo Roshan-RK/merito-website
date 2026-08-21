@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { HUB_NOTIFICATION_CATEGORIES, type HubNotificationCategory } from "@/lib/hubNotifications";
-import { FUNNEL_STAGE_LABEL, type FunnelStage } from "@/lib/adminCandidates";
+import { FUNNEL_STAGE_LABEL, FUNNEL_STAGES, type FunnelStage } from "@/lib/adminCandidates";
 import Button from "@/app/admin/_components/Button";
 import { useToast } from "@/app/admin/_components/Toast";
 
-const ALL_STAGES = Object.keys(FUNNEL_STAGE_LABEL) as FunnelStage[];
+const ALL_STAGES = FUNNEL_STAGES;
 
 const CATEGORY_LABEL: Record<HubNotificationCategory, string> = {
   general: "General",
@@ -27,21 +27,29 @@ export default function BroadcastNotificationPage() {
   const [category, setCategory] = useState<HubNotificationCategory>("general");
   const [count, setCount] = useState<number | null>(null);
   const [counting, setCounting] = useState(false);
+  const [previewError, setPreviewError] = useState(false);
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
   const fetchPreview = useCallback(async (nextStages: Set<FunnelStage>, nextRoles: Set<string>) => {
     setCounting(true);
+    setPreviewError(false);
     const params = new URLSearchParams();
     nextStages.forEach((s) => params.append("funnelStage", s));
     nextRoles.forEach((r) => params.append("roleTitle", r));
     try {
       const response = await fetch(`/api/admin/notifications/broadcast/preview?${params.toString()}`);
+      if (!response.ok) {
+        setCount(null);
+        setPreviewError(true);
+        return;
+      }
       const data = await response.json();
       setCount(typeof data.count === "number" ? data.count : 0);
       if (Array.isArray(data.roleTitleOptions)) setRoleOptions(data.roleTitleOptions);
     } catch {
       setCount(null);
+      setPreviewError(true);
     } finally {
       setCounting(false);
     }
@@ -96,7 +104,8 @@ export default function BroadcastNotificationPage() {
       setCategory("general");
       setStages(new Set());
       setRoles(new Set());
-      fetchPreview(new Set(), new Set());
+      // The state resets above already trigger the debounced preview
+      // useEffect -- no need to call fetchPreview directly here too.
     } catch {
       showToast("error", "Something went wrong — try again.");
     } finally {
@@ -166,8 +175,14 @@ export default function BroadcastNotificationPage() {
         style={{ border: "1px solid #dcdcdc", borderRadius: 7, padding: "8px 12px", fontSize: 13, height: 100, resize: "vertical" }}
       />
 
-      <p className="font-[family-name:var(--font-poppins)]" style={{ fontSize: 13, color: "#9c9c9c", margin: 0 }}>
-        {counting ? "Counting…" : count === null ? "" : `${count} candidate${count === 1 ? "" : "s"} match${count === 1 ? "es" : ""}.`}
+      <p className="font-[family-name:var(--font-poppins)]" style={{ fontSize: 13, color: previewError ? "#c0392b" : "#9c9c9c", margin: 0 }}>
+        {counting
+          ? "Counting…"
+          : previewError
+            ? "Couldn't load candidate count — try again."
+            : count === null
+              ? ""
+              : `${count} candidate${count === 1 ? "" : "s"} match${count === 1 ? "es" : ""}.`}
       </p>
 
       {!confirming ? (

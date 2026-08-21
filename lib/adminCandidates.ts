@@ -22,6 +22,14 @@ export const FUNNEL_STAGE_LABEL: Record<FunnelStage, string> = {
   reference_completed: "References completed",
 };
 
+export const FUNNEL_STAGES = [
+  "fitment_started",
+  "report_unlocked",
+  "interview_ready",
+  "personality_completed",
+  "reference_completed",
+] as const satisfies readonly FunnelStage[];
+
 type FunnelSets = {
   reportUnlocked: Set<string>;
   interviewReady: Set<string>;
@@ -54,13 +62,25 @@ export type PaginatedCandidates = { rows: CandidateListRow[]; total: number; tot
 export async function fetchAllCandidates(): Promise<CandidateListRow[]> {
   const supabase = getSupabaseServerClient();
 
-  const [{ data: leadRows }, { data: unlockRows }, { data: interviewRows }, { data: personalityRows }, { data: referenceRows }] = await Promise.all([
+  const [
+    { data: leadRows, error: leadError },
+    { data: unlockRows, error: unlockError },
+    { data: interviewRows, error: interviewError },
+    { data: personalityRows, error: personalityError },
+    { data: referenceRows, error: referenceError },
+  ] = await Promise.all([
     supabase.from("fitment_leads").select("user_id, email, name, role_title, created_at").order("created_at", { ascending: true }),
     supabase.from("report_unlocks").select("user_id"),
     supabase.from("fitment_interviews").select("user_id").eq("status", "ready"),
     supabase.from("personality_tests").select("user_id"),
     supabase.from("reference_checks").select("user_id").eq("status", "completed"),
   ]);
+
+  if (leadError) throw new Error(`Failed to load fitment leads: ${leadError.message}`);
+  if (unlockError) throw new Error(`Failed to load report unlocks: ${unlockError.message}`);
+  if (interviewError) throw new Error(`Failed to load fitment interviews: ${interviewError.message}`);
+  if (personalityError) throw new Error(`Failed to load personality tests: ${personalityError.message}`);
+  if (referenceError) throw new Error(`Failed to load reference checks: ${referenceError.message}`);
 
   const sets: FunnelSets = {
     reportUnlocked: new Set((unlockRows ?? []).map((r) => r.user_id)),
@@ -121,13 +141,12 @@ async function fetchBannedUserIds(supabase: ReturnType<typeof getSupabaseServerC
 
 export async function resolveBroadcastAudience(filters: BroadcastFilters): Promise<CandidateListRow[]> {
   const supabase = getSupabaseServerClient();
-  const [candidates, deletionResult, bannedIds] = await Promise.all([
+  const [candidates, { data: deletionRows, error }, bannedIds] = await Promise.all([
     fetchAllCandidates(),
     supabase.from("candidate_deletions").select("user_id").is("purged_at", null),
     fetchBannedUserIds(supabase),
   ]);
 
-  const { data: deletionRows, error } = deletionResult as { data: { user_id: string }[] | null; error: any };
   if (error) {
     throw new Error(`Failed to load pending deletions: ${error.message}`);
   }
@@ -624,20 +643,28 @@ export async function broadcastCandidateNotification(
       }))
     );
     if (error) {
+      console.error("[broadcast] chunk insert failed", { offset: i, size: chunk.length, message: error.message });
       failed += chunk.length;
     } else {
       sent += chunk.length;
     }
   }
 
-  await logAdminAction({
-    adminEmail,
-    action: "notification.broadcast",
-    targetType: "broadcast",
-    targetId: randomUUID(),
-    priorValue: null,
-    newValue: { filters, message, category, sent, failed },
-  });
+  try {
+    await logAdminAction({
+      adminEmail,
+      action: "notification.broadcast",
+      targetType: "broadcast",
+      targetId: randomUUID(),
+      priorValue: null,
+      newValue: { filters, message, category, sent, failed },
+    });
+  } catch (auditError) {
+    // Sends already landed and are not reversible -- an audit-log failure
+    // must never be reported to the caller as a send failure (that would
+    // invite a duplicate broadcast on retry). Log and swallow.
+    console.error("[broadcast] audit log failed", auditError);
+  }
 
   return { sent, failed };
 }

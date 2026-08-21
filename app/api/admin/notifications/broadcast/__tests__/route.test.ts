@@ -4,7 +4,16 @@ const requireAdminMock = vi.fn();
 vi.mock("@/lib/adminAuth", () => ({ requireAdmin: requireAdminMock }));
 
 const broadcastCandidateNotificationMock = vi.fn();
-vi.mock("@/lib/adminCandidates", () => ({ broadcastCandidateNotification: broadcastCandidateNotificationMock }));
+vi.mock("@/lib/adminCandidates", () => ({
+  broadcastCandidateNotification: broadcastCandidateNotificationMock,
+  FUNNEL_STAGES: ["fitment_started", "report_unlocked", "interview_ready", "personality_completed", "reference_completed"],
+}));
+
+const enforceAdminRateLimitMock = vi.fn();
+vi.mock("@/lib/adminRateLimit", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/adminRateLimit")>("@/lib/adminRateLimit");
+  return { ...actual, enforceAdminRateLimit: enforceAdminRateLimitMock };
+});
 
 function buildRequest(body: unknown) {
   return new Request("http://localhost/api/admin/notifications/broadcast", {
@@ -19,6 +28,8 @@ describe("POST /api/admin/notifications/broadcast", () => {
     requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
     broadcastCandidateNotificationMock.mockReset();
     broadcastCandidateNotificationMock.mockResolvedValue({ sent: 3, failed: 0 });
+    enforceAdminRateLimitMock.mockReset();
+    enforceAdminRateLimitMock.mockResolvedValue(undefined);
   });
 
   it("sends with defaulted filters and category, returns sent/failed", async () => {
@@ -77,5 +88,25 @@ describe("POST /api/admin/notifications/broadcast", () => {
     const response = await POST(buildRequest({ message: "hi" }));
 
     expect(response.status).toBe(409);
+  });
+
+  it("enforces the rate limit before sending", async () => {
+    const { POST } = await import("../route");
+
+    await POST(buildRequest({ message: "Hello all" }));
+
+    expect(enforceAdminRateLimitMock).toHaveBeenCalledWith("roshan@merito.in", "notification.broadcast");
+    expect(broadcastCandidateNotificationMock).toHaveBeenCalled();
+  });
+
+  it("returns 429 when the rate limit is exceeded, without sending", async () => {
+    const { RateLimitExceededError } = await import("@/lib/adminRateLimit");
+    enforceAdminRateLimitMock.mockRejectedValue(new RateLimitExceededError("notification.broadcast"));
+    const { POST } = await import("../route");
+
+    const response = await POST(buildRequest({ message: "Hello all" }));
+
+    expect(response.status).toBe(429);
+    expect(broadcastCandidateNotificationMock).not.toHaveBeenCalled();
   });
 });

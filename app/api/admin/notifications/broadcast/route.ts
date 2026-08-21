@@ -1,9 +1,8 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/adminAuth";
-import { broadcastCandidateNotification } from "@/lib/adminCandidates";
+import { broadcastCandidateNotification, FUNNEL_STAGES } from "@/lib/adminCandidates";
 import { HUB_NOTIFICATION_CATEGORIES } from "@/lib/hubNotifications";
-
-const FUNNEL_STAGES = ["fitment_started", "report_unlocked", "interview_ready", "personality_completed", "reference_completed"] as const;
+import { enforceAdminRateLimit, RateLimitExceededError } from "@/lib/adminRateLimit";
 
 const PostSchema = z.object({
   funnelStages: z.array(z.enum(FUNNEL_STAGES)).optional().default([]),
@@ -28,6 +27,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    await enforceAdminRateLimit(admin.email as string, "notification.broadcast");
     const result = await broadcastCandidateNotification(
       { funnelStages: parsed.data.funnelStages, roleTitles: parsed.data.roleTitles },
       parsed.data.message.trim(),
@@ -36,6 +36,9 @@ export async function POST(request: Request) {
     );
     return Response.json(result);
   } catch (error) {
+    if (error instanceof RateLimitExceededError) {
+      return Response.json({ error: error.message }, { status: 429 });
+    }
     const message = error instanceof Error ? error.message : "Failed to send broadcast.";
     return Response.json({ error: message }, { status: 409 });
   }

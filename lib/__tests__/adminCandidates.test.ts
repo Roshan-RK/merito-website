@@ -934,6 +934,21 @@ describe("resolveBroadcastAudience", () => {
 
     await expect(resolveBroadcastAudience({})).rejects.toThrow("Failed to load pending deletions: query timeout");
   });
+
+  it("throws rather than silently returning an empty/wrong audience when fitment_leads fails", async () => {
+    fitmentLeadsSelectMock.mockReturnValue({
+      order: () => Promise.resolve({ data: null, error: { message: "query timeout" } }),
+    });
+    reportUnlocksSelectMock.mockResolvedValue({ data: [] });
+    fitmentInterviewsSelectMock.mockReturnValue({ eq: fitmentInterviewsEq });
+    fitmentInterviewsEq.mockResolvedValue({ data: [] });
+    personalityTestsSelectMock.mockResolvedValue({ data: [] });
+    referenceChecksSelectMock.mockReturnValue({ eq: referenceChecksEq });
+    referenceChecksEq.mockResolvedValue({ data: [] });
+    const { resolveBroadcastAudience } = await import("../adminCandidates");
+
+    await expect(resolveBroadcastAudience({})).rejects.toThrow("Failed to load fitment leads: query timeout");
+  });
 });
 
 describe("broadcastCandidateNotification", () => {
@@ -1027,5 +1042,18 @@ describe("broadcastCandidateNotification", () => {
     expect(result).toEqual({ sent: 1, failed: 500 });
     expect(hubNotificationsInsertMock).toHaveBeenCalledTimes(2);
     expect(logAdminActionMock).toHaveBeenCalledWith(expect.objectContaining({ newValue: expect.objectContaining({ sent: 1, failed: 500 }) }));
+  });
+
+  it("resolves with the real send counts even when the audit log write fails", async () => {
+    stubCandidates(3);
+    logAdminActionMock.mockRejectedValue(new Error("admin_audit_log insert failed"));
+    const { broadcastCandidateNotification } = await import("../adminCandidates");
+
+    // Must NOT reject -- every hub_notifications chunk already landed, so an
+    // audit-log failure here must never be reported to the caller as a send
+    // failure (that would invite a duplicate broadcast on retry).
+    const result = await broadcastCandidateNotification({}, "Hello all", "general", "roshan@merito.in");
+
+    expect(result).toEqual({ sent: 3, failed: 0 });
   });
 });
