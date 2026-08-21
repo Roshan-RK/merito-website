@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { getAbsoluteUrl } from "@/lib/site";
+import { logRecruiterAction } from "@/lib/recruiterActionLog";
 
 function deriveRoleLabel(jdText: string): string {
   const firstLine = jdText
@@ -19,7 +20,7 @@ export async function shortlistProspect(prospectId: string): Promise<{ claimUrl:
   const admin = getSupabaseServerClient();
   const { data } = await admin
     .from("recruiter_sourced_prospects")
-    .select("claim_token, candidate_name, jd_text")
+    .select("claim_token, candidate_name, jd_text, recruiter_email")
     .eq("id", prospectId)
     .maybeSingle();
 
@@ -36,6 +37,18 @@ export async function shortlistProspect(prospectId: string): Promise<{ claimUrl:
       .eq("id", prospectId);
     if (error) {
       throw new Error(`Failed to shortlist prospect: ${error.message}`);
+    }
+
+    try {
+      await logRecruiterAction({
+        recruiterEmail: data.recruiter_email as string,
+        action: "prospect.shortlisted",
+        targetType: "prospect",
+        targetId: prospectId,
+        detail: { candidateName: data.candidate_name },
+      });
+    } catch (err) {
+      console.error("Failed to log recruiter action prospect.shortlisted", err);
     }
   }
 

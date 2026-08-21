@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { label: "Candidates", href: "/admin/candidates" },
   { label: "Broadcast", href: "/admin/notifications/broadcast" },
   { label: "Recruiters", href: "/admin/recruiters" },
+  { label: "Recruiter Activity", href: "/admin/recruiter-activity" },
   { label: "Contact Requests", href: "/admin/contact-requests" },
   { label: "Payments", href: "/admin/payments" },
   { label: "Counselling", href: "/admin/counselling" },

@@ -8,6 +8,7 @@ import type { CandidateLevel } from "@/lib/intervuebox/agents";
 import { buildSyntheticResumePdf, buildResumeText, type ScrapedCandidateFields } from "@/lib/syntheticResume";
 import { isRecruiterEmailVerified } from "@/lib/recruiterIdentity";
 import { hashJd } from "@/lib/recruiterJdRescore";
+import { logRecruiterAction } from "@/lib/recruiterActionLog";
 
 export const MONTHLY_PROSPECT_CAP = 10;
 
@@ -197,6 +198,18 @@ export async function startScoringProspect(input: ScoreProspectInput): Promise<S
 
   if (error || !inserted) {
     throw new Error(`Failed to save prospect: ${error?.message}`);
+  }
+
+  try {
+    await logRecruiterAction({
+      recruiterEmail: email,
+      action: "prospect.scored",
+      targetType: "prospect",
+      targetId: inserted.id as string,
+      detail: { candidateName: input.candidateFields.name || null },
+    });
+  } catch (err) {
+    console.error("Failed to log recruiter action prospect.scored", err);
   }
 
   return { status: "pending", prospectId: inserted.id as string };
