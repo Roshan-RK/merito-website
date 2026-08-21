@@ -106,6 +106,7 @@ export type CandidateLeadDetail = {
   roleTitle: string;
   createdAt: string;
   fitmentReport: ResumeMatchReportReady | null;
+  resumeText: string | null;
   fitmentOverridden: boolean;
   fitmentOverrideHistory: AdminActionRow[];
   candidateDetails: CandidateResumeDetails | null;
@@ -147,6 +148,7 @@ export type CandidateDetail = {
   };
   profileOverride: { phoneNumber: string | null; location: string | null; totalExperience: number | null } | null;
   profileOverrideHistory: AdminActionRow[];
+  allActions: AdminActionRow[];
   pendingDeletion: { purgeAfter: string } | null;
 };
 
@@ -156,7 +158,7 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
   const { data: leadRows } = await supabase
     .from("fitment_leads")
     .select(
-      "id, role_title, score, name, email, resume_match_status, resume_match_raw, resume_match_overridden, ib_applied_job_id, created_at"
+      "id, role_title, score, name, email, resume_match_status, resume_match_raw, resume_match_overridden, resume_text, ib_applied_job_id, created_at"
     )
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
@@ -248,6 +250,7 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
         roleTitle: lead.role_title,
         createdAt: lead.created_at,
         fitmentReport: lead.resume_match_status === "READY" ? (lead.resume_match_raw as ResumeMatchReportReady) : null,
+        resumeText: lead.resume_text,
         fitmentOverridden: lead.resume_match_overridden,
         fitmentOverrideHistory: candidateActions.filter(
           (a) =>
@@ -306,6 +309,7 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
       ? { phoneNumber: profileOverrideRow.phone_number, location: profileOverrideRow.location, totalExperience: profileOverrideRow.total_experience }
       : null,
     profileOverrideHistory,
+    allActions: candidateActions,
     pendingDeletion: deletionRow ? { purgeAfter: deletionRow.purge_after } : null,
   };
 }
