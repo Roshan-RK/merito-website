@@ -68,6 +68,10 @@ describe("POST /api/hub/save-personality-test — payment gate", () => {
 
     expect(response.status).toBe(200);
     expect(upsertMock).toHaveBeenCalledTimes(1);
+    expect(upsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: "user-1", role_title: "Backend Engineer" }),
+      { onConflict: "user_id" }
+    );
   });
 
   it("proceeds without checking unlock status when bypass is on (default)", async () => {

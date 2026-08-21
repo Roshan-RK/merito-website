@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       answers,
       completed_at: new Date().toISOString(),
     },
-    { onConflict: "user_id,role_title" }
+    { onConflict: "user_id" }
   );
 
   if (upsertError) {
