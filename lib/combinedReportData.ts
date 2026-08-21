@@ -62,12 +62,11 @@ export async function loadCombinedReportData({
   const roleTitle = roleTitleParam ?? fitment?.roleTitle ?? currentLead?.role_title ?? null;
 
   let personality: CombinedReportData["personality"] = null;
-  if (include.has("personality") && roleTitle) {
+  if (include.has("personality")) {
     const { data: existing } = await supabase
       .from("personality_tests")
       .select("scores, validity")
       .eq("user_id", userId)
-      .eq("role_title", roleTitle)
       .maybeSingle();
     if (existing?.scores && existing?.validity) {
       personality = { scores: existing.scores as Scores };

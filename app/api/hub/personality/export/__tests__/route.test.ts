@@ -9,9 +9,8 @@ const leadEqMock = vi.fn().mockReturnValue({ order: leadOrderMock });
 const leadSelectMock = vi.fn().mockReturnValue({ eq: leadEqMock });
 
 const testMaybeSingleMock = vi.fn();
-const testEq2Mock = vi.fn().mockReturnValue({ maybeSingle: testMaybeSingleMock });
-const testEq1Mock = vi.fn().mockReturnValue({ eq: testEq2Mock });
-const testSelectMock = vi.fn().mockReturnValue({ eq: testEq1Mock });
+const testEqMock = vi.fn().mockReturnValue({ maybeSingle: testMaybeSingleMock });
+const testSelectMock = vi.fn().mockReturnValue({ eq: testEqMock });
 
 const fromMock = vi.fn((table: string) => {
   if (table === "fitment_leads") return { select: leadSelectMock };
@@ -115,6 +114,10 @@ describe("GET /api/hub/personality/export", () => {
 
     expect(response.status).toBe(200);
     expect(leadMaybeSingleMock).not.toHaveBeenCalled();
-    expect(testEq2Mock).toHaveBeenCalledWith("role_title", "Backend Engineer");
+    expect(renderPageToPdfMock).toHaveBeenCalledWith(
+      "http://localhost/hub/account/personality/print?role=Backend%20Engineer",
+      [],
+      { singlePage: true }
+    );
   });
 });

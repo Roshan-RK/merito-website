@@ -36,7 +36,6 @@ export async function GET(request: Request) {
     .from("personality_tests")
     .select("scores, validity")
     .eq("user_id", user.id)
-    .eq("role_title", roleTitle)
     .maybeSingle();
 
   if (!existing || !existing.scores || !existing.validity) {
