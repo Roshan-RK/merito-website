@@ -188,7 +188,6 @@ export default async function AccountPage({
     .from("personality_tests")
     .select("role_title")
     .eq("user_id", user.id)
-    .eq("role_title", current.role_title)
     .maybeSingle();
 
   const personalityStatus: PersonalityStatus = personalityRow ? "ready" : "not_started";

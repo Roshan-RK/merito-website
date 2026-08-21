@@ -40,12 +40,11 @@ export async function GET(request: Request) {
     }
   }
 
-  if (include.has("personality") && roleTitle) {
+  if (include.has("personality")) {
     const { data: existing } = await supabase
       .from("personality_tests")
       .select("scores, validity")
       .eq("user_id", user.id)
-      .eq("role_title", roleTitle)
       .maybeSingle();
     if (existing?.scores && existing?.validity) {
       anyReady = true;

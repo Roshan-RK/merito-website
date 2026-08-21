@@ -8,9 +8,8 @@ const leadListEqMock = vi.fn().mockReturnValue({ order: leadListOrderMock });
 const leadListSelectMock = vi.fn().mockReturnValue({ eq: leadListEqMock });
 
 const personalityMaybeSingleMock = vi.fn();
-const personalityEq2Mock = vi.fn().mockReturnValue({ maybeSingle: personalityMaybeSingleMock });
-const personalityEq1Mock = vi.fn().mockReturnValue({ eq: personalityEq2Mock });
-const personalitySelectMock = vi.fn().mockReturnValue({ eq: personalityEq1Mock });
+const personalityEqMock = vi.fn().mockReturnValue({ maybeSingle: personalityMaybeSingleMock });
+const personalitySelectMock = vi.fn().mockReturnValue({ eq: personalityEqMock });
 
 const interviewMaybeSingleMock = vi.fn();
 const interviewLimitMock = vi.fn().mockReturnValue({ maybeSingle: interviewMaybeSingleMock });

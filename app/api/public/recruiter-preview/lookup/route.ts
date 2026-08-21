@@ -85,12 +85,11 @@ export async function POST(request: Request) {
   }
 
   let personality: LookupPersonality | null = null;
-  if (sections.has("personality") && roleTitle) {
+  if (sections.has("personality")) {
     const { data: personalityRow } = await admin
       .from("personality_tests")
       .select("scores, completed_at")
       .eq("user_id", userId)
-      .eq("role_title", roleTitle)
       .maybeSingle();
     if (personalityRow?.scores) {
       personality = buildLookupPersonality(
