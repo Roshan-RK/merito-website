@@ -109,7 +109,7 @@ export async function POST(request: Request) {
 
   const { data: lead, error: leadError } = await supabase
     .from("fitment_leads")
-    .select("ib_job_id, ib_applied_job_id, candidate_level")
+    .select("id, ib_job_id, ib_applied_job_id, candidate_level")
     .eq("user_id", user.id)
     .eq("role_title", roleTitle)
     .order("created_at", { ascending: false })
@@ -188,6 +188,7 @@ export async function POST(request: Request) {
   const { error: insertError } = await admin.from("fitment_interviews").insert({
     user_id: user.id,
     role_title: roleTitle,
+    lead_id: lead.id,
     ib_job_id: ibJobId,
     ib_agent_id: ibAgentId,
     ib_candidate_id: candidateId,
