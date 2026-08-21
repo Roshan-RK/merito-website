@@ -102,6 +102,44 @@ async function fetchAllTransactions(): Promise<TransactionRow[]> {
   }));
 }
 
+export type CandidatePaymentRow = {
+  orderId: string;
+  product: string;
+  roleTitle: string | null;
+  level: string;
+  amountPaise: number;
+  status: TransactionStatus;
+  createdAt: string;
+};
+
+export async function listPaymentsForCandidate(userId: string): Promise<CandidatePaymentRow[]> {
+  const supabase = getSupabaseServerClient();
+
+  const [{ data: txnRows }, { data: leadRows }] = await Promise.all([
+    supabase
+      .from("razorpay_transactions")
+      .select("order_id, product, level, lead_id, amount_paise, status, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false }),
+    supabase.from("fitment_leads").select("id, role_title").eq("user_id", userId),
+  ]);
+
+  const roleByLead = new Map<string, string>();
+  for (const lead of leadRows ?? []) {
+    roleByLead.set(lead.id, lead.role_title);
+  }
+
+  return (txnRows ?? []).map((t) => ({
+    orderId: t.order_id,
+    product: t.product,
+    roleTitle: t.lead_id ? (roleByLead.get(t.lead_id) ?? null) : null,
+    level: t.level,
+    amountPaise: t.amount_paise,
+    status: t.status as TransactionStatus,
+    createdAt: t.created_at,
+  }));
+}
+
 export async function listTransactions(page: number = 1): Promise<PaginatedTransactions> {
   const all = await fetchAllTransactions();
   const total = all.length;

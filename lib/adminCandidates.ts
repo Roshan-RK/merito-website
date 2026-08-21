@@ -627,6 +627,33 @@ export async function sendCandidateNotification(
   });
 }
 
+export type CandidateNotificationRow = {
+  id: string;
+  message: string;
+  category: string;
+  createdAt: string;
+  readAt: string | null;
+  createdBy: string | null;
+};
+
+export async function listCandidateNotifications(userId: string): Promise<CandidateNotificationRow[]> {
+  const supabase = getSupabaseServerClient();
+  const { data } = await supabase
+    .from("hub_notifications")
+    .select("id, message, category, created_at, read_at, created_by")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    message: r.message,
+    category: r.category,
+    createdAt: r.created_at,
+    readAt: r.read_at,
+    createdBy: r.created_by,
+  }));
+}
+
 export type BroadcastResult = { sent: number; failed: number };
 
 const BROADCAST_CHUNK_SIZE = 500;

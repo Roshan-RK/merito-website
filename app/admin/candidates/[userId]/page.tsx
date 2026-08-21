@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { getCandidateDetail } from "@/lib/adminCandidates";
+import { getCandidateDetail, listCandidateNotifications } from "@/lib/adminCandidates";
+import { listPaymentsForCandidate } from "@/lib/adminPayments";
 import { recordCandidateView } from "@/lib/adminRecentViews";
 import { requireAdmin } from "@/lib/adminAuth";
 import RefereeSummary from "./RefereeSummary";
@@ -11,7 +12,7 @@ import SendNotificationAction from "./SendNotificationAction";
 import RecruiterPreviewOverrideForm from "./RecruiterPreviewOverrideForm";
 import CandidateProfileOverrideForm from "./CandidateProfileOverrideForm";
 import ReportsTab from "./ReportsTab";
-import AuditTrail from "./AuditTrail";
+import ActivityFeed from "./ActivityFeed";
 import Tabs, { type TabDef } from "@/app/admin/_components/Tabs";
 import type { AdminActionRow } from "@/lib/adminAuditLog";
 
@@ -44,6 +45,11 @@ export default async function AdminCandidateDetailPage({
   } catch (error) {
     console.error("Failed to record candidate view", { userId, error });
   }
+
+  const [notifications, payments] = await Promise.all([
+    listCandidateNotifications(candidate.userId),
+    listPaymentsForCandidate(candidate.userId),
+  ]);
 
   const allActivityRaw: AdminActionRow[] = [
     ...candidate.allActions,
@@ -160,7 +166,7 @@ export default async function AdminCandidateDetailPage({
     {
       id: "activity",
       label: "Activity",
-      content: <AuditTrail actions={allActivity} />,
+      content: <ActivityFeed adminActions={allActivity} notifications={notifications} payments={payments} />,
     },
   ];
 
