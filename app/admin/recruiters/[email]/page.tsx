@@ -1,11 +1,14 @@
 import { notFound } from "next/navigation";
 import { getRecruiter } from "@/lib/adminRecruiters";
+import { listActionsForTarget } from "@/lib/adminAuditLog";
 import RecruiterActions from "./RecruiterActions";
 
 export default async function AdminRecruiterDetailPage({ params }: { params: Promise<{ email: string }> }) {
   const { email } = await params;
   const recruiter = await getRecruiter(decodeURIComponent(email));
   if (!recruiter) notFound();
+
+  const companyHistory = (await listActionsForTarget("recruiter", recruiter.email)).filter((row) => row.action === "recruiter.update_company");
 
   return (
     <div>
@@ -15,7 +18,13 @@ export default async function AdminRecruiterDetailPage({ params }: { params: Pro
       <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 13, margin: "0 0 32px" }}>
         Verified: {recruiter.verifiedAt ? "Yes" : "No"} · Banned: {recruiter.bannedAt ? "Yes" : "No"}
       </p>
-      <RecruiterActions email={recruiter.email} banned={Boolean(recruiter.bannedAt)} verified={Boolean(recruiter.verifiedAt)} companyName={recruiter.companyName} />
+      <RecruiterActions
+        email={recruiter.email}
+        banned={Boolean(recruiter.bannedAt)}
+        verified={Boolean(recruiter.verifiedAt)}
+        companyName={recruiter.companyName}
+        companyHistory={companyHistory}
+      />
     </div>
   );
 }

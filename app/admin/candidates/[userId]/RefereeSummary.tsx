@@ -11,12 +11,15 @@ function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("en-IN", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-function EditContactForm({ referee, onDone }: { referee: RefereeRow; onDone: () => void }) {
+type RefereeContactValue = { name: string; email: string; phone: string | null; organization: string | null };
+
+function EditContactForm({ referee, prefill, onDone }: { referee: RefereeRow; prefill?: RefereeContactValue; onDone: () => void }) {
   const router = useRouter();
-  const [name, setName] = useState(referee.name);
-  const [email, setEmail] = useState(referee.email);
-  const [phone, setPhone] = useState(referee.phone ?? "");
-  const [organization, setOrganization] = useState(referee.organization ?? "");
+  const initial = prefill ?? referee;
+  const [name, setName] = useState(initial.name);
+  const [email, setEmail] = useState(initial.email);
+  const [phone, setPhone] = useState(initial.phone ?? "");
+  const [organization, setOrganization] = useState(initial.organization ?? "");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +78,7 @@ function EditContactForm({ referee, onDone }: { referee: RefereeRow; onDone: () 
   );
 }
 
-function OverrideHistory({ history }: { history: AdminActionRow[] }) {
+function OverrideHistory({ history, onRevert }: { history: AdminActionRow[]; onRevert: (value: RefereeContactValue) => void }) {
   const [show, setShow] = useState(false);
   if (history.length === 0) return null;
   return (
@@ -91,10 +94,22 @@ function OverrideHistory({ history }: { history: AdminActionRow[] }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
           {history.map((row) => {
             const nv = row.newValue as { name?: string; email?: string; phone?: string | null; organization?: string | null; reason?: string } | null;
+            const pv = row.priorValue as RefereeContactValue | null;
             return (
-              <p key={row.id} className="text-[#9c9c9c]" style={{ fontSize: 11.5, margin: 0 }}>
-                {row.adminEmail} · {formatDateTime(row.createdAt)} — set email={nv?.email}, phone={nv?.phone ?? "—"} — {nv?.reason}
-              </p>
+              <div key={row.id}>
+                <p className="text-[#9c9c9c]" style={{ fontSize: 11.5, margin: 0 }}>
+                  {row.adminEmail} · {formatDateTime(row.createdAt)} — set email={nv?.email}, phone={nv?.phone ?? "—"} — {nv?.reason}
+                </p>
+                {pv && (
+                  <button
+                    onClick={() => onRevert(pv)}
+                    className="text-[#ed1a24]"
+                    style={{ fontSize: 11.5, background: "none", border: "none", padding: 0, marginTop: 2, cursor: "pointer" }}
+                  >
+                    Revert to values before this change
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>
@@ -160,6 +175,7 @@ function ResetRemindersButton({ refereeId, reminderCount }: { refereeId: string;
 
 export default function RefereeSummary({ referees }: { referees: (RefereeRow & { overrideHistory: AdminActionRow[] })[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [revertValue, setRevertValue] = useState<RefereeContactValue | null>(null);
 
   if (referees.length === 0) {
     return (
@@ -203,17 +219,33 @@ export default function RefereeSummary({ referees }: { referees: (RefereeRow & {
           {r.status === "pending" && <ResetRemindersButton refereeId={r.id} reminderCount={r.reminder_count} />}
 
           {editingId === r.id ? (
-            <EditContactForm referee={r} onDone={() => setEditingId(null)} />
+            <EditContactForm
+              referee={r}
+              prefill={revertValue ?? undefined}
+              onDone={() => {
+                setEditingId(null);
+                setRevertValue(null);
+              }}
+            />
           ) : (
             <button
-              onClick={() => setEditingId(r.id)}
+              onClick={() => {
+                setRevertValue(null);
+                setEditingId(r.id);
+              }}
               className="text-[#ed1a24]"
               style={{ fontSize: 11.5, background: "none", border: "none", padding: 0, marginTop: 8, cursor: "pointer" }}
             >
               Edit contact info
             </button>
           )}
-          <OverrideHistory history={r.overrideHistory} />
+          <OverrideHistory
+            history={r.overrideHistory}
+            onRevert={(value) => {
+              setRevertValue(value);
+              setEditingId(r.id);
+            }}
+          />
         </div>
       ))}
     </div>

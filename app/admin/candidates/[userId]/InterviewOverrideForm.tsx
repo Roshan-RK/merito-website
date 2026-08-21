@@ -109,6 +109,7 @@ export default function InterviewOverrideForm({
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
               {overrideHistory.map((row) => {
                 const nv = row.newValue as { overallScore?: number; overallSummary?: string; reason?: string } | null;
+                const pv = row.priorValue as { overallScore: number; overallSummary: string } | null;
                 return (
                   <div key={row.id} className="bg-white border border-black/[0.08]" style={{ borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>
                     <p className="font-[family-name:var(--font-poppins)] text-black" style={{ margin: "0 0 2px" }}>
@@ -117,6 +118,19 @@ export default function InterviewOverrideForm({
                     <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ margin: 0 }}>
                       Set overallScore={nv?.overallScore}, summary="{nv?.overallSummary}" — {nv?.reason}
                     </p>
+                    {pv && (
+                      <button
+                        onClick={() => {
+                          setScore(String(pv.overallScore));
+                          setText(pv.overallSummary);
+                          setOpen(true);
+                        }}
+                        className="font-[family-name:var(--font-poppins)] text-[#ed1a24]"
+                        style={{ fontSize: 11.5, background: "none", border: "none", padding: 0, marginTop: 6, cursor: "pointer" }}
+                      >
+                        Revert to values before this change
+                      </button>
+                    )}
                   </div>
                 );
               })}

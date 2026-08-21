@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getCounsellingRequest, ALLOWED_TRANSITIONS } from "@/lib/adminCounselling";
+import { listActionsForTarget } from "@/lib/adminAuditLog";
 import CounsellingStatusForm from "./CounsellingStatusForm";
 
 function formatDate(iso: string | null): string {
@@ -19,6 +20,8 @@ export default async function AdminCounsellingDetailPage({
     notFound();
   }
 
+  const statusHistory = (await listActionsForTarget("counselling_request", id)).filter((row) => row.action === "counselling.status_change");
+
   return (
     <div>
       <h2 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={{ fontSize: "1.4rem", margin: "0 0 4px" }}>
@@ -35,6 +38,7 @@ export default async function AdminCounsellingDetailPage({
         currentStatus={request.status}
         currentNotes={request.notes}
         allowedNext={ALLOWED_TRANSITIONS[request.status]}
+        statusHistory={statusHistory}
       />
     </div>
   );

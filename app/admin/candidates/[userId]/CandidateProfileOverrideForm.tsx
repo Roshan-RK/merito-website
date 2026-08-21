@@ -126,6 +126,7 @@ export default function CandidateProfileOverrideForm({
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
               {overrideHistory.map((row) => {
                 const nv = row.newValue as { phoneNumber?: string | null; location?: string | null; totalExperience?: number | null; reason?: string } | null;
+                const pv = row.priorValue as { phoneNumber: string | null; location: string | null; totalExperience: number | null } | null;
                 return (
                   <div key={row.id} className="bg-white border border-black/[0.08]" style={{ borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>
                     <p className="font-[family-name:var(--font-poppins)] text-black" style={{ margin: "0 0 2px" }}>
@@ -134,6 +135,20 @@ export default function CandidateProfileOverrideForm({
                     <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ margin: 0 }}>
                       Set phone={nv?.phoneNumber ?? "—"}, location={nv?.location ?? "—"}, experience={nv?.totalExperience ?? "—"} — {nv?.reason}
                     </p>
+                    {pv && (
+                      <button
+                        onClick={() => {
+                          setPhone(pv.phoneNumber ?? "");
+                          setLoc(pv.location ?? "");
+                          setExperience(pv.totalExperience === null ? "" : String(pv.totalExperience));
+                          setOpen(true);
+                        }}
+                        className="font-[family-name:var(--font-poppins)] text-[#ed1a24]"
+                        style={{ fontSize: 11.5, background: "none", border: "none", padding: 0, marginTop: 6, cursor: "pointer" }}
+                      >
+                        Revert to values before this change
+                      </button>
+                    )}
                   </div>
                 );
               })}
