@@ -35,20 +35,17 @@ export default async function RecruiterPreviewPage() {
       : null;
 
   let personality: LookupResponse["personality"] = null;
-  if (roleTitle) {
-    const { data: personalityRow } = await supabase
-      .from("personality_tests")
-      .select("scores, completed_at")
-      .eq("user_id", user.id)
-      .eq("role_title", roleTitle)
-      .maybeSingle();
-    if (personalityRow?.scores) {
-      personality = buildLookupPersonality(
-        personalityRow.scores as Scores,
-        candidateName,
-        (personalityRow.completed_at as string | null) ?? null
-      );
-    }
+  const { data: personalityRow } = await supabase
+    .from("personality_tests")
+    .select("scores, completed_at")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (personalityRow?.scores) {
+    personality = buildLookupPersonality(
+      personalityRow.scores as Scores,
+      candidateName,
+      (personalityRow.completed_at as string | null) ?? null
+    );
   }
 
   let interview: LookupResponse["interview"] = null;
