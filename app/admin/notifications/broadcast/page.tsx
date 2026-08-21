@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { HUB_NOTIFICATION_CATEGORIES, type HubNotificationCategory } from "@/lib/hubNotifications";
 import { FUNNEL_STAGE_LABEL, FUNNEL_STAGES, type FunnelStage } from "@/lib/adminCandidates";
 import Button from "@/app/admin/_components/Button";
@@ -30,8 +30,10 @@ export default function BroadcastNotificationPage() {
   const [previewError, setPreviewError] = useState(false);
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const requestIdRef = useRef(0);
 
   const fetchPreview = useCallback(async (nextStages: Set<FunnelStage>, nextRoles: Set<string>) => {
+    const requestId = ++requestIdRef.current;
     setCounting(true);
     setPreviewError(false);
     const params = new URLSearchParams();
@@ -39,19 +41,22 @@ export default function BroadcastNotificationPage() {
     nextRoles.forEach((r) => params.append("roleTitle", r));
     try {
       const response = await fetch(`/api/admin/notifications/broadcast/preview?${params.toString()}`);
+      if (requestId !== requestIdRef.current) return;
       if (!response.ok) {
         setCount(null);
         setPreviewError(true);
         return;
       }
       const data = await response.json();
+      if (requestId !== requestIdRef.current) return;
       setCount(typeof data.count === "number" ? data.count : 0);
       if (Array.isArray(data.roleTitleOptions)) setRoleOptions(data.roleTitleOptions);
     } catch {
+      if (requestId !== requestIdRef.current) return;
       setCount(null);
       setPreviewError(true);
     } finally {
-      setCounting(false);
+      if (requestId === requestIdRef.current) setCounting(false);
     }
   }, []);
 
@@ -99,7 +104,11 @@ export default function BroadcastNotificationPage() {
         showToast("error", data?.error || "Something went wrong — try again.");
         return;
       }
-      showToast("success", `Sent to ${data.sent} candidate${data.sent === 1 ? "" : "s"}${data.failed ? ` (${data.failed} failed)` : ""}.`);
+      if (data.sent === 0 && data.failed > 0) {
+        showToast("error", `Broadcast failed — 0 of ${data.failed} candidates notified. Try again.`);
+      } else {
+        showToast("success", `Sent to ${data.sent} candidate${data.sent === 1 ? "" : "s"}${data.failed ? ` (${data.failed} failed)` : ""}.`);
+      }
       setMessage("");
       setCategory("general");
       setStages(new Set());

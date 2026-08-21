@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const requireAdminMock = vi.fn();
-vi.mock("@/lib/adminAuth", () => ({ requireAdmin: requireAdminMock }));
+vi.mock("@/lib/adminAuth", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/adminAuth")>("@/lib/adminAuth");
+  return { ...actual, requireAdmin: requireAdminMock };
+});
 
 const broadcastCandidateNotificationMock = vi.fn();
 vi.mock("@/lib/adminCandidates", () => ({
@@ -25,7 +28,7 @@ function buildRequest(body: unknown) {
 describe("POST /api/admin/notifications/broadcast", () => {
   beforeEach(() => {
     requireAdminMock.mockReset();
-    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in" });
+    requireAdminMock.mockResolvedValue({ email: "roshan@merito.in", last_sign_in_at: new Date().toISOString() });
     broadcastCandidateNotificationMock.mockReset();
     broadcastCandidateNotificationMock.mockResolvedValue({ sent: 3, failed: 0 });
     enforceAdminRateLimitMock.mockReset();
@@ -108,5 +111,30 @@ describe("POST /api/admin/notifications/broadcast", () => {
 
     expect(response.status).toBe(429);
     expect(broadcastCandidateNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when the admin's last sign-in is too old, without sending", async () => {
+    requireAdminMock.mockResolvedValue({
+      email: "roshan@merito.in",
+      last_sign_in_at: new Date(Date.now() - 31 * 60_000).toISOString(),
+    });
+    const { POST } = await import("../route");
+
+    const response = await POST(buildRequest({ message: "Hello all" }));
+
+    expect(response.status).toBe(401);
+    expect(broadcastCandidateNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it("checks reauth before the rate limit", async () => {
+    requireAdminMock.mockResolvedValue({
+      email: "roshan@merito.in",
+      last_sign_in_at: new Date(Date.now() - 31 * 60_000).toISOString(),
+    });
+    const { POST } = await import("../route");
+
+    await POST(buildRequest({ message: "Hello all" }));
+
+    expect(enforceAdminRateLimitMock).not.toHaveBeenCalled();
   });
 });

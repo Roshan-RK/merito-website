@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requireAdmin } from "@/lib/adminAuth";
+import { requireAdmin, assertRecentAuth, ReauthRequiredError } from "@/lib/adminAuth";
 import { broadcastCandidateNotification, FUNNEL_STAGES } from "@/lib/adminCandidates";
 import { HUB_NOTIFICATION_CATEGORIES } from "@/lib/hubNotifications";
 import { enforceAdminRateLimit, RateLimitExceededError } from "@/lib/adminRateLimit";
@@ -27,6 +27,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    assertRecentAuth(admin);
     await enforceAdminRateLimit(admin.email as string, "notification.broadcast");
     const result = await broadcastCandidateNotification(
       { funnelStages: parsed.data.funnelStages, roleTitles: parsed.data.roleTitles },
@@ -36,6 +37,9 @@ export async function POST(request: Request) {
     );
     return Response.json(result);
   } catch (error) {
+    if (error instanceof ReauthRequiredError) {
+      return Response.json({ error: error.message }, { status: 401 });
+    }
     if (error instanceof RateLimitExceededError) {
       return Response.json({ error: error.message }, { status: 429 });
     }
