@@ -2,6 +2,7 @@ export const TEMPLATE_KEYS = [
   "recruiter_verification",
   "recruiter_viewed",
   "payment_failed_alert",
+  "pipeline_failure_alert",
   "referee_invite",
   "referee_reminder",
   "contact_form_submission",
@@ -16,6 +17,7 @@ export const TEMPLATE_PLACEHOLDERS: Record<TemplateKey, string[]> = {
   recruiter_verification: ["url"],
   recruiter_viewed: ["candidateName", "dashboardUrl"],
   payment_failed_alert: ["orderId", "amountRupees", "candidateEmail"],
+  pipeline_failure_alert: ["kind", "userId", "orderId", "detailJson", "pipelineFailuresUrl"],
   referee_invite: ["refereeName", "candidateName", "url", "validityDays"],
   referee_reminder: ["refereeName", "candidateName", "url"],
   contact_form_submission: ["fullName", "email", "phone", "departments", "message"],
@@ -73,6 +75,13 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, TemplateDraft> = {
     subject: "Payment failed — order {{orderId}}",
     bodyText: "A payment failed.\n\nOrder: {{orderId}}\nAmount: ₹{{amountRupees}}\nCandidate: {{candidateEmail}}",
     bodyHtml: "<p>A payment failed.</p><p>Order: {{orderId}}<br/>Amount: ₹{{amountRupees}}<br/>Candidate: {{candidateEmail}}</p>",
+  },
+  pipeline_failure_alert: {
+    subject: "Pipeline failure — {{kind}}",
+    bodyText:
+      "A pipeline step failed.\n\nKind: {{kind}}\nUser: {{userId}}\nOrder: {{orderId}}\nDetail: {{detailJson}}\n\nReview: {{pipelineFailuresUrl}}",
+    bodyHtml:
+      "<p>A pipeline step failed.</p><p>Kind: {{kind}}<br/>User: {{userId}}<br/>Order: {{orderId}}<br/>Detail: {{detailJson}}</p><p><a href=\"{{pipelineFailuresUrl}}\">Review in admin</a></p>",
   },
   referee_invite: {
     subject: "{{candidateName}} listed you as a professional reference",
@@ -186,6 +195,13 @@ const SAMPLE_VALUES: Record<TemplateKey, Record<string, string>> = {
   recruiter_verification: { url: "https://www.merito.in/api/public/recruiter/verify-email/confirm?token=sample-token" },
   recruiter_viewed: { candidateName: "Alex Kumar", dashboardUrl: "https://www.merito.in/hub/account" },
   payment_failed_alert: { orderId: "order_sample123", amountRupees: "299.00", candidateEmail: "candidate@example.com" },
+  pipeline_failure_alert: {
+    kind: "orphaned_ib_job",
+    userId: "sample-user-id",
+    orderId: "order_sample123",
+    detailJson: '{"ibJobId":"sample-job-id"}',
+    pipelineFailuresUrl: "https://www.merito.in/admin/pipeline-failures",
+  },
   referee_invite: { refereeName: "Jane Doe", candidateName: "Alex Kumar", url: "https://www.merito.in/hub/references/feedback/sample-token", validityDays: "14" },
   referee_reminder: { refereeName: "Jane Doe", candidateName: "Alex Kumar", url: "https://www.merito.in/hub/references/feedback/sample-token" },
   contact_form_submission: { fullName: "Jane Doe", email: "jane@example.com", phone: "9999999999", departments: "Sales", message: "Sample message.\nSecond line." },

@@ -1,7 +1,58 @@
+import { Resend } from "resend";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { logAdminAction } from "@/lib/adminAuditLog";
+import { renderTemplate } from "@/lib/emailTemplates";
+import { getAbsoluteUrl } from "@/lib/site";
 
 export type PipelineFailureKind = "interview_invite_after_payment" | "orphaned_ib_job" | "interview_invite_failed";
+
+function getResendClient(): Resend {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error("Email service is not configured (RESEND_API_KEY missing).");
+  }
+  return new Resend(apiKey);
+}
+
+function getFromEmail(): string {
+  const fromEmail = process.env.CONTACT_FROM_EMAIL;
+  if (!fromEmail) {
+    throw new Error("Email service is not configured (CONTACT_FROM_EMAIL missing).");
+  }
+  return fromEmail;
+}
+
+function getOpsEmail(): string {
+  const toEmail = process.env.CONTACT_TO_EMAIL;
+  if (!toEmail) {
+    throw new Error("Email service is not configured (CONTACT_TO_EMAIL missing).");
+  }
+  return toEmail;
+}
+
+async function sendPipelineFailureAlertEmail(params: {
+  kind: PipelineFailureKind;
+  userId: string | null;
+  orderId: string | null;
+  detail: Record<string, unknown>;
+}): Promise<void> {
+  const resend = getResendClient();
+  const rendered = await renderTemplate("pipeline_failure_alert", {
+    kind: params.kind,
+    userId: params.userId ?? "—",
+    orderId: params.orderId ?? "—",
+    detailJson: JSON.stringify(params.detail),
+    pipelineFailuresUrl: getAbsoluteUrl("/admin/pipeline-failures"),
+  });
+
+  await resend.emails.send({
+    from: getFromEmail(),
+    to: [getOpsEmail()],
+    subject: rendered.subject,
+    text: rendered.bodyText,
+    html: rendered.bodyHtml,
+  });
+}
 
 export type PipelineFailureRow = {
   id: string;
@@ -30,6 +81,12 @@ export async function recordPipelineFailure(params: {
   });
   if (error) {
     console.error("Failed to record pipeline failure", { params, error });
+  }
+
+  try {
+    await sendPipelineFailureAlertEmail({ kind: params.kind, userId: params.userId, orderId: params.orderId, detail: params.detail });
+  } catch (alertError) {
+    console.error("Failed to send pipeline failure alert email", { params, alertError });
   }
 }
 

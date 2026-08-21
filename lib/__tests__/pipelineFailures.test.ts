@@ -6,7 +6,23 @@ vi.mock("@/lib/adminAuditLog", () => ({ logAdminAction: logAdminActionMock }));
 const fromMock = vi.fn();
 vi.mock("@/lib/supabase", () => ({ getSupabaseServerClient: () => ({ from: fromMock }) }));
 
+const sendMock = vi.fn();
+vi.mock("resend", () => ({ Resend: class { emails = { send: sendMock }; } } ));
+
+const renderTemplateMock = vi.fn();
+vi.mock("@/lib/emailTemplates", () => ({ renderTemplate: renderTemplateMock }));
+
+const ORIGINAL_ENV = { ...process.env };
+
 describe("recordPipelineFailure", () => {
+  beforeEach(() => {
+    sendMock.mockReset();
+    sendMock.mockResolvedValue({ data: { id: "email-1" }, error: null });
+    renderTemplateMock.mockReset();
+    renderTemplateMock.mockResolvedValue({ subject: "rendered subject", bodyText: "rendered text", bodyHtml: "rendered html" });
+    process.env = { ...ORIGINAL_ENV, RESEND_API_KEY: "re_test", CONTACT_FROM_EMAIL: "admin@merito.ai", CONTACT_TO_EMAIL: "shikha@merito.in" };
+  });
+
   it("inserts a row and never throws even if the insert fails", async () => {
     const insertMock = vi.fn().mockResolvedValue({ error: { message: "db error" } });
     fromMock.mockReset();
@@ -26,6 +42,48 @@ describe("recordPipelineFailure", () => {
       order_id: null,
       detail: { a: 1 },
     });
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("sends a pipeline_failure_alert email with the failure detail", async () => {
+    const insertMock = vi.fn().mockResolvedValue({ error: null });
+    fromMock.mockReset();
+    fromMock.mockReturnValue({ insert: insertMock });
+
+    const { recordPipelineFailure } = await import("../pipelineFailures");
+
+    await recordPipelineFailure({ kind: "orphaned_ib_job", userId: "user-1", leadId: null, orderId: "order-1", detail: { ibJobId: "job-1" } });
+
+    expect(renderTemplateMock).toHaveBeenCalledWith("pipeline_failure_alert", {
+      kind: "orphaned_ib_job",
+      userId: "user-1",
+      orderId: "order-1",
+      detailJson: JSON.stringify({ ibJobId: "job-1" }),
+      pipelineFailuresUrl: expect.stringContaining("/admin/pipeline-failures"),
+    });
+    expect(sendMock).toHaveBeenCalledWith({
+      from: "admin@merito.ai",
+      to: ["shikha@merito.in"],
+      subject: "rendered subject",
+      text: "rendered text",
+      html: "rendered html",
+    });
+  });
+
+  it("never throws even if the alert email fails to send", async () => {
+    const insertMock = vi.fn().mockResolvedValue({ error: null });
+    fromMock.mockReset();
+    fromMock.mockReturnValue({ insert: insertMock });
+    sendMock.mockRejectedValue(new Error("resend down"));
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { recordPipelineFailure } = await import("../pipelineFailures");
+
+    await expect(
+      recordPipelineFailure({ kind: "orphaned_ib_job", userId: null, leadId: null, orderId: null, detail: {} })
+    ).resolves.toBeUndefined();
+
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
   });
