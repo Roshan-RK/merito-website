@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const updateUserByIdMock = vi.fn();
 const deleteUserMock = vi.fn();
 const generateLinkMock = vi.fn();
+const listUsersMock = vi.fn();
 const fitmentLeadsSelectMock = vi.fn();
 const fitmentLeadsUpdateMock = vi.fn();
 const reportUnlocksSelectMock = vi.fn();
@@ -15,6 +16,7 @@ const logAdminActionMock = vi.fn();
 const hubNotificationsInsertMock = vi.fn();
 const candidateDeletionsInsertMock = vi.fn();
 const candidateDeletionsDeleteMock = vi.fn();
+const candidateDeletionsSelectMock = vi.fn();
 const recruiterPreviewSelectMock = vi.fn();
 const recruiterPreviewUpsertMock = vi.fn();
 const profileOverrideSelectMock = vi.fn();
@@ -22,7 +24,7 @@ const profileOverrideUpsertMock = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({
-    auth: { admin: { updateUserById: updateUserByIdMock, deleteUser: deleteUserMock, generateLink: generateLinkMock } },
+    auth: { admin: { updateUserById: updateUserByIdMock, deleteUser: deleteUserMock, generateLink: generateLinkMock, listUsers: listUsersMock } },
     from: (table: string) => {
       if (table === "fitment_leads") return { select: fitmentLeadsSelectMock, update: fitmentLeadsUpdateMock };
       if (table === "report_unlocks") return { select: reportUnlocksSelectMock };
@@ -30,7 +32,7 @@ vi.mock("@/lib/supabase", () => ({
       if (table === "personality_tests") return { select: personalityTestsSelectMock };
       if (table === "reference_checks") return { select: referenceChecksSelectMock };
       if (table === "hub_notifications") return { insert: hubNotificationsInsertMock };
-      if (table === "candidate_deletions") return { insert: candidateDeletionsInsertMock, delete: candidateDeletionsDeleteMock };
+      if (table === "candidate_deletions") return { select: candidateDeletionsSelectMock, insert: candidateDeletionsInsertMock, delete: candidateDeletionsDeleteMock };
       if (table === "recruiter_preview_settings") return { select: recruiterPreviewSelectMock, upsert: recruiterPreviewUpsertMock };
       if (table === "candidate_profile_overrides") return { select: profileOverrideSelectMock, upsert: profileOverrideUpsertMock };
       throw new Error(`Unexpected table in test: ${table}`);
@@ -796,5 +798,129 @@ describe("overrideCandidateProfile", () => {
       overrideCandidateProfile("user-1", { phoneNumber: null, location: null, totalExperience: -1 }, "roshan@merito.in", "x")
     ).rejects.toThrow(/non-negative/);
     expect(profileOverrideUpsertMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("resolveBroadcastAudience", () => {
+  const fitmentInterviewsEq = vi.fn();
+  const referenceChecksEq = vi.fn();
+  const candidateDeletionsIs = vi.fn();
+
+  function stubCandidates(rows: Array<{ userId: string; roleTitle: string }>) {
+    fitmentLeadsSelectMock.mockReturnValue({
+      order: () =>
+        Promise.resolve({
+          data: rows.map((r, i) => ({
+            user_id: r.userId,
+            email: `${r.userId}@example.com`,
+            name: `Name ${i}`,
+            role_title: r.roleTitle,
+            created_at: new Date(2026, 0, i + 1).toISOString(),
+          })),
+        }),
+    });
+    reportUnlocksSelectMock.mockResolvedValue({ data: [] });
+    fitmentInterviewsSelectMock.mockReturnValue({ eq: fitmentInterviewsEq });
+    fitmentInterviewsEq.mockResolvedValue({ data: [] });
+    personalityTestsSelectMock.mockResolvedValue({ data: [] });
+    referenceChecksSelectMock.mockReturnValue({ eq: referenceChecksEq });
+    referenceChecksEq.mockResolvedValue({ data: [] });
+  }
+
+  beforeEach(() => {
+    fitmentLeadsSelectMock.mockReset();
+    reportUnlocksSelectMock.mockReset();
+    fitmentInterviewsSelectMock.mockReset();
+    fitmentInterviewsEq.mockReset();
+    personalityTestsSelectMock.mockReset();
+    referenceChecksSelectMock.mockReset();
+    referenceChecksEq.mockReset();
+    candidateDeletionsSelectMock.mockReset();
+    candidateDeletionsIs.mockReset();
+    candidateDeletionsSelectMock.mockReturnValue({ is: candidateDeletionsIs });
+    candidateDeletionsIs.mockResolvedValue({ data: [] });
+    listUsersMock.mockReset();
+    listUsersMock.mockResolvedValue({ data: { users: [] }, error: null });
+  });
+
+  it("returns all candidates when no filters are given", async () => {
+    stubCandidates([
+      { userId: "user-0", roleTitle: "Product Manager" },
+      { userId: "user-1", roleTitle: "Software Engineer" },
+    ]);
+    const { resolveBroadcastAudience } = await import("../adminCandidates");
+
+    const result = await resolveBroadcastAudience({});
+
+    expect(result.map((c) => c.userId)).toEqual(["user-1", "user-0"]);
+  });
+
+  it("filters by funnel stage", async () => {
+    stubCandidates([
+      { userId: "user-0", roleTitle: "Product Manager" },
+      { userId: "user-1", roleTitle: "Product Manager" },
+    ]);
+    reportUnlocksSelectMock.mockResolvedValue({ data: [{ user_id: "user-0" }] });
+    const { resolveBroadcastAudience } = await import("../adminCandidates");
+
+    const result = await resolveBroadcastAudience({ funnelStages: ["report_unlocked"] });
+
+    expect(result.map((c) => c.userId)).toEqual(["user-0"]);
+  });
+
+  it("filters by role title", async () => {
+    stubCandidates([
+      { userId: "user-0", roleTitle: "Product Manager" },
+      { userId: "user-1", roleTitle: "Software Engineer" },
+    ]);
+    const { resolveBroadcastAudience } = await import("../adminCandidates");
+
+    const result = await resolveBroadcastAudience({ roleTitles: ["Software Engineer"] });
+
+    expect(result.map((c) => c.userId)).toEqual(["user-1"]);
+  });
+
+  it("excludes candidates with a pending deletion", async () => {
+    stubCandidates([
+      { userId: "user-0", roleTitle: "Product Manager" },
+      { userId: "user-1", roleTitle: "Product Manager" },
+    ]);
+    candidateDeletionsIs.mockResolvedValue({ data: [{ user_id: "user-1" }] });
+    const { resolveBroadcastAudience } = await import("../adminCandidates");
+
+    const result = await resolveBroadcastAudience({});
+
+    expect(result.map((c) => c.userId)).toEqual(["user-0"]);
+  });
+
+  it("excludes currently banned candidates", async () => {
+    stubCandidates([
+      { userId: "user-0", roleTitle: "Product Manager" },
+      { userId: "user-1", roleTitle: "Product Manager" },
+    ]);
+    const farFuture = new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString();
+    listUsersMock.mockResolvedValue({
+      data: { users: [{ id: "user-1", banned_until: farFuture }] },
+      error: null,
+    });
+    const { resolveBroadcastAudience } = await import("../adminCandidates");
+
+    const result = await resolveBroadcastAudience({});
+
+    expect(result.map((c) => c.userId)).toEqual(["user-0"]);
+  });
+
+  it("does not exclude a user whose ban_until is in the past", async () => {
+    stubCandidates([{ userId: "user-0", roleTitle: "Product Manager" }]);
+    const pastDate = new Date(Date.now() - 1000 * 60 * 60).toISOString();
+    listUsersMock.mockResolvedValue({
+      data: { users: [{ id: "user-0", banned_until: pastDate }] },
+      error: null,
+    });
+    const { resolveBroadcastAudience } = await import("../adminCandidates");
+
+    const result = await resolveBroadcastAudience({});
+
+    expect(result.map((c) => c.userId)).toEqual(["user-0"]);
   });
 });

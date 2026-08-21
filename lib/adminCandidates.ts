@@ -50,7 +50,7 @@ const PAGE_SIZE = 20;
 
 export type PaginatedCandidates = { rows: CandidateListRow[]; total: number; totalPages: number; page: number };
 
-async function fetchAllCandidates(): Promise<CandidateListRow[]> {
+export async function fetchAllCandidates(): Promise<CandidateListRow[]> {
   const supabase = getSupabaseServerClient();
 
   const [{ data: leadRows }, { data: unlockRows }, { data: interviewRows }, { data: personalityRows }, { data: referenceRows }] = await Promise.all([
@@ -89,6 +89,54 @@ async function fetchAllCandidates(): Promise<CandidateListRow[]> {
   return Array.from(byUser.values())
     .map((c) => ({ ...c, funnelStage: computeFunnelStage(c.userId, sets) }))
     .sort((a, b) => (a.firstSeenAt < b.firstSeenAt ? 1 : -1));
+}
+
+export type BroadcastFilters = {
+  funnelStages?: FunnelStage[];
+  roleTitles?: string[];
+};
+
+async function fetchBannedUserIds(supabase: ReturnType<typeof getSupabaseServerClient>): Promise<Set<string>> {
+  const banned = new Set<string>();
+  const perPage = 1000;
+  let page = 1;
+  for (;;) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      throw new Error(`Failed to list users: ${error.message}`);
+    }
+    const users = data?.users ?? [];
+    const now = Date.now();
+    for (const u of users) {
+      if (u.banned_until && new Date(u.banned_until).getTime() > now) {
+        banned.add(u.id);
+      }
+    }
+    if (users.length < perPage) break;
+    page += 1;
+  }
+  return banned;
+}
+
+export async function resolveBroadcastAudience(filters: BroadcastFilters): Promise<CandidateListRow[]> {
+  const supabase = getSupabaseServerClient();
+  const [candidates, { data: deletionRows }, bannedIds] = await Promise.all([
+    fetchAllCandidates(),
+    supabase.from("candidate_deletions").select("user_id").is("purged_at", null),
+    fetchBannedUserIds(supabase),
+  ]);
+
+  const pendingDeletionIds = new Set((deletionRows ?? []).map((r) => r.user_id));
+  const stageFilter = filters.funnelStages && filters.funnelStages.length > 0 ? new Set(filters.funnelStages) : null;
+  const roleFilter = filters.roleTitles && filters.roleTitles.length > 0 ? new Set(filters.roleTitles) : null;
+
+  return candidates.filter((c) => {
+    if (pendingDeletionIds.has(c.userId)) return false;
+    if (bannedIds.has(c.userId)) return false;
+    if (stageFilter && !stageFilter.has(c.funnelStage)) return false;
+    if (roleFilter && !roleFilter.has(c.latestRoleTitle)) return false;
+    return true;
+  });
 }
 
 export async function listCandidates(page: number = 1): Promise<PaginatedCandidates> {
