@@ -145,6 +145,8 @@ export type CandidateDetail = {
     shareLinks: ShareLinkDetail[];
     overrideHistory: AdminActionRow[];
   };
+  profileOverride: { phoneNumber: string | null; location: string | null; totalExperience: number | null } | null;
+  profileOverrideHistory: AdminActionRow[];
   pendingDeletion: { purgeAfter: string } | null;
 };
 
@@ -216,14 +218,29 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
     .is("purged_at", null)
     .maybeSingle();
 
+  const { data: profileOverrideRow } = await supabase
+    .from("candidate_profile_overrides")
+    .select("phone_number, location, total_experience")
+    .eq("user_id", userId)
+    .maybeSingle();
+
   const candidateActions = await listActionsForTarget("candidate", userId);
   const recruiterPreviewOverrideHistory = candidateActions.filter((a) => a.action === "candidate.recruiter_preview_override");
+  const profileOverrideHistory = candidateActions.filter((a) => a.action === "candidate.profile_override");
 
   const leads: CandidateLeadDetail[] = await Promise.all(
     leadRows.map(async (lead) => {
-      const candidateDetails = lead.ib_applied_job_id
+      let candidateDetails = lead.ib_applied_job_id
         ? await getCandidateResumeDetails(lead.ib_applied_job_id).catch(() => null)
         : null;
+      if (candidateDetails && profileOverrideRow) {
+        candidateDetails = {
+          ...candidateDetails,
+          phoneNumber: profileOverrideRow.phone_number,
+          location: profileOverrideRow.location,
+          totalExperience: profileOverrideRow.total_experience,
+        };
+      }
       const interviewRow = latestInterviewByRole.get(lead.role_title);
       const interviewOverrideHistory = interviewRow ? await listActionsForTarget("interview", interviewRow.id) : [];
       return {
@@ -285,6 +302,10 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
       })),
       overrideHistory: recruiterPreviewOverrideHistory,
     },
+    profileOverride: profileOverrideRow
+      ? { phoneNumber: profileOverrideRow.phone_number, location: profileOverrideRow.location, totalExperience: profileOverrideRow.total_experience }
+      : null,
+    profileOverrideHistory,
     pendingDeletion: deletionRow ? { purgeAfter: deletionRow.purge_after } : null,
   };
 }
@@ -559,6 +580,55 @@ export async function updateRecruiterPreviewOverride(
     targetId: userId,
     priorValue,
     newValue: { enabled: updates.enabled, sections: updates.sections, reason },
+  });
+}
+
+// getCandidateResumeDetails() re-fetches from IntervueBox on every page
+// load -- nothing is cached locally for this data, unlike fitment/interview
+// reports. So an override here can't "lock" a local row; it just wins on
+// read, unconditionally, every time (see getCandidateDetail's merge step).
+export async function overrideCandidateProfile(
+  userId: string,
+  updates: { phoneNumber: string | null; location: string | null; totalExperience: number | null },
+  adminEmail: string,
+  reason: string
+): Promise<void> {
+  if (updates.totalExperience !== null && (!Number.isFinite(updates.totalExperience) || updates.totalExperience < 0)) {
+    throw new Error("totalExperience must be a non-negative number or null.");
+  }
+
+  const supabase = getSupabaseServerClient();
+  const { data: existing } = await supabase
+    .from("candidate_profile_overrides")
+    .select("phone_number, location, total_experience")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const priorValue = existing
+    ? { phoneNumber: existing.phone_number, location: existing.location, totalExperience: existing.total_experience }
+    : null;
+
+  const { error } = await supabase.from("candidate_profile_overrides").upsert(
+    {
+      user_id: userId,
+      phone_number: updates.phoneNumber,
+      location: updates.location,
+      total_experience: updates.totalExperience,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
+  );
+  if (error) {
+    throw new Error(`Failed to override candidate profile: ${error.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "candidate.profile_override",
+    targetType: "candidate",
+    targetId: userId,
+    priorValue,
+    newValue: { ...updates, reason },
   });
 }
 

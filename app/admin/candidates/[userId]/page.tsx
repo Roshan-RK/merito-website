@@ -23,6 +23,7 @@ import SendNotificationAction from "./SendNotificationAction";
 import RecruiterPreviewOverrideForm from "./RecruiterPreviewOverrideForm";
 import FitmentOverrideForm from "./FitmentOverrideForm";
 import InterviewOverrideForm from "./InterviewOverrideForm";
+import CandidateProfileOverrideForm from "./CandidateProfileOverrideForm";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -65,6 +66,21 @@ export default async function AdminCandidateDetailPage({
           Send notification
         </h3>
         <SendNotificationAction userId={candidate.userId} />
+      </section>
+
+      <section style={{ marginBottom: 32 }}>
+        <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
+          Profile
+        </h3>
+        <CandidateProfileOverrideForm
+          userId={candidate.userId}
+          phoneNumber={candidate.profileOverride?.phoneNumber ?? candidate.leads.find((l) => l.candidateDetails)?.candidateDetails?.phoneNumber ?? null}
+          location={candidate.profileOverride?.location ?? candidate.leads.find((l) => l.candidateDetails)?.candidateDetails?.location ?? null}
+          totalExperience={
+            candidate.profileOverride?.totalExperience ?? candidate.leads.find((l) => l.candidateDetails)?.candidateDetails?.totalExperience ?? null
+          }
+          overrideHistory={candidate.profileOverrideHistory}
+        />
       </section>
 
       {candidate.leads.map((lead) => (

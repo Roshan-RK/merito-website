@@ -17,6 +17,8 @@ const candidateDeletionsInsertMock = vi.fn();
 const candidateDeletionsDeleteMock = vi.fn();
 const recruiterPreviewSelectMock = vi.fn();
 const recruiterPreviewUpsertMock = vi.fn();
+const profileOverrideSelectMock = vi.fn();
+const profileOverrideUpsertMock = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({
@@ -30,6 +32,7 @@ vi.mock("@/lib/supabase", () => ({
       if (table === "hub_notifications") return { insert: hubNotificationsInsertMock };
       if (table === "candidate_deletions") return { insert: candidateDeletionsInsertMock, delete: candidateDeletionsDeleteMock };
       if (table === "recruiter_preview_settings") return { select: recruiterPreviewSelectMock, upsert: recruiterPreviewUpsertMock };
+      if (table === "candidate_profile_overrides") return { select: profileOverrideSelectMock, upsert: profileOverrideUpsertMock };
       throw new Error(`Unexpected table in test: ${table}`);
     },
     rpc: rpcMock,
@@ -739,5 +742,59 @@ describe("overrideInterviewReport", () => {
       overrideInterviewReport("row-1", { overallScore: 15, overallSummary: "x" }, "roshan@merito.in", "x")
     ).rejects.toThrow(/between 0 and 10/);
     expect(rowSelectMaybeSingle).not.toHaveBeenCalled();
+  });
+});
+
+describe("overrideCandidateProfile", () => {
+  beforeEach(() => {
+    profileOverrideSelectMock.mockReset();
+    profileOverrideUpsertMock.mockReset();
+    profileOverrideUpsertMock.mockResolvedValue({ error: null });
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+  });
+
+  it("upserts the override and logs prior/new values with the reason", async () => {
+    profileOverrideSelectMock.mockReturnValue({
+      eq: () => ({ maybeSingle: () => Promise.resolve({ data: { phone_number: "111", location: "Old City", total_experience: 2 } }) }),
+    });
+    const { overrideCandidateProfile } = await import("../adminCandidates");
+
+    await overrideCandidateProfile(
+      "user-1",
+      { phoneNumber: "222", location: "New City", totalExperience: 3.5 },
+      "roshan@merito.in",
+      "resume parser got the city wrong"
+    );
+
+    expect(profileOverrideUpsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: "user-1", phone_number: "222", location: "New City", total_experience: 3.5 }),
+      { onConflict: "user_id" }
+    );
+    expect(logAdminActionMock).toHaveBeenCalledWith({
+      adminEmail: "roshan@merito.in",
+      action: "candidate.profile_override",
+      targetType: "candidate",
+      targetId: "user-1",
+      priorValue: { phoneNumber: "111", location: "Old City", totalExperience: 2 },
+      newValue: { phoneNumber: "222", location: "New City", totalExperience: 3.5, reason: "resume parser got the city wrong" },
+    });
+  });
+
+  it("treats a missing override row as null prior value", async () => {
+    profileOverrideSelectMock.mockReturnValue({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }) });
+    const { overrideCandidateProfile } = await import("../adminCandidates");
+
+    await overrideCandidateProfile("user-1", { phoneNumber: null, location: null, totalExperience: null }, "roshan@merito.in", "x");
+
+    expect(logAdminActionMock).toHaveBeenCalledWith(expect.objectContaining({ priorValue: null }));
+  });
+
+  it("throws on a negative totalExperience", async () => {
+    const { overrideCandidateProfile } = await import("../adminCandidates");
+    await expect(
+      overrideCandidateProfile("user-1", { phoneNumber: null, location: null, totalExperience: -1 }, "roshan@merito.in", "x")
+    ).rejects.toThrow(/non-negative/);
+    expect(profileOverrideUpsertMock).not.toHaveBeenCalled();
   });
 });
