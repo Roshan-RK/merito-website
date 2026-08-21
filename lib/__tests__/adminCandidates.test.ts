@@ -7,6 +7,7 @@ const fitmentLeadsSelectMock = vi.fn();
 const fitmentLeadsUpdateMock = vi.fn();
 const reportUnlocksSelectMock = vi.fn();
 const fitmentInterviewsSelectMock = vi.fn();
+const fitmentInterviewsUpdateMock = vi.fn();
 const personalityTestsSelectMock = vi.fn();
 const referenceChecksSelectMock = vi.fn();
 const rpcMock = vi.fn();
@@ -23,7 +24,7 @@ vi.mock("@/lib/supabase", () => ({
     from: (table: string) => {
       if (table === "fitment_leads") return { select: fitmentLeadsSelectMock, update: fitmentLeadsUpdateMock };
       if (table === "report_unlocks") return { select: reportUnlocksSelectMock };
-      if (table === "fitment_interviews") return { select: fitmentInterviewsSelectMock };
+      if (table === "fitment_interviews") return { select: fitmentInterviewsSelectMock, update: fitmentInterviewsUpdateMock };
       if (table === "personality_tests") return { select: personalityTestsSelectMock };
       if (table === "reference_checks") return { select: referenceChecksSelectMock };
       if (table === "hub_notifications") return { insert: hubNotificationsInsertMock };
@@ -680,5 +681,63 @@ describe("updateRecruiterPreviewOverride", () => {
     expect(logAdminActionMock).toHaveBeenCalledWith(
       expect.objectContaining({ priorValue: { enabled: false, sections: [] } })
     );
+  });
+});
+
+describe("overrideInterviewReport", () => {
+  const rowSelectMaybeSingle = vi.fn();
+  const rowUpdateEq = vi.fn();
+
+  beforeEach(() => {
+    logAdminActionMock.mockReset();
+    logAdminActionMock.mockResolvedValue(undefined);
+    rowSelectMaybeSingle.mockReset();
+    rowUpdateEq.mockReset();
+    rowUpdateEq.mockResolvedValue({ error: null });
+    fitmentInterviewsSelectMock.mockReset();
+    fitmentInterviewsSelectMock.mockReturnValue({ eq: () => ({ maybeSingle: rowSelectMaybeSingle }) });
+    fitmentInterviewsUpdateMock.mockReset();
+    fitmentInterviewsUpdateMock.mockReturnValue({ eq: rowUpdateEq });
+  });
+
+  it("merges the override into report_raw and logs prior/new values", async () => {
+    rowSelectMaybeSingle.mockResolvedValue({
+      data: { status: "ready", report_raw: { overallScore: 6, overallSummary: "Old summary", skillMetrics: { comms: 7 } } },
+      error: null,
+    });
+
+    const { overrideInterviewReport } = await import("../adminCandidates");
+    await overrideInterviewReport("row-1", { overallScore: 9, overallSummary: "Better summary" }, "roshan@merito.in", "misjudged tone");
+
+    expect(rowUpdateEq).toHaveBeenCalledWith("id", "row-1");
+    expect(fitmentInterviewsUpdateMock).toHaveBeenCalledWith({
+      report_raw: expect.objectContaining({ overallScore: 9, overallSummary: "Better summary", skillMetrics: { comms: 7 } }),
+    });
+    expect(logAdminActionMock).toHaveBeenCalledWith({
+      adminEmail: "roshan@merito.in",
+      action: "interview.report_override",
+      targetType: "interview",
+      targetId: "row-1",
+      priorValue: { overallScore: 6, overallSummary: "Old summary" },
+      newValue: { overallScore: 9, overallSummary: "Better summary", reason: "misjudged tone" },
+    });
+  });
+
+  it("throws when the interview isn't ready yet", async () => {
+    rowSelectMaybeSingle.mockResolvedValue({ data: { status: "invited" }, error: null });
+
+    const { overrideInterviewReport } = await import("../adminCandidates");
+    await expect(
+      overrideInterviewReport("row-1", { overallScore: 9, overallSummary: "x" }, "roshan@merito.in", "x")
+    ).rejects.toThrow(/isn't ready/);
+    expect(fitmentInterviewsUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it("throws on an out-of-range score", async () => {
+    const { overrideInterviewReport } = await import("../adminCandidates");
+    await expect(
+      overrideInterviewReport("row-1", { overallScore: 15, overallSummary: "x" }, "roshan@merito.in", "x")
+    ).rejects.toThrow(/between 0 and 10/);
+    expect(rowSelectMaybeSingle).not.toHaveBeenCalled();
   });
 });

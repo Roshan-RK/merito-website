@@ -110,6 +110,7 @@ export type CandidateLeadDetail = {
   fitmentOverrideHistory: AdminActionRow[];
   candidateDetails: CandidateResumeDetails | null;
   interviewReport: InterviewReportReady | null;
+  interviewOverrideHistory: AdminActionRow[];
   // Present whenever an interview was invited for this role, ready or not --
   // lets the admin UI offer a manual generate/reinvite action on a stuck
   // (e.g. terminated) interview even though interviewReport is still null.
@@ -224,6 +225,7 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
         ? await getCandidateResumeDetails(lead.ib_applied_job_id).catch(() => null)
         : null;
       const interviewRow = latestInterviewByRole.get(lead.role_title);
+      const interviewOverrideHistory = interviewRow ? await listActionsForTarget("interview", interviewRow.id) : [];
       return {
         id: lead.id,
         roleTitle: lead.role_title,
@@ -237,6 +239,7 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
         ),
         candidateDetails,
         interviewReport: interviewByRole.get(lead.role_title) ?? null,
+        interviewOverrideHistory: interviewOverrideHistory.filter((a) => a.action === "interview.report_override"),
         interviewRow: interviewRow
           ? { id: interviewRow.id, status: interviewRow.status, ibAgentId: interviewRow.ib_agent_id, ibCandidateId: interviewRow.ib_candidate_id }
           : null,
@@ -628,5 +631,51 @@ export async function clearFitmentOverride(leadId: string, adminEmail: string, r
     targetId: lead.user_id ?? leadId,
     priorValue: { overridden: true },
     newValue: { leadId, overridden: false, reason },
+  });
+}
+
+// No lock flag needed here (unlike overrideFitmentReport/retryResumeMatch):
+// the sweep that populates report_raw only ever touches rows with
+// status "invited" (lib/intervuebox/sweepPendingInterviews.ts), and the
+// admin reinvite route explicitly skips resetting status on a row that's
+// already "ready" -- so nothing in this codebase can silently overwrite a
+// report_raw an admin has manually edited.
+export async function overrideInterviewReport(
+  interviewRowId: string,
+  updates: { overallScore: number; overallSummary: string },
+  adminEmail: string,
+  reason: string
+): Promise<void> {
+  if (!Number.isFinite(updates.overallScore) || updates.overallScore < 0 || updates.overallScore > 10) {
+    throw new Error("overallScore must be a number between 0 and 10.");
+  }
+
+  const supabase = getSupabaseServerClient();
+  const { data: row } = await supabase
+    .from("fitment_interviews")
+    .select("status, report_raw")
+    .eq("id", interviewRowId)
+    .maybeSingle();
+
+  if (!row || row.status !== "ready") {
+    throw new Error("Interview report isn't ready yet — nothing to override.");
+  }
+
+  const existingRaw = row.report_raw as InterviewReportReady;
+  const priorValue = { overallScore: existingRaw.overallScore, overallSummary: existingRaw.overallSummary };
+  const mergedRaw: InterviewReportReady = { ...existingRaw, overallScore: updates.overallScore, overallSummary: updates.overallSummary };
+
+  const { error } = await supabase.from("fitment_interviews").update({ report_raw: mergedRaw }).eq("id", interviewRowId);
+  if (error) {
+    throw new Error(`Failed to override interview report: ${error.message}`);
+  }
+
+  await logAdminAction({
+    adminEmail,
+    action: "interview.report_override",
+    targetType: "interview",
+    targetId: interviewRowId,
+    priorValue,
+    newValue: { overallScore: updates.overallScore, overallSummary: updates.overallSummary, reason },
   });
 }

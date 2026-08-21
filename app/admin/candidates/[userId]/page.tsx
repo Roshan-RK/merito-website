@@ -22,6 +22,7 @@ import ResumeMatchRetry from "./ResumeMatchRetry";
 import SendNotificationAction from "./SendNotificationAction";
 import RecruiterPreviewOverrideForm from "./RecruiterPreviewOverrideForm";
 import FitmentOverrideForm from "./FitmentOverrideForm";
+import InterviewOverrideForm from "./InterviewOverrideForm";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -137,6 +138,14 @@ export default async function AdminCandidateDetailPage({
               {lead.interviewReport.roadmap && <RoadmapTimeline roadmap={lead.interviewReport.roadmap} />}
               {lead.interviewReport.feedbackToInterviewer && <EvaluatorNotes notes={lead.interviewReport.feedbackToInterviewer} />}
               <AnswerTranscript answers={lead.interviewReport.answers} />
+              {lead.interviewRow && (
+                <InterviewOverrideForm
+                  interviewRowId={lead.interviewRow.id}
+                  overallScore={lead.interviewReport.overallScore}
+                  overallSummary={lead.interviewReport.overallSummary}
+                  overrideHistory={lead.interviewOverrideHistory}
+                />
+              )}
             </div>
           ) : lead.interviewRow ? (
             <div style={{ marginBottom: 20 }}>
