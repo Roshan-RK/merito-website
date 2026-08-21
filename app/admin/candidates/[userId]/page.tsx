@@ -36,11 +36,17 @@ export default async function AdminCandidateDetailPage({
     notFound();
   }
 
-  const allActivity: AdminActionRow[] = [
+  const allActivityRaw: AdminActionRow[] = [
     ...candidate.allActions,
     ...candidate.leads.flatMap((lead) => lead.interviewOverrideHistory),
     ...(candidate.references?.referees.flatMap((referee) => referee.overrideHistory) ?? []),
-  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  ];
+  // Dedupe by id: two fitment_leads rows sharing a role_title resolve to the
+  // same interviewRow in getCandidateDetail(), so their interviewOverrideHistory
+  // arrays -- and thus this merge -- can contain the same AdminActionRow twice.
+  const allActivity = [...new Map(allActivityRaw.map((row) => [row.id, row])).values()].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 
   const tabs: TabDef[] = [
     {
@@ -158,7 +164,7 @@ export default async function AdminCandidateDetailPage({
         {candidate.email}
       </p>
 
-      <Tabs tabs={tabs} initialTab={tab && tabs.some((t) => t.id === tab) ? tab : "overview"} />
+      <Tabs tabs={tabs} initialTab={tab ?? ""} />
     </div>
   );
 }

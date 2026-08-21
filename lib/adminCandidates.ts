@@ -226,7 +226,12 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
     .eq("user_id", userId)
     .maybeSingle();
 
-  const candidateActions = await listActionsForTarget("candidate", userId);
+  const [candidateActionsByUserId, magicLinkActions, shareLinkActionsNested] = await Promise.all([
+    listActionsForTarget("candidate", userId),
+    listActionsForTarget("candidate", leadRows[0].email),
+    Promise.all((shareLinkRows ?? []).map((r) => listActionsForTarget("share_link", r.token))),
+  ]);
+  const candidateActions = [...candidateActionsByUserId, ...magicLinkActions, ...shareLinkActionsNested.flat()];
   const recruiterPreviewOverrideHistory = candidateActions.filter((a) => a.action === "candidate.recruiter_preview_override");
   const profileOverrideHistory = candidateActions.filter((a) => a.action === "candidate.profile_override");
 
