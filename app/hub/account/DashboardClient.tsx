@@ -118,6 +118,15 @@ export default function DashboardClient({
           <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 13.5, margin: 0 }}>
             {doneCount} of {totalSteps} steps complete. Each one strengthens the case a recruiter sees.
           </p>
+          <div
+            className="inline-flex items-center bg-[#ed1a24]/10 border border-[#ed1a24]/25"
+            style={{ gap: 8, borderRadius: 50, padding: "7px 14px", marginTop: 12 }}
+          >
+            <span className="bg-[#ed1a24]" style={{ width: 6, height: 6, borderRadius: "50%" }} />
+            <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 12.5 }}>
+              Your seniority level: {level.charAt(0).toUpperCase() + level.slice(1)}
+            </span>
+          </div>
         </div>
 
         <OnboardingBanner roleTitle={roleTitle} />

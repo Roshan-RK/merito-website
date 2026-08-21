@@ -30,7 +30,6 @@ export default async function PricingPage() {
     .maybeSingle();
 
   const level = (lead?.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
-  const levelLabel = level.charAt(0).toUpperCase() + level.slice(1);
 
   const cards = buildPricingCards(level);
   const bundle = buildBundleSummary(level);
@@ -44,7 +43,6 @@ export default async function PricingPage() {
       <PricingCardsClient
         cards={cards}
         bundle={bundle}
-        levelLabel={levelLabel}
         level={level}
         purchasable={false}
         leadId={null}
@@ -93,7 +91,6 @@ export default async function PricingPage() {
     <PricingCardsClient
       cards={cards}
       bundle={bundle}
-      levelLabel={levelLabel}
       level={level}
       purchasable
       leadId={lead.id}

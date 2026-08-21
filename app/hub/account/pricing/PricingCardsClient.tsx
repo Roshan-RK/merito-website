@@ -31,7 +31,6 @@ type Modal = "none" | "report" | "personality" | "references" | "interview" | "c
 export default function PricingCardsClient({
   cards,
   bundle,
-  levelLabel,
   level,
   purchasable,
   leadId,
@@ -45,7 +44,6 @@ export default function PricingCardsClient({
 }: {
   cards: PricingCard[];
   bundle: BundleSummary;
-  levelLabel: string;
   level: CandidateLevel;
   purchasable: boolean;
   leadId: string | null;
@@ -65,7 +63,12 @@ export default function PricingCardsClient({
   const [counsellingRequested, setCounsellingRequested] = useState(initialCounsellingRequested);
   const [, setReport] = useState<ResumeMatchReportReady | null>(null);
 
-  const bundleEligible = purchasable && !personalityUnlocked && !referencesUnlocked;
+  // All three pieces have to still be unowned -- if even one (report
+  // included) was already bought solo, the bundle isn't a valid purchase
+  // anymore (can't re-sell what's already unlocked, and there's no single
+  // "view" destination for a bundle that was never actually bought as one).
+  const bundleEligible = purchasable && !reportUnlocked && !personalityUnlocked && !referencesUnlocked;
+  const bundlePartiallyOwned = purchasable && !bundleEligible;
   const counsellingCard = cards.find((c) => c.key === "counselling");
 
   function ctaFor(card: PricingCard) {
@@ -163,18 +166,8 @@ export default function PricingCardsClient({
             Pricing
           </h1>
           <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 13.5, margin: "6px 0 0" }}>
-            Priced for where you are in your career right now.
+            Everything you can add to your profile, all in one place.
           </p>
-
-          <div
-            className="inline-flex items-center bg-[#ed1a24]/10 border border-[#ed1a24]/25"
-            style={{ gap: 8, borderRadius: 50, padding: "7px 14px", marginTop: 14 }}
-          >
-            <span className="bg-[#ed1a24]" style={{ width: 6, height: 6, borderRadius: "50%" }} />
-            <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 12.5 }}>
-              Your pricing tier: {levelLabel}-level
-            </span>
-          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" style={{ gap: 14 }}>
@@ -220,18 +213,30 @@ export default function PricingCardsClient({
           })}
 
           <div
-            className="border border-[#ed1a24]/30 flex flex-col"
-            style={{ background: "linear-gradient(to bottom right, #1a0507, #141416)", borderRadius: 14, padding: 20 }}
+            className={bundlePartiallyOwned ? "border border-white/[0.08] flex flex-col" : "border border-[#ed1a24]/30 flex flex-col"}
+            style={{
+              background: bundlePartiallyOwned ? "#141416" : "linear-gradient(to bottom right, #1a0507, #141416)",
+              borderRadius: 14,
+              padding: 20,
+              opacity: bundlePartiallyOwned ? 0.5 : 1,
+            }}
           >
             <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
-              <div className="flex items-center justify-center bg-[#ed1a24]/15 text-[#ed1a24]" style={{ width: 40, height: 40, borderRadius: 10 }}>
+              <div
+                className={bundlePartiallyOwned ? "flex items-center justify-center bg-white/[0.06] text-white/40" : "flex items-center justify-center bg-[#ed1a24]/15 text-[#ed1a24]"}
+                style={{ width: 40, height: 40, borderRadius: 10 }}
+              >
                 <Package size={18} strokeWidth={2} />
               </div>
               <span
-                className="font-[family-name:var(--font-poppins)] font-bold uppercase bg-[#ed1a24] text-white"
+                className={
+                  bundlePartiallyOwned
+                    ? "font-[family-name:var(--font-poppins)] font-bold uppercase bg-white/[0.06] text-white/40"
+                    : "font-[family-name:var(--font-poppins)] font-bold uppercase bg-[#ed1a24] text-white"
+                }
                 style={{ fontSize: 9.5, letterSpacing: "0.05em", borderRadius: 50, padding: "4px 10px" }}
               >
-                Best value
+                {bundlePartiallyOwned ? "Not applicable" : "Best value"}
               </span>
             </div>
 
@@ -242,34 +247,42 @@ export default function PricingCardsClient({
               Report, personality test, and reference checks together.
             </p>
 
-            <div className="flex items-baseline" style={{ gap: 8, marginBottom: 6 }}>
-              <span className="font-[family-name:var(--font-gabarito)] font-bold text-white" style={{ fontSize: 24 }}>
-                {bundle.bundlePriceLabel}
-              </span>
-              <span className="text-white/35" style={{ fontSize: 12.5, textDecoration: "line-through" }}>
-                {bundle.soloTotalLabel}
-              </span>
-            </div>
-            <p className="font-[family-name:var(--font-poppins)] font-semibold" style={{ fontSize: 11.5, color: "#3FCB8C", margin: "0 0 16px" }}>
-              You save {bundle.savingsLabel}
-            </p>
-
-            {bundleEligible ? (
-              <button
-                onClick={() => setModal("report")}
-                className="text-center font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
-                style={{ borderRadius: 8, padding: "11px 16px", fontSize: 13.5, border: "none", cursor: "pointer" }}
-              >
-                Get the bundle now →
-              </button>
+            {bundlePartiallyOwned ? (
+              <p className="font-[family-name:var(--font-poppins)] text-white/50" style={{ fontSize: 12.5, lineHeight: 1.6, flex: 1, margin: 0 }}>
+                Not applicable — you already own at least one of these separately. Buy what's left individually above.
+              </p>
             ) : (
-              <Link
-                href="/hub/account"
-                className="text-center font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
-                style={{ borderRadius: 8, padding: "11px 16px", fontSize: 13.5 }}
-              >
-                {purchasable ? "View on Overview →" : "Get the bundle on Overview →"}
-              </Link>
+              <>
+                <div className="flex items-baseline" style={{ gap: 8, marginBottom: 6 }}>
+                  <span className="font-[family-name:var(--font-gabarito)] font-bold text-white" style={{ fontSize: 24 }}>
+                    {bundle.bundlePriceLabel}
+                  </span>
+                  <span className="text-white/35" style={{ fontSize: 12.5, textDecoration: "line-through" }}>
+                    {bundle.soloTotalLabel}
+                  </span>
+                </div>
+                <p className="font-[family-name:var(--font-poppins)] font-semibold" style={{ fontSize: 11.5, color: "#3FCB8C", margin: "0 0 16px" }}>
+                  You save {bundle.savingsLabel}
+                </p>
+
+                {bundleEligible ? (
+                  <button
+                    onClick={() => setModal("report")}
+                    className="text-center font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
+                    style={{ borderRadius: 8, padding: "11px 16px", fontSize: 13.5, border: "none", cursor: "pointer" }}
+                  >
+                    Get the bundle now →
+                  </button>
+                ) : (
+                  <Link
+                    href="/hub/account"
+                    className="text-center font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
+                    style={{ borderRadius: 8, padding: "11px 16px", fontSize: 13.5 }}
+                  >
+                    Get the bundle on Overview →
+                  </Link>
+                )}
+              </>
             )}
           </div>
         </div>

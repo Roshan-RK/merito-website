@@ -200,7 +200,9 @@ export default async function AccountPage({
     isProductUnlocked(user.id, "personality"),
     isProductUnlocked(user.id, "references"),
   ]);
-  const bundleEligible = !personalityUnlocked && !referencesUnlocked;
+  // All three have to still be unowned -- if report was already bought solo,
+  // the bundle isn't a valid purchase anymore (same fix as the pricing page).
+  const bundleEligible = !reportUnlocked && !personalityUnlocked && !referencesUnlocked;
 
   const { data: counsellingRequest } = await supabase
     .from("counselling_requests")
