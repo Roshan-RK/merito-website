@@ -100,6 +100,7 @@ Resync-lock decision resolved 2026-08-21: **manual admin edit wins, resync must 
 - Recruiter-side action audit (shortlist/request-details/contact-request currently leave no log — distinct from admin's own audit log)
 - Duplicate-candidate detection (merge tool is manual-only today; no proactive surfacing)
 - Periodic digest email — sequence after Phase 7 has enough analytics to summarize meaningfully
+- Broadcast notification to all candidates (or a filtered subset, e.g. by funnel stage) — requested 2026-08-21 after noticing `sendCandidateNotification()` is single-user-only, no global/bulk-send path exists anywhere in the codebase today (confirmed via grep). Needs its own scoping pass: does "all" mean every candidate ever, or filterable by funnel stage/role/date; does it reuse `hub_notifications` (in-app only, no email dispatch attached today) or need an email-send path too
 
 ## Phase 7 — Analytics
 
