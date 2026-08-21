@@ -120,11 +120,16 @@ async function fetchBannedUserIds(supabase: ReturnType<typeof getSupabaseServerC
 
 export async function resolveBroadcastAudience(filters: BroadcastFilters): Promise<CandidateListRow[]> {
   const supabase = getSupabaseServerClient();
-  const [candidates, { data: deletionRows }, bannedIds] = await Promise.all([
+  const [candidates, deletionResult, bannedIds] = await Promise.all([
     fetchAllCandidates(),
     supabase.from("candidate_deletions").select("user_id").is("purged_at", null),
     fetchBannedUserIds(supabase),
   ]);
+
+  const { data: deletionRows, error } = deletionResult as { data: { user_id: string }[] | null; error: any };
+  if (error) {
+    throw new Error(`Failed to load pending deletions: ${error.message}`);
+  }
 
   const pendingDeletionIds = new Set((deletionRows ?? []).map((r) => r.user_id));
   const stageFilter = filters.funnelStages && filters.funnelStages.length > 0 ? new Set(filters.funnelStages) : null;

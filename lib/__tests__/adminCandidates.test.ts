@@ -923,4 +923,15 @@ describe("resolveBroadcastAudience", () => {
 
     expect(result.map((c) => c.userId)).toEqual(["user-0"]);
   });
+
+  it("throws when the candidate_deletions query fails", async () => {
+    stubCandidates([
+      { userId: "user-0", roleTitle: "Product Manager" },
+      { userId: "user-1", roleTitle: "Product Manager" },
+    ]);
+    candidateDeletionsIs.mockResolvedValue({ data: null, error: { message: "query timeout" } });
+    const { resolveBroadcastAudience } = await import("../adminCandidates");
+
+    await expect(resolveBroadcastAudience({})).rejects.toThrow("Failed to load pending deletions: query timeout");
+  });
 });
