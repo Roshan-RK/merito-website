@@ -56,6 +56,29 @@ export default function AdminSidebar({ adminEmail, recentViews }: { adminEmail: 
         Merito Admin
       </p>
 
+      <form
+        action="/admin/search"
+        method="GET"
+        style={{ marginBottom: 20 }}
+      >
+        <input
+          type="text"
+          name="q"
+          placeholder="Search name or email…"
+          className="font-[family-name:var(--font-poppins)]"
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            fontSize: 13,
+            padding: "8px 12px",
+            borderRadius: 7,
+            border: "1px solid rgba(255,255,255,0.15)",
+            background: "rgba(255,255,255,0.06)",
+            color: "#fff",
+          }}
+        />
+      </form>
+
       <nav style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
         {NAV_ITEMS.map((item) => {
           const active = isNavItemActive(pathname ?? "", item.href);

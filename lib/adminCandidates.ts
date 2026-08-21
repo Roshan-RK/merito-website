@@ -174,6 +174,16 @@ export async function listCandidates(page: number = 1): Promise<PaginatedCandida
   return { rows: all.slice(start, start + PAGE_SIZE), total, totalPages, page: clampedPage };
 }
 
+const SEARCH_RESULT_LIMIT = 20;
+
+export async function searchCandidates(query: string): Promise<CandidateListRow[]> {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+
+  const all = await fetchAllCandidates();
+  return all.filter((c) => c.email.toLowerCase().includes(q) || (c.name ?? "").toLowerCase().includes(q)).slice(0, SEARCH_RESULT_LIMIT);
+}
+
 export type CandidateLeadDetail = {
   id: string;
   roleTitle: string;
