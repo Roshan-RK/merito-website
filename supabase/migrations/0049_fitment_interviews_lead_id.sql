@@ -1,6 +1,6 @@
 -- supabase/migrations/0049_fitment_interviews_lead_id.sql
 alter table fitment_interviews
-  add column if not exists lead_id uuid references fitment_leads(id);
+  add column if not exists lead_id uuid references fitment_leads(id) on delete set null;
 
 create index if not exists fitment_interviews_lead_id_idx on fitment_interviews(lead_id);
 
@@ -15,6 +15,7 @@ set lead_id = (
   from fitment_leads fl
   where fl.user_id = fi.user_id
     and fl.role_title = fi.role_title
+    and fl.created_at <= fi.invited_at
   order by fl.created_at desc
   limit 1
 )

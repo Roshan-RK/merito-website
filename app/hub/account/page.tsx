@@ -53,7 +53,8 @@ export default async function AccountPage({
   if (!current) {
     redirect("/hub/account");
   }
-  const prevForSameRole = leads.find((l, i) => i > 0 && l.role_title === current.role_title);
+  const currentIndex = leads.indexOf(current);
+  const prevForSameRole = leads.find((l, i) => i > currentIndex && l.role_title === current.role_title);
 
   const reportUnlocked = await isReportUnlocked(user.id, current.role_title);
 

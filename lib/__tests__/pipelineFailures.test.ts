@@ -44,6 +44,7 @@ describe("retryInterviewFromFailure", () => {
         id: "failure-1",
         kind: "interview_invite_after_payment",
         user_id: "user-1",
+        lead_id: "lead-1",
         detail: { roleTitle: "PM", ibJobId: "job-1", ibAgentId: "agent-1", ibCandidateId: "cand-1" },
         resolved_at: null,
       },
@@ -71,6 +72,7 @@ describe("retryInterviewFromFailure", () => {
     expect(insertInterviewMock).toHaveBeenCalledWith({
       user_id: "user-1",
       role_title: "PM",
+      lead_id: "lead-1",
       ib_job_id: "job-1",
       ib_agent_id: "agent-1",
       ib_candidate_id: "cand-1",
