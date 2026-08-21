@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCandidateDetail } from "@/lib/adminCandidates";
+import { recordCandidateView } from "@/lib/adminRecentViews";
+import { requireAdmin } from "@/lib/adminAuth";
 import RefereeSummary from "./RefereeSummary";
 import ShareLinkRevokeToggle from "./ShareLinkRevokeToggle";
 import { Table, TableHeadRow, TableRow, TableCell, TableEmptyRow } from "@/app/admin/_components/Table";
@@ -34,6 +36,13 @@ export default async function AdminCandidateDetailPage({
 
   if (!candidate) {
     notFound();
+  }
+
+  const admin = await requireAdmin();
+  try {
+    await recordCandidateView(admin.email as string, candidate.userId, candidate.email, candidate.name);
+  } catch (error) {
+    console.error("Failed to record candidate view", { userId, error });
   }
 
   const allActivityRaw: AdminActionRow[] = [

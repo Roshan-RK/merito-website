@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabaseAuth";
 import Button from "@/app/admin/_components/Button";
+import type { RecentCandidateView } from "@/lib/adminRecentViews";
 
 const NAV_ITEMS = [
   { label: "Overview", href: "/admin" },
@@ -26,7 +27,7 @@ function isNavItemActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export default function AdminSidebar({ adminEmail }: { adminEmail: string }) {
+export default function AdminSidebar({ adminEmail, recentViews }: { adminEmail: string; recentViews: RecentCandidateView[] }) {
   const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
@@ -76,6 +77,37 @@ export default function AdminSidebar({ adminEmail }: { adminEmail: string }) {
           );
         })}
       </nav>
+
+      {recentViews.length > 0 && (
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.12)", paddingTop: 16, marginTop: 16 }}>
+          <p
+            className="font-[family-name:var(--font-poppins)] font-semibold"
+            style={{ fontSize: 11, letterSpacing: 0.4, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", margin: "0 0 8px" }}
+          >
+            Recently viewed
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {recentViews.map((view) => (
+              <Link
+                key={view.userId}
+                href={`/admin/candidates/${view.userId}`}
+                className="font-[family-name:var(--font-poppins)]"
+                style={{
+                  fontSize: 12.5,
+                  padding: "6px 12px",
+                  borderRadius: 6,
+                  color: "rgba(255,255,255,0.7)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {view.name || view.email}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.12)", paddingTop: 16, marginTop: 16 }}>
         <p

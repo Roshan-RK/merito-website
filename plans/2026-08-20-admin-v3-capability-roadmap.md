@@ -95,7 +95,7 @@ Resync-lock decision resolved 2026-08-21: **manual admin edit wins, resync must 
 
 - Global search (candidate email / order ID / interview ID)
 - Unified per-candidate activity feed (merges account actions + audit log + notifications + payments into one timeline) — sequence after Phase 1's audit log exists
-- Recently-viewed candidates list
+- ~~Recently-viewed candidates list~~ — **shipped 2026-08-21.** New `admin_recent_views` table (migration `0049`), upserted on every candidate detail page load (best-effort, doesn't block the page). Sidebar (`AdminSidebar.tsx`, fed from `AdminLayout`) shows the current admin's last 5, name/email denormalized onto the row so the sidebar — rendered on every admin page — never needs a join. Same migration also fixed two pre-existing gaps found while touching `purge_candidate_data()`: `candidate_profile_overrides` (migration `0048`) was missing RLS entirely and was never added to the purge function, both closed.
 - Admin alerting (Slack/email push on pipeline failure, payment failure) — sequence after Phase 1, alerts should fire off audit-logged events
 - Recruiter-side action audit (shortlist/request-details/contact-request currently leave no log — distinct from admin's own audit log)
 - Duplicate-candidate detection (merge tool is manual-only today; no proactive surfacing)
