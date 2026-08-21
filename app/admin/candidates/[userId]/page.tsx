@@ -1,29 +1,17 @@
 import { notFound } from "next/navigation";
 import { getCandidateDetail } from "@/lib/adminCandidates";
-import ResumeMatchGauge from "@/app/hub/account/report/ResumeMatchGauge";
-import ResumeMatchCategoryCard from "@/app/hub/account/report/ResumeMatchCategoryCard";
-import CandidateStatsCard from "@/app/hub/account/report/CandidateStatsCard";
-import CandidateProfile from "@/app/hub/account/report/CandidateProfile";
-import InterviewScoreGauge from "@/app/hub/account/interview/InterviewScoreGauge";
-import ParameterScoreTile from "@/app/hub/account/interview/ParameterScoreTile";
-import CriteriaMatchCard from "@/app/hub/account/interview/CriteriaMatchCard";
-import SkillReportTable from "@/app/hub/account/interview/SkillReportTable";
-import AnswerTranscript from "@/app/hub/account/interview/AnswerTranscript";
-import RoadmapTimeline from "@/app/hub/account/RoadmapTimeline";
-import EvaluatorNotes from "@/app/hub/account/EvaluatorNotes";
-import PersonalityReport from "@/app/hub/account/personality/PersonalityReport";
 import RefereeSummary from "./RefereeSummary";
 import ShareLinkRevokeToggle from "./ShareLinkRevokeToggle";
 import { Table, TableHeadRow, TableRow, TableCell, TableEmptyRow } from "@/app/admin/_components/Table";
 import Badge from "@/app/admin/_components/Badge";
-import InterviewRecoveryActions from "./InterviewRecoveryActions";
 import AccountActions from "./AccountActions";
-import ResumeMatchRetry from "./ResumeMatchRetry";
 import SendNotificationAction from "./SendNotificationAction";
 import RecruiterPreviewOverrideForm from "./RecruiterPreviewOverrideForm";
-import FitmentOverrideForm from "./FitmentOverrideForm";
-import InterviewOverrideForm from "./InterviewOverrideForm";
 import CandidateProfileOverrideForm from "./CandidateProfileOverrideForm";
+import ReportsTab from "./ReportsTab";
+import AuditTrail from "./AuditTrail";
+import Tabs, { type TabDef } from "@/app/admin/_components/Tabs";
+import type { AdminActionRow } from "@/lib/adminAuditLog";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -35,15 +23,131 @@ const emptyNote: React.CSSProperties = { fontSize: 13 };
 
 export default async function AdminCandidateDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ userId: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { userId } = await params;
+  const { tab } = await searchParams;
   const candidate = await getCandidateDetail(userId);
 
   if (!candidate) {
     notFound();
   }
+
+  const allActivity: AdminActionRow[] = [
+    ...candidate.allActions,
+    ...candidate.leads.flatMap((lead) => lead.interviewOverrideHistory),
+    ...(candidate.references?.referees.flatMap((referee) => referee.overrideHistory) ?? []),
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const tabs: TabDef[] = [
+    {
+      id: "overview",
+      label: "Overview",
+      content: (
+        <div>
+          <section style={{ marginBottom: 32 }}>
+            <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
+              Account
+            </h3>
+            <AccountActions userId={candidate.userId} email={candidate.email} pendingDeletion={candidate.pendingDeletion} />
+          </section>
+
+          <section style={{ marginBottom: 32 }}>
+            <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
+              Send notification
+            </h3>
+            <SendNotificationAction userId={candidate.userId} />
+          </section>
+
+          <section>
+            <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
+              Profile
+            </h3>
+            <CandidateProfileOverrideForm
+              userId={candidate.userId}
+              phoneNumber={candidate.profileOverride?.phoneNumber ?? candidate.leads.find((l) => l.candidateDetails)?.candidateDetails?.phoneNumber ?? null}
+              location={candidate.profileOverride?.location ?? candidate.leads.find((l) => l.candidateDetails)?.candidateDetails?.location ?? null}
+              totalExperience={
+                candidate.profileOverride?.totalExperience ?? candidate.leads.find((l) => l.candidateDetails)?.candidateDetails?.totalExperience ?? null
+              }
+              overrideHistory={candidate.profileOverrideHistory}
+            />
+          </section>
+        </div>
+      ),
+    },
+    {
+      id: "reports",
+      label: "Reports",
+      content: (
+        <ReportsTab email={candidate.email} candidateName={candidate.name || candidate.email} leads={candidate.leads} personality={candidate.personality} />
+      ),
+    },
+    {
+      id: "references",
+      label: "References",
+      content: candidate.references ? (
+        <div>
+          <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 13, margin: "0 0 14px" }}>
+            Status: {candidate.references.status} · {candidate.references.report.referees.length}/{candidate.references.minReferences} completed
+          </p>
+          <RefereeSummary referees={candidate.references.referees} />
+        </div>
+      ) : (
+        <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={emptyNote}>
+          Not started yet.
+        </p>
+      ),
+    },
+    {
+      id: "recruiter-preview",
+      label: "Recruiter Preview",
+      content: (
+        <div>
+          <div style={{ marginBottom: 20 }}>
+            <RecruiterPreviewOverrideForm
+              userId={candidate.userId}
+              settings={candidate.recruiterPreview.settings}
+              overrideHistory={candidate.recruiterPreview.overrideHistory}
+            />
+          </div>
+
+          <Table>
+            <TableHeadRow columns={["Role", "Status", "Views", "Last viewed", "Expires", ""]} />
+            <tbody>
+              {candidate.recruiterPreview.shareLinks.map((link) => (
+                <TableRow key={link.token}>
+                  <TableCell>{link.roleTitle}</TableCell>
+                  <TableCell>
+                    <Badge variant={link.revoked || link.expired ? "neutral" : "success"}>
+                      {link.revoked ? "Revoked" : link.expired ? "Expired" : "Active"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{link.viewCount}</TableCell>
+                  <TableCell>{formatDate(link.lastViewedAt)}</TableCell>
+                  <TableCell>{formatDate(link.expiresAt)}</TableCell>
+                  <TableCell>
+                    <ShareLinkRevokeToggle token={link.token} revoked={link.revoked} />
+                  </TableCell>
+                </TableRow>
+              ))}
+              {candidate.recruiterPreview.shareLinks.length === 0 && (
+                <TableEmptyRow colSpan={6} message="No share links created yet." />
+              )}
+            </tbody>
+          </Table>
+        </div>
+      ),
+    },
+    {
+      id: "activity",
+      label: "Activity",
+      content: <AuditTrail actions={allActivity} />,
+    },
+  ];
 
   return (
     <div>
@@ -54,215 +158,7 @@ export default async function AdminCandidateDetailPage({
         {candidate.email}
       </p>
 
-      <section style={{ marginBottom: 32 }}>
-        <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
-          Account
-        </h3>
-        <AccountActions userId={candidate.userId} email={candidate.email} pendingDeletion={candidate.pendingDeletion} />
-      </section>
-
-      <section style={{ marginBottom: 32 }}>
-        <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
-          Send notification
-        </h3>
-        <SendNotificationAction userId={candidate.userId} />
-      </section>
-
-      <section style={{ marginBottom: 32 }}>
-        <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
-          Profile
-        </h3>
-        <CandidateProfileOverrideForm
-          userId={candidate.userId}
-          phoneNumber={candidate.profileOverride?.phoneNumber ?? candidate.leads.find((l) => l.candidateDetails)?.candidateDetails?.phoneNumber ?? null}
-          location={candidate.profileOverride?.location ?? candidate.leads.find((l) => l.candidateDetails)?.candidateDetails?.location ?? null}
-          totalExperience={
-            candidate.profileOverride?.totalExperience ?? candidate.leads.find((l) => l.candidateDetails)?.candidateDetails?.totalExperience ?? null
-          }
-          overrideHistory={candidate.profileOverrideHistory}
-        />
-      </section>
-
-      {candidate.leads.map((lead) => (
-        <section key={lead.id} style={{ marginBottom: 40 }}>
-          <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
-            {lead.roleTitle}
-          </h3>
-
-          {lead.candidateDetails && (
-            <CandidateStatsCard
-              email={candidate.email}
-              phoneNumber={lead.candidateDetails.phoneNumber}
-              location={lead.candidateDetails.location}
-              totalExperience={lead.candidateDetails.totalExperience}
-              experience={lead.candidateDetails.experience}
-            />
-          )}
-
-          {lead.fitmentReport ? (
-            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, margin: "0 0 20px" }}>
-              <div className="flex items-center justify-center" style={{ marginBottom: 16 }}>
-                <ResumeMatchGauge percent={lead.fitmentReport.overallScore} />
-              </div>
-              <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14, lineHeight: 1.7, margin: "0 0 16px" }}>
-                {lead.fitmentReport.summary}
-              </p>
-              <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14 }}>
-                {lead.fitmentReport.categories.map((category) => (
-                  <ResumeMatchCategoryCard key={category.key} category={category} />
-                ))}
-              </div>
-              <FitmentOverrideForm
-                leadId={lead.id}
-                overallScore={lead.fitmentReport.overallScore}
-                summary={lead.fitmentReport.summary}
-                overridden={lead.fitmentOverridden}
-                overrideHistory={lead.fitmentOverrideHistory}
-              />
-            </div>
-          ) : (
-            <div style={{ marginBottom: 20 }}>
-              <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={emptyNote}>
-                Fitment report not ready yet.
-              </p>
-              <ResumeMatchRetry leadId={lead.id} />
-            </div>
-          )}
-
-          {lead.interviewReport ? (
-            <div className="bg-white border border-black/[0.08]" style={{ borderRadius: 14, padding: 20, margin: "0 0 20px" }}>
-              <div className="flex items-center justify-center" style={{ marginBottom: 16 }}>
-                <InterviewScoreGauge score={lead.interviewReport.overallScore} />
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12, marginBottom: 16 }}>
-                {Object.entries(lead.interviewReport.skillMetrics ?? {}).map(([skill, score]) => (
-                  <ParameterScoreTile key={skill} skill={skill} score={score} />
-                ))}
-              </div>
-              <p className="font-[family-name:var(--font-poppins)] text-black" style={{ fontSize: 14, lineHeight: 1.7, margin: "0 0 16px" }}>
-                {lead.interviewReport.overallSummary}
-              </p>
-              {Object.keys(lead.interviewReport.skillReport).length > 0 && (
-                <SkillReportTable skillReport={lead.interviewReport.skillReport} />
-              )}
-              {typeof lead.interviewReport.skillMetrics?.criteriaMatch === "number" && (
-                <CriteriaMatchCard
-                  criteriaMatchScore={lead.interviewReport.skillMetrics.criteriaMatch}
-                  criteriaEvaluationTable={lead.interviewReport.criteriaEvaluationTable}
-                />
-              )}
-              {lead.interviewReport.roadmap && <RoadmapTimeline roadmap={lead.interviewReport.roadmap} />}
-              {lead.interviewReport.feedbackToInterviewer && <EvaluatorNotes notes={lead.interviewReport.feedbackToInterviewer} />}
-              <AnswerTranscript answers={lead.interviewReport.answers} />
-              {lead.interviewRow && (
-                <InterviewOverrideForm
-                  interviewRowId={lead.interviewRow.id}
-                  overallScore={lead.interviewReport.overallScore}
-                  overallSummary={lead.interviewReport.overallSummary}
-                  overrideHistory={lead.interviewOverrideHistory}
-                />
-              )}
-            </div>
-          ) : lead.interviewRow ? (
-            <div style={{ marginBottom: 20 }}>
-              <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ ...emptyNote, marginBottom: 10 }}>
-                Interview not completed yet.
-              </p>
-              <InterviewRecoveryActions interviewId={lead.interviewRow.id} status={lead.interviewRow.status} />
-            </div>
-          ) : (
-            <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={emptyNote}>
-              Interview not completed yet.
-            </p>
-          )}
-
-          {lead.candidateDetails &&
-            (lead.candidateDetails.education.length > 0 ||
-              lead.candidateDetails.experience.length > 0 ||
-              lead.candidateDetails.projects.length > 0) && (
-              <CandidateProfile
-                education={lead.candidateDetails.education}
-                experience={lead.candidateDetails.experience}
-                certifications={lead.candidateDetails.certifications}
-                projects={lead.candidateDetails.projects}
-              />
-            )}
-        </section>
-      ))}
-
-      <section style={{ marginBottom: 40 }}>
-        <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
-          Personality
-        </h3>
-        {candidate.personality ? (
-          <PersonalityReport
-            candidateName={candidate.name || candidate.email}
-            roleTitle={candidate.personality.roleTitle}
-            scores={candidate.personality.scores}
-            validity={candidate.personality.validity}
-          />
-        ) : (
-          <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={emptyNote}>
-            Not taken yet.
-          </p>
-        )}
-      </section>
-
-      <section>
-        <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
-          References
-        </h3>
-        {candidate.references ? (
-          <>
-            <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={{ fontSize: 13, margin: "0 0 14px" }}>
-              Status: {candidate.references.status} · {candidate.references.report.referees.length}/{candidate.references.minReferences} completed
-            </p>
-            <RefereeSummary referees={candidate.references.referees} />
-          </>
-        ) : (
-          <p className="font-[family-name:var(--font-poppins)] text-[#9c9c9c]" style={emptyNote}>
-            Not started yet.
-          </p>
-        )}
-      </section>
-
-      <section>
-        <h3 className="font-[family-name:var(--font-gabarito)] font-semibold text-black" style={sectionHeading}>
-          Recruiter Preview
-        </h3>
-        <div style={{ marginBottom: 20 }}>
-          <RecruiterPreviewOverrideForm
-            userId={candidate.userId}
-            settings={candidate.recruiterPreview.settings}
-            overrideHistory={candidate.recruiterPreview.overrideHistory}
-          />
-        </div>
-
-        <Table>
-          <TableHeadRow columns={["Role", "Status", "Views", "Last viewed", "Expires", ""]} />
-          <tbody>
-            {candidate.recruiterPreview.shareLinks.map((link) => (
-              <TableRow key={link.token}>
-                <TableCell>{link.roleTitle}</TableCell>
-                <TableCell>
-                  <Badge variant={link.revoked || link.expired ? "neutral" : "success"}>
-                    {link.revoked ? "Revoked" : link.expired ? "Expired" : "Active"}
-                  </Badge>
-                </TableCell>
-                <TableCell>{link.viewCount}</TableCell>
-                <TableCell>{formatDate(link.lastViewedAt)}</TableCell>
-                <TableCell>{formatDate(link.expiresAt)}</TableCell>
-                <TableCell>
-                  <ShareLinkRevokeToggle token={link.token} revoked={link.revoked} />
-                </TableCell>
-              </TableRow>
-            ))}
-            {candidate.recruiterPreview.shareLinks.length === 0 && (
-              <TableEmptyRow colSpan={6} message="No share links created yet." />
-            )}
-          </tbody>
-        </Table>
-      </section>
+      <Tabs tabs={tabs} initialTab={tab && tabs.some((t) => t.id === tab) ? tab : "overview"} />
     </div>
   );
 }
