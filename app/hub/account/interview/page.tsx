@@ -121,11 +121,14 @@ export default async function InterviewReportPage({
   }
 
   if (viewState === "invited") {
-    const { data: leadForLevel } = await supabase
+    let leadForLevelQuery = supabase
       .from("fitment_leads")
       .select("candidate_level")
-      .eq("user_id", userId)
-      .or(`id.eq.${interview.lead_id ?? ""},role_title.eq.${interview.role_title}`)
+      .eq("user_id", userId);
+    leadForLevelQuery = interview.lead_id
+      ? leadForLevelQuery.or(`id.eq.${interview.lead_id},role_title.eq.${interview.role_title}`)
+      : leadForLevelQuery.eq("role_title", interview.role_title);
+    const { data: leadForLevel } = await leadForLevelQuery
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -177,11 +180,14 @@ export default async function InterviewReportPage({
 
   const report = interview.report_raw as InterviewReportReady;
 
-  const { data: lead } = await supabase
+  let leadQuery = supabase
     .from("fitment_leads")
     .select("name, ib_applied_job_id")
-    .eq("user_id", user.id)
-    .or(`id.eq.${interview.lead_id ?? ""},role_title.eq.${interview.role_title}`)
+    .eq("user_id", user.id);
+  leadQuery = interview.lead_id
+    ? leadQuery.or(`id.eq.${interview.lead_id},role_title.eq.${interview.role_title}`)
+    : leadQuery.eq("role_title", interview.role_title);
+  const { data: lead } = await leadQuery
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
