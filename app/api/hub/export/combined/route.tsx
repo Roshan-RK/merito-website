@@ -24,19 +24,21 @@ export async function GET(request: Request) {
 
   let anyReady = false;
 
-  if (include.has("fitment")) {
-    const { data: leads } = await supabase
-      .from("fitment_leads")
-      .select("id, role_title, resume_match_status, resume_match_raw")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1);
-    const current = leads?.[0];
-    if (current) {
-      const unlocked = await isReportUnlocked(user.id, current.role_title);
-      if (unlocked && current.resume_match_status === "READY" && current.resume_match_raw) {
-        anyReady = true;
-      }
+  // Fetched unconditionally (not gated by include.has("fitment")) so the
+  // resolved lead's id is available below for the fitment_interviews
+  // identity match even when only "interview" was requested.
+  const { data: leads } = await supabase
+    .from("fitment_leads")
+    .select("id, role_title, resume_match_status, resume_match_raw")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const current = leads?.[0] ?? null;
+
+  if (include.has("fitment") && current) {
+    const unlocked = await isReportUnlocked(user.id, current.role_title);
+    if (unlocked && current.resume_match_status === "READY" && current.resume_match_raw) {
+      anyReady = true;
     }
   }
 
@@ -58,7 +60,9 @@ export async function GET(request: Request) {
       .select("role_title, status, report_raw")
       .eq("user_id", user.id);
     if (roleTitle) {
-      query = query.eq("role_title", roleTitle);
+      query = current
+        ? query.or(`lead_id.eq.${current.id},role_title.eq.${roleTitle}`)
+        : query.eq("role_title", roleTitle);
     }
     const { data: interview } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
     if (interview && interview.status === "ready" && interview.report_raw) {

@@ -77,7 +77,11 @@ export async function loadCombinedReportData({
   let interview: CombinedReportData["interview"] = null;
   if (include.has("interview")) {
     let query = supabase.from("fitment_interviews").select("role_title, status, report_raw, updated_at").eq("user_id", userId);
-    if (roleTitle) query = query.eq("role_title", roleTitle);
+    if (roleTitle) {
+      query = currentLead
+        ? query.or(`lead_id.eq.${currentLead.id},role_title.eq.${roleTitle}`)
+        : query.eq("role_title", roleTitle);
+    }
     const { data: row } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
     if (row && row.status === "ready" && row.report_raw) {
       interview = { roleTitle: row.role_title, report: row.report_raw as InterviewReportReady, updatedAt: row.updated_at };

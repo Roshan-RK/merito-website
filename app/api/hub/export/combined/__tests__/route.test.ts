@@ -15,8 +15,9 @@ const personalitySelectMock = vi.fn().mockReturnValue({ eq: personalityEq1Mock }
 const interviewMaybeSingleMock = vi.fn();
 const interviewLimitMock = vi.fn().mockReturnValue({ maybeSingle: interviewMaybeSingleMock });
 const interviewOrderMock = vi.fn().mockReturnValue({ limit: interviewLimitMock });
+const interviewOrMock = vi.fn().mockReturnValue({ order: interviewOrderMock });
 const interviewEqMock = vi.fn();
-interviewEqMock.mockReturnValue({ eq: interviewEqMock, order: interviewOrderMock });
+interviewEqMock.mockReturnValue({ eq: interviewEqMock, or: interviewOrMock, order: interviewOrderMock });
 const interviewSelectMock = vi.fn().mockReturnValue({ eq: interviewEqMock });
 
 const isReportUnlockedMock = vi.fn();
@@ -56,6 +57,7 @@ describe("GET /api/hub/export/combined", () => {
     leadListLimitMock.mockReset();
     personalityMaybeSingleMock.mockReset();
     interviewMaybeSingleMock.mockReset();
+    interviewOrMock.mockClear();
     isReportUnlockedMock.mockReset();
     getReferenceCheckStatusMock.mockReset();
     renderPageToPdfMock.mockReset();
@@ -90,7 +92,7 @@ describe("GET /api/hub/export/combined", () => {
   it("returns a PDF containing only the ready sections when one requested type isn't actually ready", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "roshan@merito.in" } } });
     leadListLimitMock.mockResolvedValue({
-      data: [{ role_title: "Senior Product Manager", resume_match_status: "READY", resume_match_raw: { overallScore: 92 } }],
+      data: [{ id: "lead-1", role_title: "Senior Product Manager", resume_match_status: "READY", resume_match_raw: { overallScore: 92 } }],
       error: null,
     });
     isReportUnlockedMock.mockResolvedValue(true);
@@ -112,7 +114,7 @@ describe("GET /api/hub/export/combined", () => {
   it("returns a combined PDF merging fitment, personality, interview, and references when all four are ready", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "roshan@merito.in" } } });
     leadListLimitMock.mockResolvedValue({
-      data: [{ role_title: "Senior Product Manager", resume_match_status: "READY", resume_match_raw: { overallScore: 92 } }],
+      data: [{ id: "lead-1", role_title: "Senior Product Manager", resume_match_status: "READY", resume_match_raw: { overallScore: 92 } }],
       error: null,
     });
     isReportUnlockedMock.mockResolvedValue(true);
@@ -146,6 +148,7 @@ describe("GET /api/hub/export/combined", () => {
       [],
       { singlePage: true }
     );
+    expect(interviewOrMock).toHaveBeenCalledWith("lead_id.eq.lead-1,role_title.eq.Senior Product Manager");
     const buffer = await response.arrayBuffer();
     expect(buffer.byteLength).toBeGreaterThan(0);
   });
@@ -153,7 +156,7 @@ describe("GET /api/hub/export/combined", () => {
   it("sets an inline Content-Disposition when inline=1 is passed, for the preview modal's iframe", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "roshan@merito.in" } } });
     leadListLimitMock.mockResolvedValue({
-      data: [{ role_title: "Senior Product Manager", resume_match_status: "READY", resume_match_raw: { overallScore: 92 } }],
+      data: [{ id: "lead-1", role_title: "Senior Product Manager", resume_match_status: "READY", resume_match_raw: { overallScore: 92 } }],
       error: null,
     });
     isReportUnlockedMock.mockResolvedValue(true);
@@ -170,7 +173,7 @@ describe("GET /api/hub/export/combined", () => {
   it("defaults to an attachment Content-Disposition when inline isn't passed", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "roshan@merito.in" } } });
     leadListLimitMock.mockResolvedValue({
-      data: [{ role_title: "Senior Product Manager", resume_match_status: "READY", resume_match_raw: { overallScore: 92 } }],
+      data: [{ id: "lead-1", role_title: "Senior Product Manager", resume_match_status: "READY", resume_match_raw: { overallScore: 92 } }],
       error: null,
     });
     isReportUnlockedMock.mockResolvedValue(true);
