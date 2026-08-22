@@ -110,7 +110,7 @@ export default async function AccountPage({
     .from("fitment_interviews")
     .select("id, status, ib_agent_id, ib_candidate_id, invited_at, stuck_at")
     .eq("user_id", user.id)
-    .eq("role_title", current.role_title)
+    .or(`lead_id.eq.${current.id},role_title.eq.${current.role_title}`)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
