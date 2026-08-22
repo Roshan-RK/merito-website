@@ -227,17 +227,17 @@ describe("getScoreAnalysis", () => {
     return { eq: eq1 };
   }
 
-  it("excludes overridden rows, buckets scores, and correlates paired READY reports by user+role", async () => {
+  it("excludes overridden rows, buckets scores, and correlates paired READY reports by lead_id", async () => {
     fitmentLeadsSelectMock.mockReturnValue(
       chainOf([
-        { user_id: "u1", role_title: "SDE", resume_match_status: "READY", resume_match_score: 20 },
-        { user_id: "u2", role_title: "SDE", resume_match_status: "READY", resume_match_score: 90 },
+        { id: "lead-1", user_id: "u1", role_title: "SDE", resume_match_status: "READY", resume_match_score: 20 },
+        { id: "lead-2", user_id: "u2", role_title: "SDE", resume_match_status: "READY", resume_match_score: 90 },
       ])
     );
     fitmentInterviewsSelectMock.mockReturnValue(
       chainOf([
-        { user_id: "u1", role_title: "SDE", status: "ready", report_raw: { overallScore: 2 } },
-        { user_id: "u2", role_title: "SDE", status: "ready", report_raw: { overallScore: 9 } },
+        { user_id: "u1", role_title: "SDE", lead_id: "lead-1", status: "ready", report_raw: { overallScore: 2 } },
+        { user_id: "u2", role_title: "SDE", lead_id: "lead-2", status: "ready", report_raw: { overallScore: 9 } },
       ])
     );
 
@@ -251,8 +251,33 @@ describe("getScoreAnalysis", () => {
     expect(result.correlation).toBeCloseTo(1, 5); // perfectly aligned low/high pairs
   });
 
+  it("matches a lead_id = null interview by role_title, exactly as before the lead_id cutover", async () => {
+    fitmentLeadsSelectMock.mockReturnValue(
+      chainOf([
+        // Two different users sharing the same role_title -- if the fallback
+        // key omitted user_id this would wrongly cross-match between them.
+        { id: "lead-1", user_id: "u1", role_title: "SDE", resume_match_status: "READY", resume_match_score: 20 },
+        { id: "lead-2", user_id: "u2", role_title: "SDE", resume_match_status: "READY", resume_match_score: 90 },
+      ])
+    );
+    fitmentInterviewsSelectMock.mockReturnValue(
+      chainOf([
+        // Historical, unbackfilled rows -- lead_id is null, so this must
+        // still resolve via role_title or the pairing silently disappears.
+        { user_id: "u1", role_title: "SDE", lead_id: null, status: "ready", report_raw: { overallScore: 2 } },
+        { user_id: "u2", role_title: "SDE", lead_id: null, status: "ready", report_raw: { overallScore: 9 } },
+      ])
+    );
+
+    const { getScoreAnalysis } = await import("../adminAnalytics");
+    const result = await getScoreAnalysis();
+
+    expect(result.correlationSampleSize).toBe(2);
+    expect(result.correlation).toBeCloseTo(1, 5);
+  });
+
   it("returns null correlation with fewer than 2 paired points", async () => {
-    fitmentLeadsSelectMock.mockReturnValue(chainOf([{ user_id: "u1", role_title: "SDE", resume_match_status: "READY", resume_match_score: 50 }]));
+    fitmentLeadsSelectMock.mockReturnValue(chainOf([{ id: "lead-1", user_id: "u1", role_title: "SDE", resume_match_status: "READY", resume_match_score: 50 }]));
     fitmentInterviewsSelectMock.mockReturnValue(chainOf([]));
 
     const { getScoreAnalysis } = await import("../adminAnalytics");
