@@ -261,7 +261,7 @@ describe("POST /api/hub/start-ai-interview", () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     leadMaybeSingleMock.mockResolvedValue({
-      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
+      data: { id: "lead-chain-fail", ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
       error: null,
     });
     getApplicantMock.mockRejectedValue(new Error("boom"));
@@ -273,6 +273,7 @@ describe("POST /api/hub/start-ai-interview", () => {
       expect.objectContaining({
         kind: "interview_invite_failed",
         userId: "user-1",
+        leadId: "lead-chain-fail",
         detail: expect.objectContaining({ stage: "getApplicant", error: "boom" }),
       })
     );
@@ -282,7 +283,7 @@ describe("POST /api/hub/start-ai-interview", () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     leadMaybeSingleMock.mockResolvedValue({
-      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
+      data: { id: "lead-invite-zero", ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
       error: null,
     });
     getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
@@ -297,6 +298,7 @@ describe("POST /api/hub/start-ai-interview", () => {
       expect.objectContaining({
         kind: "interview_invite_failed",
         userId: "user-1",
+        leadId: "lead-invite-zero",
         detail: expect.objectContaining({ stage: "sendInterviewInvitation", ibAgentId: "INT_123", candidateId: "USR_123", invited: 0 }),
       })
     );
@@ -308,7 +310,7 @@ describe("POST /api/hub/start-ai-interview", () => {
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     creditMaybeSingleMock.mockResolvedValue({ data: { order_id: "order_credit_1" }, error: null });
     leadMaybeSingleMock.mockResolvedValue({
-      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
+      data: { id: "lead-unconsume", ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
       error: null,
     });
     getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
@@ -323,7 +325,7 @@ describe("POST /api/hub/start-ai-interview", () => {
     expect(consumeUpdateMock).toHaveBeenNthCalledWith(2, { consumed_at: null });
     expect(consumeUpdateEqMock).toHaveBeenNthCalledWith(2, "order_id", "order_credit_1");
     expect(recordPipelineFailureMock).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: "interview_invite_failed", orderId: "order_credit_1" })
+      expect.objectContaining({ kind: "interview_invite_failed", leadId: "lead-unconsume", orderId: "order_credit_1" })
     );
     delete process.env.RAZORPAY_BYPASS;
   });
@@ -332,7 +334,7 @@ describe("POST /api/hub/start-ai-interview", () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
     leadMaybeSingleMock.mockResolvedValue({
-      data: { ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
+      data: { id: "lead-insert-fail", ib_job_id: "JOB_123", ib_applied_job_id: "APJ_123", candidate_level: "mid" },
       error: null,
     });
     getApplicantMock.mockResolvedValue({ candidateId: "USR_123" });
@@ -346,7 +348,7 @@ describe("POST /api/hub/start-ai-interview", () => {
     expect(response.status).toBe(500);
     expect(adminReselectMaybeSingleMock).not.toHaveBeenCalled();
     expect(recordPipelineFailureMock).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: "interview_invite_after_payment", userId: "user-1" })
+      expect.objectContaining({ kind: "interview_invite_after_payment", userId: "user-1", leadId: "lead-insert-fail" })
     );
   });
 
