@@ -286,4 +286,41 @@ describe("getScoreAnalysis", () => {
     expect(result.correlation).toBeNull();
     expect(result.correlationSampleSize).toBe(0);
   });
+
+  it("does not fall through to a different interview's role_title score when the id-matched interview has no score of its own", async () => {
+    fitmentLeadsSelectMock.mockReturnValue(
+      chainOf([
+        { id: "lead-x", user_id: "u2", role_title: "SDE", resume_match_status: "READY", resume_match_score: 10 },
+        { id: "lead-y", user_id: "u3", role_title: "SDE", resume_match_status: "READY", resume_match_score: 90 },
+        // The trap: lead-1's own interview (linked by lead_id) has no
+        // usable score yet, but a DIFFERENT, unlinked interview for the
+        // same user_id+role_title does. A `??`-based join would wrongly
+        // fall through to that other interview's score; `.has()` must
+        // report "no score" for lead-1 instead.
+        { id: "lead-1", user_id: "u1", role_title: "SDE", resume_match_status: "READY", resume_match_score: 50 },
+      ])
+    );
+    fitmentInterviewsSelectMock.mockReturnValue(
+      chainOf([
+        { user_id: "u2", role_title: "SDE", lead_id: "lead-x", status: "ready", report_raw: { overallScore: 1 } },
+        { user_id: "u3", role_title: "SDE", lead_id: "lead-y", status: "ready", report_raw: { overallScore: 9 } },
+        // Exact id link to lead-1, but not scored yet -- `.has()` on this
+        // key must be true while `.get()` is undefined.
+        { user_id: "u1", role_title: "SDE", lead_id: "lead-1", status: "ready", report_raw: null },
+        // Unlinked (lead_id null) interview for the same user+role_title,
+        // with a real score -- must never be attributed to lead-1.
+        { user_id: "u1", role_title: "SDE", lead_id: null, status: "ready", report_raw: { overallScore: 9 } },
+      ])
+    );
+
+    const { getScoreAnalysis } = await import("../adminAnalytics");
+    const result = await getScoreAnalysis();
+
+    // Only lead-x/lead-y pair up (perfectly correlated). lead-1 must be
+    // excluded, not paired with the unlinked interview's overallScore: 9 --
+    // that wrong pairing would both add a 3rd sample and drag correlation
+    // below 1.
+    expect(result.correlationSampleSize).toBe(2);
+    expect(result.correlation).toBeCloseTo(1, 5);
+  });
 });
