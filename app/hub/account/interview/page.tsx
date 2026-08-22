@@ -58,7 +58,7 @@ export default async function InterviewReportPage({
   async function latestReadyInterview(scopedToRole: string | null) {
     let query = supabase
       .from("fitment_interviews")
-      .select("role_title, status, report_raw, updated_at, ib_interview_status, stuck_at, invited_at")
+      .select("role_title, status, report_raw, updated_at, ib_interview_status, stuck_at, invited_at, lead_id")
       .eq("user_id", userId);
     if (scopedToRole) {
       query = query.eq("role_title", scopedToRole);
@@ -67,13 +67,14 @@ export default async function InterviewReportPage({
     return data;
   }
 
-  // ProgressRail links here with the *current lead's* role_title, but
-  // fitment_interviews is matched by free-text role_title with no lead_id --
-  // if the candidate's most recent fitment check is for a role they haven't
-  // interviewed for yet (interview taken for an older/different role_title),
-  // an exact-match lookup finds nothing even though a real "ready" interview
-  // exists. Fall back to the most-recent-ready-interview-overall in that
-  // case, matching what happens when no ?role= is passed at all.
+  // ProgressRail links here with the *current lead's* role_title. fitment_interviews
+  // does carry a lead_id FK now, but this page's own ?role= param is still
+  // free-text role_title (its external URL contract), so this exact-match
+  // lookup can still find nothing when the candidate's most recent fitment
+  // check is for a role they haven't interviewed for yet (interview taken for
+  // an older/different role_title). Fall back to the most-recent-ready-
+  // interview-overall in that case, matching what happens when no ?role= is
+  // passed at all.
   let interview = await latestReadyInterview(roleTitle);
   if ((!interview || interview.status !== "ready" || !interview.report_raw) && roleTitle) {
     interview = await latestReadyInterview(null);
@@ -124,7 +125,7 @@ export default async function InterviewReportPage({
       .from("fitment_leads")
       .select("candidate_level")
       .eq("user_id", userId)
-      .eq("role_title", interview.role_title)
+      .or(`id.eq.${interview.lead_id ?? ""},role_title.eq.${interview.role_title}`)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -180,7 +181,7 @@ export default async function InterviewReportPage({
     .from("fitment_leads")
     .select("name, ib_applied_job_id")
     .eq("user_id", user.id)
-    .eq("role_title", interview.role_title)
+    .or(`id.eq.${interview.lead_id ?? ""},role_title.eq.${interview.role_title}`)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
