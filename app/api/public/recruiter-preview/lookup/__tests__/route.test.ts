@@ -4,6 +4,7 @@ function makeQueryStub(result: { data: unknown }) {
   const stub: Record<string, unknown> = {};
   stub.select = () => stub;
   stub.eq = () => stub;
+  stub.or = vi.fn(() => stub);
   stub.order = () => stub;
   stub.limit = () => stub;
   stub.maybeSingle = async () => result;
@@ -104,6 +105,7 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
     tableResults.fitment_leads = makeQueryStub({
       data: [
         {
+          id: "lead-1",
           role_title: "Data Analyst",
           name: "Jane Doe",
           resume_match_status: "READY",
@@ -194,5 +196,6 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
     expect(body.interview).not.toHaveProperty("feedbackToInterviewer");
     expect(body.interview).not.toHaveProperty("criteriaEvaluationTable");
     expect(body.interview).not.toHaveProperty("roadmap");
+    expect(tableResults.fitment_interviews.or).toHaveBeenCalledWith("lead_id.eq.lead-1,role_title.eq.Data Analyst");
   });
 });

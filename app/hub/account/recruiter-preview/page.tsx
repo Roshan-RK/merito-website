@@ -20,7 +20,7 @@ export default async function RecruiterPreviewPage() {
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("role_title, name, resume_match_status, resume_match_raw, candidate_level")
+    .select("id, role_title, name, resume_match_status, resume_match_raw, candidate_level")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(1);
@@ -52,12 +52,12 @@ export default async function RecruiterPreviewPage() {
   }
 
   let interview: LookupResponse["interview"] = null;
-  if (roleTitle) {
+  if (currentLead && roleTitle) {
     const { data: interviewRow } = await supabase
       .from("fitment_interviews")
       .select("status, report_raw, updated_at")
       .eq("user_id", user.id)
-      .eq("role_title", roleTitle)
+      .or(`lead_id.eq.${currentLead.id},role_title.eq.${roleTitle}`)
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
