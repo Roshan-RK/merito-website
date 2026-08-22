@@ -252,18 +252,21 @@ Before (both, same shape):
     .limit(1)
     .maybeSingle();
 ```
-After:
+After — **CORRECTED 2026-08-22 after a task review caught a bug in this plan's original code**: an earlier draft of this step used `.or(\`id.eq.${interview.lead_id ?? ""},role_title.eq...\`)`, reasoning that a null `lead_id` would make the `id.eq.` clause simply match zero rows. That reasoning is wrong — `""` is not a valid `uuid` literal, so Postgres/PostgREST rejects the whole `.or()` with a cast error (`22P02`) whenever `interview.lead_id` is null, silently losing the `role_title` fallback too (the query destructures only `{ data }`, so the error surfaces as `data: null`, not a thrown exception). The safe form makes the `.or()` conditional, exactly like the pattern already used in `app/api/hub/export/combined/route.tsx`:
 ```typescript
-  const { data: leadForLevel } = await supabase
+  let leadForLevelQuery = supabase
     .from("fitment_leads")
     .select("candidate_level")
-    .eq("user_id", userId)
-    .or(`id.eq.${interview.lead_id ?? ""},role_title.eq.${interview.role_title}`)
+    .eq("user_id", userId);
+  leadForLevelQuery = interview.lead_id
+    ? leadForLevelQuery.or(`id.eq.${interview.lead_id},role_title.eq.${interview.role_title}`)
+    : leadForLevelQuery.eq("role_title", interview.role_title);
+  const { data: leadForLevel } = await leadForLevelQuery
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 ```
-(Note the direction is reversed from prior tasks — here you're matching `fitment_leads.id` against the interview's `lead_id`, not the other way around. If `interview.lead_id` is `null`, the `id.eq.` clause matches nothing and the `role_title.eq.` clause carries the query exactly as it did before this change — safe by construction. Apply the equivalent transformation to the second reverse-lookup at ~line 179-186.)
+(Direction is still reversed from prior tasks — you're matching `fitment_leads.id` against the interview's `lead_id`, not the other way around. Apply the equivalent transformation to the second reverse-lookup at ~line 179-186, renaming the local query variable appropriately for that lookup's own selected columns.)
 
 - [ ] **Step 4: Run the full test suite**
 
@@ -289,13 +292,16 @@ git commit -m "feat(hub): interview page reverse-lookups match lead_id or role_t
 
 - [ ] **Step 2: Check whether the primary query's select includes `lead_id`** — add it if missing, same as Task 5 Step 2.
 
-- [ ] **Step 3: Apply the same reversed safety-rule pattern as Task 5 Step 3** to the reverse-lookup:
+- [ ] **Step 3: Apply the same CORRECTED reversed safety-rule pattern as Task 5 Step 3** (conditional `.or()`, not a bare `?? ""` fallback — see Task 5's step for why) to the reverse-lookup:
 ```typescript
-  const { data: lead } = await supabase
+  let leadQuery = supabase
     .from("fitment_leads")
     .select("name, ib_applied_job_id")
-    .eq("user_id", user.id)
-    .or(`id.eq.${interview.lead_id ?? ""},role_title.eq.${interview.role_title}`)
+    .eq("user_id", user.id);
+  leadQuery = interview.lead_id
+    ? leadQuery.or(`id.eq.${interview.lead_id},role_title.eq.${interview.role_title}`)
+    : leadQuery.eq("role_title", interview.role_title);
+  const { data: lead } = await leadQuery
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
