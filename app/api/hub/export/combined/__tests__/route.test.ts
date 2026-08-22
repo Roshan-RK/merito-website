@@ -153,6 +153,31 @@ describe("GET /api/hub/export/combined", () => {
     expect(buffer.byteLength).toBeGreaterThan(0);
   });
 
+  it("passes the fetched lead id to the fitment_interviews identity match when interview is requested without fitment", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "roshan@merito.in" } } });
+    leadListLimitMock.mockResolvedValue({
+      data: [{ id: "lead-1", role_title: "Senior Product Manager", resume_match_status: "READY", resume_match_raw: { overallScore: 92 } }],
+      error: null,
+    });
+    interviewMaybeSingleMock.mockResolvedValue({
+      data: { role_title: "Senior Product Manager", status: "ready", report_raw: { overallScore: 8 } },
+      error: null,
+    });
+    const { GET } = await importRoute();
+
+    const response = await GET(
+      buildRequest("http://localhost/api/hub/export/combined?include=interview&role=Senior%20Product%20Manager")
+    );
+
+    expect(response.status).toBe(200);
+    // This is the case Task 4 fixed: fetching the lead is gated on
+    // include.has("fitment") || include.has("interview"), not just
+    // "fitment" alone -- if that gate regressed to "fitment"-only, `current`
+    // would be null here, the query would fall back to a bare role_title
+    // match, and interviewOrMock would never be called at all.
+    expect(interviewOrMock).toHaveBeenCalledWith("lead_id.eq.lead-1,role_title.eq.Senior Product Manager");
+  });
+
   it("sets an inline Content-Disposition when inline=1 is passed, for the preview modal's iframe", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "roshan@merito.in" } } });
     leadListLimitMock.mockResolvedValue({

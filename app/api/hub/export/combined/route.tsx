@@ -24,16 +24,22 @@ export async function GET(request: Request) {
 
   let anyReady = false;
 
-  // Fetched unconditionally (not gated by include.has("fitment")) so the
-  // resolved lead's id is available below for the fitment_interviews
-  // identity match even when only "interview" was requested.
-  const { data: leads } = await supabase
-    .from("fitment_leads")
-    .select("id, role_title, resume_match_status, resume_match_raw")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1);
-  const current = leads?.[0] ?? null;
+  // Gated on fitment OR interview: the fitment block below needs `current`
+  // for its own unlock/status check, and the fitment_interviews query
+  // further down needs `current.id` for its lead_id identity-match .or()
+  // clause -- that's the only reason this runs for "interview" requests
+  // too. Requests for personality or references alone never read
+  // `current`, so this fetch is skipped for them.
+  let current = null;
+  if (include.has("fitment") || include.has("interview")) {
+    const { data: leads } = await supabase
+      .from("fitment_leads")
+      .select("id, role_title, resume_match_status, resume_match_raw")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    current = leads?.[0] ?? null;
+  }
 
   if (include.has("fitment") && current) {
     const unlocked = await isReportUnlocked(user.id, current.role_title);
