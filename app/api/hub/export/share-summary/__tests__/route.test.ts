@@ -15,8 +15,8 @@ const personalitySelectMock = vi.fn().mockReturnValue({ eq: personalityEq1Mock }
 const interviewMaybeSingleMock = vi.fn();
 const interviewLimitMock = vi.fn().mockReturnValue({ maybeSingle: interviewMaybeSingleMock });
 const interviewOrderMock = vi.fn().mockReturnValue({ limit: interviewLimitMock });
-const interviewEqMock = vi.fn();
-interviewEqMock.mockReturnValue({ eq: interviewEqMock, order: interviewOrderMock });
+const interviewOrMock = vi.fn().mockReturnValue({ order: interviewOrderMock });
+const interviewEqMock = vi.fn().mockReturnValue({ or: interviewOrMock, order: interviewOrderMock });
 const interviewSelectMock = vi.fn().mockReturnValue({ eq: interviewEqMock });
 
 const isReportUnlockedMock = vi.fn();
@@ -56,6 +56,7 @@ describe("GET /api/hub/export/share-summary", () => {
     leadListLimitMock.mockReset();
     personalityMaybeSingleMock.mockReset();
     interviewMaybeSingleMock.mockReset();
+    interviewOrMock.mockClear();
     isReportUnlockedMock.mockReset();
     getReferenceCheckStatusMock.mockReset();
     renderPageToPdfMock.mockReset();
@@ -90,7 +91,7 @@ describe("GET /api/hub/export/share-summary", () => {
   it("returns a PDF when at least one requested section is ready", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "roshan@merito.in" } } });
     leadListLimitMock.mockResolvedValue({
-      data: [{ role_title: "Senior Product Manager", resume_match_status: "READY" }],
+      data: [{ id: "lead-1", role_title: "Senior Product Manager", resume_match_status: "READY" }],
       error: null,
     });
     isReportUnlockedMock.mockResolvedValue(true);
@@ -103,6 +104,7 @@ describe("GET /api/hub/export/share-summary", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("application/pdf");
+    expect(interviewOrMock).toHaveBeenCalledWith("lead_id.eq.lead-1,role_title.eq.Senior Product Manager");
     expect(renderPageToPdfMock).toHaveBeenCalledTimes(1);
     expect(renderPageToPdfMock).toHaveBeenCalledWith(
       "http://localhost/hub/account/share-summary?include=fitment%2Cinterview",

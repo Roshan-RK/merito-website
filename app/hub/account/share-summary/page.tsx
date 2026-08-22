@@ -34,7 +34,7 @@ export default async function ShareSummaryPage({
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("role_title, name, resume_match_status")
+    .select("id, role_title, name, resume_match_status")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(1);
@@ -62,7 +62,7 @@ export default async function ShareSummaryPage({
   let interviewDone = false;
   if (include.has("interview")) {
     let query = supabase.from("fitment_interviews").select("status, updated_at").eq("user_id", user.id);
-    if (currentLead) query = query.eq("role_title", currentLead.role_title);
+    if (currentLead) query = query.or(`lead_id.eq.${currentLead.id},role_title.eq.${currentLead.role_title}`);
     const { data: row } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
     interviewDone = row?.status === "ready";
   }

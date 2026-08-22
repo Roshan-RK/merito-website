@@ -25,7 +25,7 @@ export async function GET(request: Request) {
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("role_title, resume_match_status")
+    .select("id, role_title, resume_match_status")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(1);
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
 
   if (include.has("interview")) {
     let query = supabase.from("fitment_interviews").select("status").eq("user_id", user.id);
-    if (currentLead) query = query.eq("role_title", currentLead.role_title);
+    if (currentLead) query = query.or(`lead_id.eq.${currentLead.id},role_title.eq.${currentLead.role_title}`);
     const { data: interview } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
     if (interview && interview.status === "ready") {
       anyReady = true;
