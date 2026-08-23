@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (!row) {
-    return Response.json({ error: "No interview invite found for this role." }, { status: 400 });
+    return Response.json({ error: "No interview invite found." }, { status: 400 });
   }
 
   // Re-select fresh above (not a stale page-load value) -- if the sweep
