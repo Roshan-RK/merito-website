@@ -46,6 +46,7 @@ function loadRazorpayCheckoutScript(): Promise<void> {
 }
 
 export default function InterviewPaywallModal({
+  leadId,
   roleTitle,
   level,
   userEmail,
@@ -53,6 +54,7 @@ export default function InterviewPaywallModal({
   onClose,
   onStarted,
 }: {
+  leadId: string;
   roleTitle: string;
   level: CandidateLevel;
   userEmail: string;
@@ -75,7 +77,7 @@ export default function InterviewPaywallModal({
     const res = await fetch("/api/hub/start-ai-interview", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ roleTitle }),
+      body: JSON.stringify({ leadId }),
     });
     const data = await res.json();
     setPaying(false);

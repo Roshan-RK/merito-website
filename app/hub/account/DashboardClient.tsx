@@ -232,6 +232,7 @@ export default function DashboardClient({
       )}
       {modal === "interview" && (
         <InterviewPaywallModal
+          leadId={leadId}
           roleTitle={roleTitle}
           level={level}
           userEmail={userEmail}

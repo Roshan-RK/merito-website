@@ -29,10 +29,12 @@ const SAMPLE_QUESTIONS = [
 ];
 
 export default function InterviewLockedState({
+  leadId,
   roleTitle,
   level,
   userEmail,
 }: {
+  leadId: string;
   roleTitle: string;
   level: CandidateLevel;
   userEmail: string;
@@ -130,6 +132,7 @@ export default function InterviewLockedState({
 
       {modalOpen && (
         <InterviewPaywallModal
+          leadId={leadId}
           roleTitle={roleTitle}
           level={level}
           userEmail={userEmail}

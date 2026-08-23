@@ -338,8 +338,9 @@ export default function PricingCardsClient({
           }}
         />
       )}
-      {modal === "interview" && roleTitle && (
+      {modal === "interview" && leadId && roleTitle && (
         <InterviewPaywallModal
+          leadId={leadId}
           roleTitle={roleTitle}
           level={level}
           userEmail={userEmail}

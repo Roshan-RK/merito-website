@@ -107,7 +107,7 @@ export default async function InterviewReportPage({
               Role-matched questions with a scored breakdown afterward.
             </p>
           </div>
-          <InterviewLockedState roleTitle={current.role_title} level={level} userEmail={user.email ?? ""} />
+          <InterviewLockedState leadId={current.id} roleTitle={current.role_title} level={level} userEmail={user.email ?? ""} />
         </div>
       </main>
     );
