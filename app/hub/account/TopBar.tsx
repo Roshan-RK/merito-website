@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Search, Bell, HelpCircle, Briefcase, Receipt, FileText, Brain, Mic, Users, Eye, Megaphone } from "lucide-react";
@@ -45,17 +46,32 @@ function useDismiss(open: boolean, onDismiss: () => void, refs: React.RefObject<
   }, [open, onDismiss, refs]);
 }
 
+type Lead = {
+  id: string;
+  role_title: string;
+  name: string;
+};
+
 export default function TopBar({
-  roleTitle,
+  leads,
   userName,
   userEmail,
   onChangeRole,
 }: {
-  roleTitle: string;
+  leads: Lead[];
   userName: string;
   userEmail: string;
   onChangeRole: () => void;
 }) {
+  const searchParams = useSearchParams();
+  const leadIdParam = searchParams.get("lead");
+
+  const activeLead = leadIdParam
+    ? leads.find((l) => l.id === leadIdParam) || leads[0]
+    : leads[0];
+
+  const roleTitle = activeLead?.role_title ?? "";
+
   const [openMenu, setOpenMenu] = useState<"none" | "notifications" | "help" | "avatar">("none");
   const notifTriggerRef = useRef<HTMLButtonElement>(null);
   const notifPanelRef = useRef<HTMLDivElement>(null);

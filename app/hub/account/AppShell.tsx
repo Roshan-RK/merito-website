@@ -5,13 +5,19 @@ import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import ChangeRoleModal from "./ChangeRoleModal";
 
+type Lead = {
+  id: string;
+  role_title: string;
+  name: string;
+};
+
 export default function AppShell({
-  roleTitle,
+  leads,
   userName,
   userEmail,
   children,
 }: {
-  roleTitle: string;
+  leads: Lead[];
   userName: string;
   userEmail: string;
   children: React.ReactNode;
@@ -29,7 +35,7 @@ export default function AppShell({
         backgroundAttachment: "fixed",
       }}
     >
-      <TopBar roleTitle={roleTitle} userName={userName} userEmail={userEmail} onChangeRole={() => setShowChangeRole(true)} />
+      <TopBar leads={leads} userName={userName} userEmail={userEmail} onChangeRole={() => setShowChangeRole(true)} />
       <div className="flex items-start mx-auto" style={{ maxWidth: 1360 }}>
         <Sidebar />
         <div className="min-w-0 flex-1">{children}</div>

@@ -125,7 +125,6 @@ export async function POST(request: Request) {
   // reusing it here would let an admin mark a candidate "invited" when
   // IntervueBox was never actually confirmed to have sent anything.
   const userId = user.id;
-  const leadId = lead.id;
   async function recordFailedInviteAttempt(detail: Record<string, unknown>) {
     await recordPipelineFailure({
       kind: "interview_invite_failed",

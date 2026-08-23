@@ -16,18 +16,21 @@ export default async function AccountLayout({
     redirect("/hub/login");
   }
 
-  const { data: lead } = await supabase
+  const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("role_title, name")
+    .select("id, role_title, name")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: false });
 
-  const userName = lead?.name || user.email?.split("@")[0] || "there";
+  const latestLead = leads?.[0];
+  const userName = latestLead?.name || user.email?.split("@")[0] || "there";
 
   return (
-    <AppShell roleTitle={lead?.role_title ?? ""} userName={userName} userEmail={user.email ?? ""}>
+    <AppShell
+      leads={leads || []}
+      userName={userName}
+      userEmail={user.email ?? ""}
+    >
       {children}
     </AppShell>
   );
