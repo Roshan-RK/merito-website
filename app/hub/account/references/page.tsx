@@ -6,11 +6,18 @@ import { DEFAULT_LEVEL, type CandidateLevel } from "@/lib/razorpay/pricing";
 import ReferencesClient from "./ReferencesClient";
 import ReferencesLockedState from "./ReferencesLockedState";
 
-export default async function ReferencesPage() {
+export default async function ReferencesPage({
+  searchParams,
+}: {
+  searchParams: { lead?: string };
+}) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Note: ?lead= param is accepted for URL consistency but not used
+  // (references are candidate-wide)
 
   if (!user) {
     redirect("/hub/login");
