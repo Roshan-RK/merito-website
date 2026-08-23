@@ -15,16 +15,16 @@ export async function POST(request: Request) {
     return Response.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  let body: { roleTitle?: string };
+  let body: { leadId?: string };
   try {
     body = await request.json();
   } catch {
     return Response.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const roleTitle = typeof body.roleTitle === "string" ? body.roleTitle.trim() : "";
-  if (!roleTitle) {
-    return Response.json({ error: "roleTitle is required." }, { status: 400 });
+  const leadId = typeof body.leadId === "string" ? body.leadId.trim() : "";
+  if (!leadId) {
+    return Response.json({ error: "leadId is required." }, { status: 400 });
   }
 
   const admin = getSupabaseServerClient();
@@ -32,13 +32,11 @@ export async function POST(request: Request) {
     .from("fitment_interviews")
     .select("id, status, ib_agent_id, ib_candidate_id, has_resumed")
     .eq("user_id", user.id)
-    .eq("role_title", roleTitle)
-    .order("updated_at", { ascending: false })
-    .limit(1)
+    .eq("lead_id", leadId)
     .maybeSingle();
 
   if (!row) {
-    return Response.json({ error: "No interrupted interview found for this role." }, { status: 400 });
+    return Response.json({ error: "No interrupted interview found for this lead." }, { status: 400 });
   }
 
   let reinviteResult: Awaited<ReturnType<typeof reinviteInterviewCandidates>>;
@@ -50,7 +48,7 @@ export async function POST(request: Request) {
     // vendor's 200-OK "business logic failure per candidate" shape (e.g.
     // "Cannot resume an interview in status EVALUATED"). Both are real and
     // must return clean JSON instead of crashing the route.
-    console.error("Hub resume reinvite request failed", { roleTitle, error: err });
+    console.error("Hub resume reinvite request failed", { leadId, error: err });
     // A row that's already used its one resume and still fails has no
     // self-service path left -- mark it stuck instead of leaving it to
     // silently fall back to the plain "Start Interview" card.
@@ -94,7 +92,7 @@ export async function POST(request: Request) {
     // The candidate already has a valid vendor resume link -- don't fail the
     // request over a DB write miss, just log it so a row stuck showing
     // "terminated" after a real resume isn't a silent mystery later.
-    console.error("Hub resume: failed to reset the row to invited", { roleTitle, error: resetError });
+    console.error("Hub resume: failed to reset the row to invited", { leadId, error: resetError });
   }
 
   return Response.json({ url: fresh.magicLink });

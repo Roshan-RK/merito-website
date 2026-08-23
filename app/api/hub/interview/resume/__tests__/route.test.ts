@@ -11,10 +11,8 @@ vi.mock("@/lib/intervuebox/invitations", () => ({
 }));
 
 const maybeSingleMock = vi.fn();
-const limitMock = vi.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
-const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
-const eqRoleMock = vi.fn().mockReturnValue({ order: orderMock });
-const eqUserMock = vi.fn().mockReturnValue({ eq: eqRoleMock });
+const eqLeadMock = vi.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
+const eqUserMock = vi.fn().mockReturnValue({ eq: eqLeadMock });
 const selectMock = vi.fn().mockReturnValue({ eq: eqUserMock });
 
 const updateEqMock = vi.fn().mockResolvedValue({ error: null });
@@ -49,14 +47,14 @@ describe("POST /api/hub/interview/resume", () => {
   it("returns 401 when not signed in", async () => {
     getUserMock.mockResolvedValue({ data: { user: null } });
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
     expect(response.status).toBe(401);
   });
 
   it("returns 400 when there's no terminated row for the role", async () => {
     maybeSingleMock.mockResolvedValue({ data: null });
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
     expect(response.status).toBe(400);
   });
 
@@ -71,7 +69,7 @@ describe("POST /api/hub/interview/resume", () => {
     });
 
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ url: "https://fresh" });
@@ -96,7 +94,7 @@ describe("POST /api/hub/interview/resume", () => {
     });
 
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
 
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({
@@ -112,7 +110,7 @@ describe("POST /api/hub/interview/resume", () => {
     reinviteInterviewCandidatesMock.mockRejectedValue(new Error("IntervueBox 500"));
 
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
 
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "IntervueBox rejected the reinvite request." });
@@ -126,7 +124,7 @@ describe("POST /api/hub/interview/resume", () => {
     reinviteInterviewCandidatesMock.mockRejectedValue(new Error("IntervueBox 500"));
 
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
 
     expect(response.status).toBe(502);
     expect(updateMock).toHaveBeenCalledWith({ stuck_at: expect.any(String) });
@@ -143,7 +141,7 @@ describe("POST /api/hub/interview/resume", () => {
     });
 
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
 
     expect(response.status).toBe(502);
     expect(updateMock).toHaveBeenCalledWith({ stuck_at: expect.any(String) });
@@ -160,7 +158,7 @@ describe("POST /api/hub/interview/resume", () => {
     });
 
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
 
     expect(response.status).toBe(502);
     expect(updateMock).not.toHaveBeenCalled();

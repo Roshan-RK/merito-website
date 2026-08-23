@@ -58,7 +58,7 @@ export default async function InterviewReportPage({
   async function latestReadyInterview(scopedToRole: string | null) {
     let query = supabase
       .from("fitment_interviews")
-      .select("role_title, status, report_raw, updated_at, ib_interview_status, stuck_at, invited_at")
+      .select("role_title, status, report_raw, updated_at, ib_interview_status, stuck_at, invited_at, lead_id")
       .eq("user_id", userId);
     if (scopedToRole) {
       query = query.eq("role_title", scopedToRole);
@@ -158,7 +158,7 @@ export default async function InterviewReportPage({
     return (
       <main>
         <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
-          <InterviewTerminatedState roleTitle={interview.role_title} />
+          <InterviewTerminatedState roleTitle={interview.role_title} leadId={interview.lead_id ?? ""} />
         </div>
       </main>
     );
