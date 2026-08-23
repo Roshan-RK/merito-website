@@ -108,9 +108,9 @@ export default async function InterviewPrintPage({
     redirect("/hub/login");
   }
 
-  const { lead, role } = await searchParams;
-  const leadId = typeof lead === "string" ? lead : null;
-  const roleTitle = typeof role === "string" ? role : null;
+  const { lead: leadParam, role: roleParam } = await searchParams;
+  const leadId = typeof leadParam === "string" ? leadParam : null;
+  const roleTitle = typeof roleParam === "string" ? roleParam : null;
 
   let query = supabase
     .from("fitment_interviews")
