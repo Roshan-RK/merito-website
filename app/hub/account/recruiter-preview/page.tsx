@@ -6,7 +6,6 @@ import { buildLookupFitment, buildLookupPersonality, buildLookupInterview } from
 import type { LookupResponse, CandidateLevel } from "@/shared/recruiter-preview/types";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
-import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 import RecruiterPreviewClient from "./RecruiterPreviewClient";
 
 export default async function RecruiterPreviewPage({

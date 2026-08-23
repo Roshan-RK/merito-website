@@ -5,7 +5,6 @@ import { isReportUnlocked } from "@/lib/reportUnlocks";
 import { getReferenceCheckStatus } from "@/lib/referenceChecks";
 import { nameFromEmail } from "@/lib/personality";
 import { getAbsoluteUrl } from "@/lib/site";
-import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 
 const SECTION_COPY: Record<string, { label: string; blurb: string }> = {
   fitment: { label: "Role Fitment Analysis", blurb: "CV matched against the job description" },
