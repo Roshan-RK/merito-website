@@ -4,6 +4,7 @@ import { getReferenceCheckStatus, computeReferenceReport } from "@/lib/reference
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import { nameFromEmail, type Scores } from "@/lib/personality";
+import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 
 export type CombinedReportData = {
   fitment: { roleTitle: string; displayName: string; report: ResumeMatchReportReady } | null;
@@ -73,10 +74,27 @@ export async function loadCombinedReportData({
     }
   }
 
+  // currentLead is always the candidate's LATEST lead, but roleTitle can be a
+  // caller-supplied roleTitleParam for a DIFFERENT, older role (the public
+  // share page passes a role title frozen at share-link-creation time -- see
+  // lib/reportShareTokens.ts). OR-ing currentLead.id together with a
+  // requested roleTitle that belongs to a different lead would match
+  // "interview linked to the LATEST lead OR interview matching the
+  // REQUESTED role" -- two different leads' identities ORed together --
+  // and .order("updated_at").limit(1) could then return the latest lead's
+  // interview instead of the requested role's. Only use the lead_id half of
+  // the identity match when currentLead actually IS the lead being asked
+  // about; otherwise fall back to a plain role_title match.
+  const identityLeadId = currentLead && currentLead.role_title === roleTitle ? currentLead.id : null;
+
   let interview: CombinedReportData["interview"] = null;
   if (include.has("interview")) {
     let query = supabase.from("fitment_interviews").select("role_title, status, report_raw, updated_at").eq("user_id", userId);
-    if (roleTitle) query = query.eq("role_title", roleTitle);
+    if (roleTitle) {
+      query = identityLeadId
+        ? query.or(leadIdOrRoleTitleFilter(identityLeadId, roleTitle))
+        : query.eq("role_title", roleTitle);
+    }
     const { data: row } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
     if (row && row.status === "ready" && row.report_raw) {
       interview = { roleTitle: row.role_title, report: row.report_raw as InterviewReportReady, updatedAt: row.updated_at };

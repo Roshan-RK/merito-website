@@ -306,20 +306,35 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
 
   const { data: interviewRows } = await supabase
     .from("fitment_interviews")
-    .select("id, role_title, status, report_raw, report_overridden, ib_agent_id, ib_candidate_id, updated_at")
+    .select("id, lead_id, role_title, status, report_raw, report_overridden, ib_agent_id, ib_candidate_id, updated_at")
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
 
-  // Most-recent row per role -- mirrors the ordering used everywhere else
+  // Most-recent row per key -- mirrors the ordering used everywhere else
   // fitment_interviews is read by role_title (see interview/status/route.ts).
-  const latestInterviewByRole = new Map<string, NonNullable<typeof interviewRows>[number]>();
+  // Keyed by the interview's own lead_id when present -- an exact,
+  // collision-free link to the one lead it was scored against -- falling
+  // back to role_title only for historical rows that predate the lead_id
+  // backfill (those rows must keep matching by role_title exactly as they
+  // did before this change). This query is already scoped to a single
+  // user_id, so no user prefix is needed in the key (unlike
+  // adminAnalytics.ts's getScoreAnalysis, which joins across all users).
+  const latestInterviewByKey = new Map<string, NonNullable<typeof interviewRows>[number]>();
   for (const row of interviewRows ?? []) {
-    if (!latestInterviewByRole.has(row.role_title)) latestInterviewByRole.set(row.role_title, row);
+    const key = (row.lead_id as string | null) ?? row.role_title;
+    if (!latestInterviewByKey.has(key)) latestInterviewByKey.set(key, row);
   }
-  const interviewByRole = new Map(
-    [...latestInterviewByRole.entries()]
-      .filter(([, row]) => row.status === "ready")
-      .map(([roleTitle, row]) => [roleTitle, row.report_raw as InterviewReportReady])
+  // Same key set as latestInterviewByKey (never filtered down) -- an
+  // id-matched interview that isn't ready, or that is ready but has a null
+  // report, must still register as "present" here (with a null value), so
+  // the .has()-based lookup below can tell "matched, but nothing to show"
+  // apart from "no match at this key at all" and correctly avoid falling
+  // through to a role_title sibling's report.
+  const interviewReportByKey = new Map(
+    [...latestInterviewByKey.entries()].map(([key, row]) => [
+      key,
+      row.status === "ready" ? (row.report_raw as InterviewReportReady | null) : null,
+    ])
   );
 
   const { data: personalityRow } = await supabase
@@ -387,7 +402,15 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
           totalExperience: profileOverrideRow.total_experience,
         };
       }
-      const interviewRow = latestInterviewByRole.get(lead.role_title);
+      const idKey = lead.id;
+      const roleKey = lead.role_title;
+      // .has() (not `??`) so once an interview IS linked to this lead by
+      // lead_id, that link is authoritative -- even when the linked row
+      // isn't ready (and so has no usable report/history) -- and never
+      // silently falls through to a different interview that merely shares
+      // role_title.
+      const interviewRow = latestInterviewByKey.has(idKey) ? latestInterviewByKey.get(idKey) : latestInterviewByKey.get(roleKey);
+      const interviewReport = interviewReportByKey.has(idKey) ? interviewReportByKey.get(idKey) : interviewReportByKey.get(roleKey);
       const interviewOverrideHistory = interviewRow ? await listActionsForTarget("interview", interviewRow.id) : [];
       return {
         id: lead.id,
@@ -402,7 +425,7 @@ export async function getCandidateDetail(userId: string): Promise<CandidateDetai
             (a.newValue as { leadId?: string } | null)?.leadId === lead.id
         ),
         candidateDetails,
-        interviewReport: interviewByRole.get(lead.role_title) ?? null,
+        interviewReport: interviewReport ?? null,
         interviewOverridden: interviewRow?.report_overridden ?? false,
         interviewOverrideHistory: interviewOverrideHistory.filter(
           (a) => a.action === "interview.report_override" || a.action === "interview.report_override_cleared"

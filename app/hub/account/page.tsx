@@ -13,6 +13,7 @@ import { getRecruiterViewCount } from "@/lib/recruiterActivity";
 import RecruiterActivityPanel from "./RecruiterActivityPanel";
 import AuthenticatedFitmentChecker from "./AuthenticatedFitmentChecker";
 import { resolveActiveLead } from "@/lib/activeLead";
+import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 
 export default async function AccountPage({
   searchParams,
@@ -110,7 +111,7 @@ export default async function AccountPage({
     .from("fitment_interviews")
     .select("id, status, ib_agent_id, ib_candidate_id, invited_at, stuck_at")
     .eq("user_id", user.id)
-    .eq("role_title", current.role_title)
+    .or(leadIdOrRoleTitleFilter(current.id, current.role_title))
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();

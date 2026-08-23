@@ -21,6 +21,7 @@ const recruiterPreviewSelectMock = vi.fn();
 const recruiterPreviewUpsertMock = vi.fn();
 const profileOverrideSelectMock = vi.fn();
 const profileOverrideUpsertMock = vi.fn();
+const reportShareLinksSelectMock = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({
@@ -35,6 +36,7 @@ vi.mock("@/lib/supabase", () => ({
       if (table === "candidate_deletions") return { select: candidateDeletionsSelectMock, insert: candidateDeletionsInsertMock, delete: candidateDeletionsDeleteMock };
       if (table === "recruiter_preview_settings") return { select: recruiterPreviewSelectMock, upsert: recruiterPreviewUpsertMock };
       if (table === "candidate_profile_overrides") return { select: profileOverrideSelectMock, upsert: profileOverrideUpsertMock };
+      if (table === "report_share_links") return { select: reportShareLinksSelectMock };
       throw new Error(`Unexpected table in test: ${table}`);
     },
     rpc: rpcMock,
@@ -56,6 +58,15 @@ const listActionsForTargetMock = vi.fn();
 vi.mock("@/lib/adminAuditLog", () => ({
   logAdminAction: logAdminActionMock,
   listActionsForTarget: listActionsForTargetMock,
+}));
+
+const getReferenceCheckStatusMock = vi.fn();
+const computeReferenceReportMock = vi.fn();
+const listRefereeOverrideHistoryMock = vi.fn();
+vi.mock("@/lib/referenceChecks", () => ({
+  getReferenceCheckStatus: getReferenceCheckStatusMock,
+  computeReferenceReport: computeReferenceReportMock,
+  listRefereeOverrideHistory: listRefereeOverrideHistoryMock,
 }));
 
 describe("banCandidate", () => {
@@ -1275,5 +1286,120 @@ describe("broadcastCandidateNotification", () => {
     const result = await broadcastCandidateNotification({}, "Hello all", "general", "roshan@merito.in");
 
     expect(result).toEqual({ sent: 3, failed: 0 });
+  });
+});
+
+describe("getCandidateDetail", () => {
+  function lead(overrides: Partial<Record<string, unknown>> = {}) {
+    return {
+      id: "lead-1",
+      role_title: "Product Manager",
+      score: 7,
+      name: "Test Candidate",
+      email: "candidate@example.com",
+      resume_match_status: "PENDING",
+      resume_match_raw: null,
+      resume_match_overridden: false,
+      resume_text: null,
+      ib_applied_job_id: null, // keeps candidateDetails resolution out of scope of these tests
+      created_at: "2026-01-01T00:00:00Z",
+      ...overrides,
+    };
+  }
+
+  function interview(overrides: Partial<Record<string, unknown>> = {}) {
+    return {
+      id: "interview-1",
+      lead_id: null,
+      role_title: "Product Manager",
+      status: "invited",
+      report_raw: null,
+      report_overridden: false,
+      ib_agent_id: "agent-1",
+      ib_candidate_id: "cand-1",
+      updated_at: "2026-01-01T00:00:00Z",
+      ...overrides,
+    };
+  }
+
+  function stubLeadsAndInterviews(leadRows: Array<Record<string, unknown>>, interviewRows: Array<Record<string, unknown>>) {
+    fitmentLeadsSelectMock.mockReturnValue({ eq: () => ({ order: () => Promise.resolve({ data: leadRows }) }) });
+    fitmentInterviewsSelectMock.mockReturnValue({ eq: () => ({ order: () => Promise.resolve({ data: interviewRows }) }) });
+  }
+
+  beforeEach(() => {
+    fitmentLeadsSelectMock.mockReset();
+    fitmentInterviewsSelectMock.mockReset();
+    personalityTestsSelectMock.mockReset();
+    personalityTestsSelectMock.mockReturnValue({
+      eq: () => ({ order: () => ({ limit: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }) }) }),
+    });
+    getReferenceCheckStatusMock.mockReset();
+    getReferenceCheckStatusMock.mockResolvedValue(null);
+    recruiterPreviewSelectMock.mockReset();
+    recruiterPreviewSelectMock.mockReturnValue({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }) });
+    reportShareLinksSelectMock.mockReset();
+    reportShareLinksSelectMock.mockReturnValue({ eq: () => ({ order: () => Promise.resolve({ data: [] }) }) });
+    candidateDeletionsSelectMock.mockReset();
+    candidateDeletionsSelectMock.mockReturnValue({ eq: () => ({ is: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }) }) });
+    profileOverrideSelectMock.mockReset();
+    profileOverrideSelectMock.mockReturnValue({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }) });
+    listActionsForTargetMock.mockReset();
+    listActionsForTargetMock.mockResolvedValue([]);
+  });
+
+  it("matches an interview to its lead by lead_id when present", async () => {
+    stubLeadsAndInterviews(
+      [lead({ id: "lead-1", role_title: "Product Manager" })],
+      [interview({ id: "interview-1", lead_id: "lead-1", role_title: "Product Manager", status: "ready", report_raw: { overallScore: 8 } })]
+    );
+    const { getCandidateDetail } = await import("../adminCandidates");
+
+    const detail = await getCandidateDetail("user-1");
+
+    expect(detail!.leads[0].interviewReport).toEqual({ overallScore: 8 });
+    expect(detail!.leads[0].interviewRow).toEqual({ id: "interview-1", status: "ready", ibAgentId: "agent-1", ibCandidateId: "cand-1" });
+  });
+
+  it("falls back to matching by role_title when the interview's lead_id is null (historical, pre-backfill rows)", async () => {
+    stubLeadsAndInterviews(
+      [lead({ id: "lead-2", role_title: "Product Manager" })],
+      [interview({ id: "interview-2", lead_id: null, role_title: "Product Manager", status: "ready", report_raw: { overallScore: 5 } })]
+    );
+    const { getCandidateDetail } = await import("../adminCandidates");
+
+    const detail = await getCandidateDetail("user-1");
+
+    expect(detail!.leads[0].interviewReport).toEqual({ overallScore: 5 });
+    expect(detail!.leads[0].interviewRow?.id).toBe("interview-2");
+  });
+
+  it("does not fall through to a role_title sibling's report when the id-matched interview has no report of its own", async () => {
+    stubLeadsAndInterviews(
+      [lead({ id: "lead-1", role_title: "Product Manager" })],
+      [
+        // Exact id link to lead-1, but not ready yet -- `.has()` on this key
+        // must report true while its report value is null.
+        interview({ id: "iv-1", lead_id: "lead-1", role_title: "Product Manager", status: "invited", report_raw: null, updated_at: "2026-01-02T00:00:00Z" }),
+        // Unlinked (lead_id null) interview that merely shares role_title,
+        // with a real ready report -- must never be attributed to lead-1.
+        // A `??`-based join would wrongly fall through to this sibling's
+        // report; `.has()` must keep lead-1's report null instead.
+        interview({
+          id: "iv-2",
+          lead_id: null,
+          role_title: "Product Manager",
+          status: "ready",
+          report_raw: { overallScore: 9 },
+          updated_at: "2026-01-01T00:00:00Z",
+        }),
+      ]
+    );
+    const { getCandidateDetail } = await import("../adminCandidates");
+
+    const detail = await getCandidateDetail("user-1");
+
+    expect(detail!.leads[0].interviewReport).toBeNull();
+    expect(detail!.leads[0].interviewRow?.id).toBe("iv-1");
   });
 });

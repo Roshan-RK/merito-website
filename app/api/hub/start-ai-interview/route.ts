@@ -57,10 +57,9 @@ export async function POST(request: Request) {
   // candidateId was never valid on the new job either. There's no cheap fix
   // without re-collecting the CV, so block instead of silently failing —
   // and check before the payment-credit consumption below so a blocked
-  // attempt is never charged. role_title is the only link fitment_interviews
-  // has back to an attempt (no lead_id FK), so this fires the same way
-  // whether reached via a retake or via Change Target Role reusing the same
-  // role title text.
+  // attempt is never charged. This checks by role_title (not lead_id) so it
+  // fires the same way whether reached via a retake or via Change Target
+  // Role reusing the same role title text.
   const { data: priorAttempt } = await admin
     .from("fitment_interviews")
     .select("id")
@@ -139,11 +138,12 @@ export async function POST(request: Request) {
   // reusing it here would let an admin mark a candidate "invited" when
   // IntervueBox was never actually confirmed to have sent anything.
   const userId = user.id;
+  const leadId = lead.id;
   async function recordFailedInviteAttempt(detail: Record<string, unknown>) {
     await recordPipelineFailure({
       kind: "interview_invite_failed",
       userId,
-      leadId: null,
+      leadId,
       orderId: consumedOrderId,
       detail: { stage, roleTitle, ibJobId, candidateId, ibAgentId, ...detail },
     });
@@ -229,7 +229,7 @@ export async function POST(request: Request) {
     await recordPipelineFailure({
       kind: "interview_invite_after_payment",
       userId: user.id,
-      leadId: null,
+      leadId: lead.id,
       orderId: consumedOrderId,
       detail: { roleTitle, ibJobId, ibAgentId, ibCandidateId: candidateId, error: insertError.message },
     });

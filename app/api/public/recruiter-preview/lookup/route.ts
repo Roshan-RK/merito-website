@@ -13,6 +13,7 @@ import {
 } from "@/lib/recruiterPreview";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
+import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 
 export const runtime = "nodejs";
 
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
 
   const { data: leads } = await admin
     .from("fitment_leads")
-    .select("role_title, name, resume_match_status, resume_match_raw, candidate_level")
+    .select("id, role_title, name, resume_match_status, resume_match_raw, candidate_level")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(1);
@@ -101,12 +102,12 @@ export async function POST(request: Request) {
   }
 
   let interview: LookupInterview | null = null;
-  if (sections.has("interview") && roleTitle) {
+  if (sections.has("interview") && currentLead && roleTitle) {
     const { data: interviewRow } = await admin
       .from("fitment_interviews")
       .select("status, report_raw, updated_at")
       .eq("user_id", userId)
-      .eq("role_title", roleTitle)
+      .or(leadIdOrRoleTitleFilter(currentLead.id, roleTitle))
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();

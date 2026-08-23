@@ -248,10 +248,15 @@ export async function getScoreAnalysis(): Promise<ScoreAnalysis> {
   const [{ data: leadRows }, { data: interviewRows }] = await Promise.all([
     supabase
       .from("fitment_leads")
-      .select("user_id, role_title, resume_match_status, resume_match_score, resume_match_overridden")
+      .select("id, user_id, role_title, resume_match_status, resume_match_score, resume_match_overridden")
       .eq("resume_match_status", "READY")
       .eq("resume_match_overridden", false),
-    supabase.from("fitment_interviews").select("user_id, role_title, status, report_raw, report_overridden").eq("status", "ready").eq("report_overridden", false),
+    supabase
+      .from("fitment_interviews")
+      .select("user_id, role_title, lead_id, status, report_raw, report_overridden, updated_at")
+      .eq("status", "ready")
+      .eq("report_overridden", false)
+      .order("updated_at", { ascending: false }),
   ]);
 
   const fitmentScores = (leadRows ?? []).map((r) => r.resume_match_score as number).filter((s) => Number.isFinite(s));
@@ -259,13 +264,38 @@ export async function getScoreAnalysis(): Promise<ScoreAnalysis> {
     .map((r) => (r.report_raw as { overallScore?: number } | null)?.overallScore)
     .filter((s): s is number => Number.isFinite(s));
 
-  const fitmentByKey = new Map((leadRows ?? []).map((r) => [`${r.user_id}:${r.role_title}`, r.resume_match_score as number]));
+  // Keyed by the interview's own lead_id when present -- an exact,
+  // collision-free link to the one lead it was scored against -- falling
+  // back to role_title only for historical rows that predate the lead_id
+  // backfill (migration 0049_fitment_interviews_lead_id.sql leaves lead_id
+  // null when no match could be found; those rows must keep matching by
+  // role_title exactly as they did before this change). Ordered by
+  // updated_at descending with an explicit first-wins loop -- not `new
+  // Map(rows.map(...))`, which is last-duplicate-wins and therefore
+  // DB-order-dependent without an .order() clause -- so which interview
+  // wins a role_title key collision is deterministic (most-recently-updated)
+  // rather than whatever order Postgres happened to return rows in. Mirrors
+  // lib/adminCandidates.ts's latestInterviewByKey.
+  const interviewScoreByKey = new Map<string, number | undefined>();
+  for (const r of interviewRows ?? []) {
+    const key = `${r.user_id}:${(r.lead_id as string | null) ?? r.role_title}`;
+    if (!interviewScoreByKey.has(key)) {
+      interviewScoreByKey.set(key, (r.report_raw as { overallScore?: number } | null)?.overallScore);
+    }
+  }
+
   const pairs: Array<[number, number]> = [];
-  for (const row of interviewRows ?? []) {
-    const fitmentScore = fitmentByKey.get(`${row.user_id}:${row.role_title}`);
-    const interviewScore = (row.report_raw as { overallScore?: number } | null)?.overallScore;
+  for (const lead of leadRows ?? []) {
+    const idKey = `${lead.user_id}:${lead.id}`;
+    const roleKey = `${lead.user_id}:${lead.role_title}`;
+    // .has() (not `??`) so an interview that IS linked by lead_id but lacks
+    // a usable score doesn't silently fall through to a different
+    // interview's role_title-matched score -- an exact id link, once it
+    // exists, is authoritative even when its own value is undefined.
+    const interviewScore = interviewScoreByKey.has(idKey) ? interviewScoreByKey.get(idKey) : interviewScoreByKey.get(roleKey);
+    const fitmentScore = lead.resume_match_score as number;
     if (Number.isFinite(fitmentScore) && Number.isFinite(interviewScore)) {
-      pairs.push([fitmentScore as number, interviewScore as number]);
+      pairs.push([fitmentScore, interviewScore as number]);
     }
   }
 

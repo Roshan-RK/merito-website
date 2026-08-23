@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { isReportUnlocked } from "@/lib/reportUnlocks";
 import { getReferenceCheckStatus } from "@/lib/referenceChecks";
 import { renderPageToPdf, requestCookiesFor } from "@/lib/pdf/renderPageToPdf";
+import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -24,19 +25,27 @@ export async function GET(request: Request) {
 
   let anyReady = false;
 
-  if (include.has("fitment")) {
+  // Gated on fitment OR interview: the fitment block below needs `current`
+  // for its own unlock/status check, and the fitment_interviews query
+  // further down needs `current.id` for its lead_id identity-match .or()
+  // clause -- that's the only reason this runs for "interview" requests
+  // too. Requests for personality or references alone never read
+  // `current`, so this fetch is skipped for them.
+  let current = null;
+  if (include.has("fitment") || include.has("interview")) {
     const { data: leads } = await supabase
       .from("fitment_leads")
       .select("id, role_title, resume_match_status, resume_match_raw")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(1);
-    const current = leads?.[0];
-    if (current) {
-      const unlocked = await isReportUnlocked(user.id, current.role_title);
-      if (unlocked && current.resume_match_status === "READY" && current.resume_match_raw) {
-        anyReady = true;
-      }
+    current = leads?.[0] ?? null;
+  }
+
+  if (include.has("fitment") && current) {
+    const unlocked = await isReportUnlocked(user.id, current.role_title);
+    if (unlocked && current.resume_match_status === "READY" && current.resume_match_raw) {
+      anyReady = true;
     }
   }
 
@@ -51,13 +60,26 @@ export async function GET(request: Request) {
     }
   }
 
+  // current is always the candidate's LATEST lead, but roleTitle is a
+  // caller-supplied query param that can name a DIFFERENT, older role.
+  // OR-ing current.id together with a roleTitle that belongs to a different
+  // lead would match "interview linked to the LATEST lead OR interview
+  // matching the REQUESTED role" -- two different leads' identities ORed
+  // together -- and .order("updated_at").limit(1) could then return the
+  // latest lead's interview instead of the requested role's. Only use the
+  // lead_id half of the identity match when `current` actually IS the lead
+  // being asked about; otherwise fall back to a plain role_title match.
+  const identityLeadId = current && current.role_title === roleTitle ? current.id : null;
+
   if (include.has("interview")) {
     let query = supabase
       .from("fitment_interviews")
       .select("role_title, status, report_raw")
       .eq("user_id", user.id);
     if (roleTitle) {
-      query = query.eq("role_title", roleTitle);
+      query = identityLeadId
+        ? query.or(leadIdOrRoleTitleFilter(identityLeadId, roleTitle))
+        : query.eq("role_title", roleTitle);
     }
     const { data: interview } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
     if (interview && interview.status === "ready" && interview.report_raw) {
