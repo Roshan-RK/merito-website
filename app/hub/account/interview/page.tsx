@@ -137,7 +137,7 @@ export default async function InterviewReportPage({
           {generating ? (
             <InterviewGeneratingState roleTitle={interview.role_title} />
           ) : (
-            <InterviewInProgressState roleTitle={interview.role_title} />
+            <InterviewInProgressState roleTitle={interview.role_title} leadId={interview.lead_id ?? ""} />
           )}
         </div>
       </main>

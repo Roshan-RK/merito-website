@@ -13,8 +13,8 @@ vi.mock("@/lib/intervuebox/invitations", () => ({
 const maybeSingleMock = vi.fn();
 const limitMock = vi.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
 const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
-const eqRoleMock = vi.fn().mockReturnValue({ order: orderMock });
-const eqUserMock = vi.fn().mockReturnValue({ eq: eqRoleMock });
+const eqLeadIdMock = vi.fn().mockReturnValue({ order: orderMock });
+const eqUserMock = vi.fn().mockReturnValue({ eq: eqLeadIdMock });
 const selectMock = vi.fn().mockReturnValue({ eq: eqUserMock });
 
 const updateEqMock = vi.fn().mockResolvedValue({ error: null });
@@ -49,14 +49,14 @@ describe("POST /api/hub/interview/launch-link", () => {
   it("returns 401 when not signed in", async () => {
     getUserMock.mockResolvedValue({ data: { user: null } });
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
     expect(response.status).toBe(401);
   });
 
   it("returns 400 when there's no row for the role", async () => {
     maybeSingleMock.mockResolvedValue({ data: null });
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
     expect(response.status).toBe(400);
   });
 
@@ -65,7 +65,7 @@ describe("POST /api/hub/interview/launch-link", () => {
       data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", magic_link: null, magic_link_expires_at: null },
     });
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
     expect(response.status).toBe(409);
     expect(reinviteInterviewCandidatesMock).not.toHaveBeenCalled();
   });
@@ -76,7 +76,7 @@ describe("POST /api/hub/interview/launch-link", () => {
       data: { id: "row-1", status: "invited", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", magic_link: "https://cached", magic_link_expires_at: future },
     });
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ url: "https://cached" });
     expect(reinviteInterviewCandidatesMock).not.toHaveBeenCalled();
@@ -93,7 +93,7 @@ describe("POST /api/hub/interview/launch-link", () => {
       magicLinks: [{ candidateId: "USR_1", magicLink: "https://fresh", expiresAt: "2026-08-20T10:00:00.000Z" }],
     });
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ url: "https://fresh" });
     expect(reinviteInterviewCandidatesMock).toHaveBeenCalledWith("INT_1", ["USR_1"], "REINVITE");
@@ -119,7 +119,7 @@ describe("POST /api/hub/interview/launch-link", () => {
       magicLinks: [{ candidateId: "USR_1", magicLink: "https://fresh-resume", expiresAt: "2026-08-20T10:00:00.000Z" }],
     });
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ url: "https://fresh-resume" });
     expect(reinviteInterviewCandidatesMock).toHaveBeenCalledWith("INT_1", ["USR_1"], "RESUME");
@@ -144,7 +144,7 @@ describe("POST /api/hub/interview/launch-link", () => {
       errors: [{ candidateId: "USR_1", error: "Cannot resume an interview in status EVALUATED" }],
     });
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "Cannot resume an interview in status EVALUATED" });
   });
@@ -156,7 +156,7 @@ describe("POST /api/hub/interview/launch-link", () => {
     });
     reinviteInterviewCandidatesMock.mockRejectedValue(new Error("IntervueBox 500"));
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "IntervueBox rejected the reinvite request." });
     expect(updateMock).not.toHaveBeenCalled();
@@ -172,7 +172,7 @@ describe("POST /api/hub/interview/launch-link", () => {
       magicLinks: [{ candidateId: "USR_1", magicLink: "https://fresh", expiresAt: "2026-08-20T10:00:00.000Z" }],
     });
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
     expect(response.status).toBe(200);
     expect(reinviteInterviewCandidatesMock).toHaveBeenCalled();
   });
@@ -192,7 +192,7 @@ describe("POST /api/hub/interview/launch-link", () => {
     });
     reinviteInterviewCandidatesMock.mockRejectedValue(new Error("IntervueBox 500"));
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
     expect(response.status).toBe(502);
     expect(updateMock).toHaveBeenCalledWith({ stuck_at: expect.any(String) });
   });
@@ -216,7 +216,7 @@ describe("POST /api/hub/interview/launch-link", () => {
       errors: [{ candidateId: "USR_1", error: "Cannot resume an interview in status EVALUATED" }],
     });
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
     expect(response.status).toBe(502);
     expect(updateMock).toHaveBeenCalledWith({ stuck_at: expect.any(String) });
   });
@@ -228,7 +228,7 @@ describe("POST /api/hub/interview/launch-link", () => {
     });
     reinviteInterviewCandidatesMock.mockRejectedValue(new Error("IntervueBox 500"));
     const { POST } = await importRoute();
-    const response = await POST(makeRequest({ roleTitle: "Backend Engineer" }));
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
     expect(response.status).toBe(502);
     expect(updateMock).not.toHaveBeenCalled();
   });
