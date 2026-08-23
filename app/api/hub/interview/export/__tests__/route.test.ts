@@ -96,4 +96,27 @@ describe("GET /api/hub/interview/export", () => {
     const buffer = await response.arrayBuffer();
     expect(buffer.byteLength).toBeGreaterThan(0);
   });
+
+  it("forwards to the print page by lead when the interview has a lead_id", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "roshan@merito.in" } } });
+    interviewMaybeSingleMock.mockResolvedValue({
+      data: {
+        role_title: "HR Business Partner",
+        status: "ready",
+        report_raw: { overallScore: 8 },
+        lead_id: "lead-1",
+      },
+      error: null,
+    });
+    const { GET } = await importRoute();
+
+    const response = await GET(buildRequest("http://localhost/api/hub/interview/export?lead=lead-1"));
+
+    expect(response.status).toBe(200);
+    expect(renderPageToPdfMock).toHaveBeenCalledWith(
+      "http://localhost/hub/account/interview/print?lead=lead-1",
+      [],
+      { singlePage: true }
+    );
+  });
 });

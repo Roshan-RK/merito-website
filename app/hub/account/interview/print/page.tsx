@@ -108,15 +108,18 @@ export default async function InterviewPrintPage({
     redirect("/hub/login");
   }
 
-  const { role } = await searchParams;
+  const { lead, role } = await searchParams;
+  const leadId = typeof lead === "string" ? lead : null;
   const roleTitle = typeof role === "string" ? role : null;
 
   let query = supabase
     .from("fitment_interviews")
-    .select("role_title, status, report_raw, updated_at")
+    .select("role_title, status, report_raw, updated_at, lead_id")
     .eq("user_id", user.id);
 
-  if (roleTitle) {
+  if (leadId) {
+    query = query.eq("lead_id", leadId);
+  } else if (roleTitle) {
     query = query.eq("role_title", roleTitle);
   }
 
