@@ -253,9 +253,10 @@ export async function getScoreAnalysis(): Promise<ScoreAnalysis> {
       .eq("resume_match_overridden", false),
     supabase
       .from("fitment_interviews")
-      .select("user_id, role_title, lead_id, status, report_raw, report_overridden")
+      .select("user_id, role_title, lead_id, status, report_raw, report_overridden, updated_at")
       .eq("status", "ready")
-      .eq("report_overridden", false),
+      .eq("report_overridden", false)
+      .order("updated_at", { ascending: false }),
   ]);
 
   const fitmentScores = (leadRows ?? []).map((r) => r.resume_match_score as number).filter((s) => Number.isFinite(s));
@@ -268,13 +269,20 @@ export async function getScoreAnalysis(): Promise<ScoreAnalysis> {
   // back to role_title only for historical rows that predate the lead_id
   // backfill (migration 0049_fitment_interviews_lead_id.sql leaves lead_id
   // null when no match could be found; those rows must keep matching by
-  // role_title exactly as they did before this change).
-  const interviewScoreByKey = new Map(
-    (interviewRows ?? []).map((r) => [
-      `${r.user_id}:${(r.lead_id as string | null) ?? r.role_title}`,
-      (r.report_raw as { overallScore?: number } | null)?.overallScore,
-    ])
-  );
+  // role_title exactly as they did before this change). Ordered by
+  // updated_at descending with an explicit first-wins loop -- not `new
+  // Map(rows.map(...))`, which is last-duplicate-wins and therefore
+  // DB-order-dependent without an .order() clause -- so which interview
+  // wins a role_title key collision is deterministic (most-recently-updated)
+  // rather than whatever order Postgres happened to return rows in. Mirrors
+  // lib/adminCandidates.ts's latestInterviewByKey.
+  const interviewScoreByKey = new Map<string, number | undefined>();
+  for (const r of interviewRows ?? []) {
+    const key = `${r.user_id}:${(r.lead_id as string | null) ?? r.role_title}`;
+    if (!interviewScoreByKey.has(key)) {
+      interviewScoreByKey.set(key, (r.report_raw as { overallScore?: number } | null)?.overallScore);
+    }
+  }
 
   const pairs: Array<[number, number]> = [];
   for (const lead of leadRows ?? []) {

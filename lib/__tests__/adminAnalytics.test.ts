@@ -227,6 +227,17 @@ describe("getScoreAnalysis", () => {
     return { eq: eq1 };
   }
 
+  // fitment_interviews now adds .order("updated_at", ...) after its two
+  // .eq() calls (Finding 6 fix: deterministic first-wins map instead of
+  // DB-order-dependent last-wins), so its mock chain needs one more link
+  // than fitmentLeadsSelectMock's plain chainOf.
+  function chainOfOrdered(finalData: unknown) {
+    const order = vi.fn().mockResolvedValue({ data: finalData });
+    const eq2 = vi.fn().mockReturnValue({ order });
+    const eq1 = vi.fn().mockReturnValue({ eq: eq2 });
+    return { eq: eq1 };
+  }
+
   it("excludes overridden rows, buckets scores, and correlates paired READY reports by lead_id", async () => {
     fitmentLeadsSelectMock.mockReturnValue(
       chainOf([
@@ -235,7 +246,7 @@ describe("getScoreAnalysis", () => {
       ])
     );
     fitmentInterviewsSelectMock.mockReturnValue(
-      chainOf([
+      chainOfOrdered([
         { user_id: "u1", role_title: "SDE", lead_id: "lead-1", status: "ready", report_raw: { overallScore: 2 } },
         { user_id: "u2", role_title: "SDE", lead_id: "lead-2", status: "ready", report_raw: { overallScore: 9 } },
       ])
@@ -261,7 +272,7 @@ describe("getScoreAnalysis", () => {
       ])
     );
     fitmentInterviewsSelectMock.mockReturnValue(
-      chainOf([
+      chainOfOrdered([
         // Historical, unbackfilled rows -- lead_id is null, so this must
         // still resolve via role_title or the pairing silently disappears.
         { user_id: "u1", role_title: "SDE", lead_id: null, status: "ready", report_raw: { overallScore: 2 } },
@@ -278,7 +289,7 @@ describe("getScoreAnalysis", () => {
 
   it("returns null correlation with fewer than 2 paired points", async () => {
     fitmentLeadsSelectMock.mockReturnValue(chainOf([{ id: "lead-1", user_id: "u1", role_title: "SDE", resume_match_status: "READY", resume_match_score: 50 }]));
-    fitmentInterviewsSelectMock.mockReturnValue(chainOf([]));
+    fitmentInterviewsSelectMock.mockReturnValue(chainOfOrdered([]));
 
     const { getScoreAnalysis } = await import("../adminAnalytics");
     const result = await getScoreAnalysis();
@@ -301,7 +312,7 @@ describe("getScoreAnalysis", () => {
       ])
     );
     fitmentInterviewsSelectMock.mockReturnValue(
-      chainOf([
+      chainOfOrdered([
         { user_id: "u2", role_title: "SDE", lead_id: "lead-x", status: "ready", report_raw: { overallScore: 1 } },
         { user_id: "u3", role_title: "SDE", lead_id: "lead-y", status: "ready", report_raw: { overallScore: 9 } },
         // Exact id link to lead-1, but not scored yet -- `.has()` on this

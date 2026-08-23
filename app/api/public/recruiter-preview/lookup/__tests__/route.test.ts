@@ -196,6 +196,6 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
     expect(body.interview).not.toHaveProperty("feedbackToInterviewer");
     expect(body.interview).not.toHaveProperty("criteriaEvaluationTable");
     expect(body.interview).not.toHaveProperty("roadmap");
-    expect(tableResults.fitment_interviews.or).toHaveBeenCalledWith("lead_id.eq.lead-1,role_title.eq.Data Analyst");
+    expect(tableResults.fitment_interviews.or).toHaveBeenCalledWith('lead_id.eq.lead-1,role_title.eq."Data Analyst"');
   });
 });

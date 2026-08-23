@@ -13,6 +13,7 @@ import {
 } from "@/lib/recruiterPreview";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
+import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 
 export const runtime = "nodejs";
 
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
       .from("fitment_interviews")
       .select("status, report_raw, updated_at")
       .eq("user_id", userId)
-      .or(`lead_id.eq.${currentLead.id},role_title.eq.${roleTitle}`)
+      .or(leadIdOrRoleTitleFilter(currentLead.id, roleTitle))
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();

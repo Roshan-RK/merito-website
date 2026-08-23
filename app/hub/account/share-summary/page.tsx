@@ -5,6 +5,7 @@ import { isReportUnlocked } from "@/lib/reportUnlocks";
 import { getReferenceCheckStatus } from "@/lib/referenceChecks";
 import { nameFromEmail } from "@/lib/personality";
 import { getAbsoluteUrl } from "@/lib/site";
+import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 
 const SECTION_COPY: Record<string, { label: string; blurb: string }> = {
   fitment: { label: "Role Fitment Analysis", blurb: "CV matched against the job description" },
@@ -62,7 +63,7 @@ export default async function ShareSummaryPage({
   let interviewDone = false;
   if (include.has("interview")) {
     let query = supabase.from("fitment_interviews").select("status, updated_at").eq("user_id", user.id);
-    if (currentLead) query = query.or(`lead_id.eq.${currentLead.id},role_title.eq.${currentLead.role_title}`);
+    if (currentLead) query = query.or(leadIdOrRoleTitleFilter(currentLead.id, currentLead.role_title));
     const { data: row } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
     interviewDone = row?.status === "ready";
   }

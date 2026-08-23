@@ -128,17 +128,33 @@ export default async function InterviewPrintPage({
 
   const report = interview.report_raw as InterviewReportReady;
 
-  let leadQuery = supabase
-    .from("fitment_leads")
-    .select("name, ib_applied_job_id")
-    .eq("user_id", user.id);
-  leadQuery = interview.lead_id
-    ? leadQuery.or(`id.eq.${interview.lead_id},role_title.eq.${interview.role_title}`)
-    : leadQuery.eq("role_title", interview.role_title);
-  const { data: lead } = await leadQuery
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // interview.lead_id, when set, is an exact known-correct link -- look it
+  // up directly (no ordering ambiguity possible) so it can never lose to a
+  // newer fitment_leads row that merely shares the same role_title text
+  // (e.g. from "Change Target Role" reusing the same title). Only fall back
+  // to the role_title match when there's no lead_id, or the exact lookup
+  // misses (a lead that's since been deleted).
+  let lead = interview.lead_id
+    ? (
+        await supabase
+          .from("fitment_leads")
+          .select("name, ib_applied_job_id")
+          .eq("user_id", user.id)
+          .eq("id", interview.lead_id)
+          .maybeSingle()
+      ).data
+    : null;
+  if (!lead) {
+    const { data } = await supabase
+      .from("fitment_leads")
+      .select("name, ib_applied_job_id")
+      .eq("user_id", user.id)
+      .eq("role_title", interview.role_title)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    lead = data;
+  }
 
   const candidateDetails = lead?.ib_applied_job_id
     ? await getCandidateResumeDetails(lead.ib_applied_job_id).catch(() => null)

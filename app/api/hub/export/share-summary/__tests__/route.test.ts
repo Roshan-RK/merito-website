@@ -104,7 +104,7 @@ describe("GET /api/hub/export/share-summary", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("application/pdf");
-    expect(interviewOrMock).toHaveBeenCalledWith("lead_id.eq.lead-1,role_title.eq.Senior Product Manager");
+    expect(interviewOrMock).toHaveBeenCalledWith('lead_id.eq.lead-1,role_title.eq."Senior Product Manager"');
     expect(renderPageToPdfMock).toHaveBeenCalledTimes(1);
     expect(renderPageToPdfMock).toHaveBeenCalledWith(
       "http://localhost/hub/account/share-summary?include=fitment%2Cinterview",
@@ -112,5 +112,20 @@ describe("GET /api/hub/export/share-summary", () => {
     );
     const buffer = await response.arrayBuffer();
     expect(buffer.byteLength).toBeGreaterThan(0);
+  });
+
+  it("quotes a comma-bearing role_title so it can't split the .or() filter into an extra clause", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1", email: "roshan@merito.in" } } });
+    leadListLimitMock.mockResolvedValue({
+      data: [{ id: "lead-1", role_title: "Manager, Growth", resume_match_status: "READY" }],
+      error: null,
+    });
+    isReportUnlockedMock.mockResolvedValue(true);
+    interviewMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+    const { GET } = await importRoute();
+
+    await GET(buildRequest("http://localhost/api/hub/export/share-summary?include=fitment,interview"));
+
+    expect(interviewOrMock).toHaveBeenCalledWith('lead_id.eq.lead-1,role_title.eq."Manager, Growth"');
   });
 });

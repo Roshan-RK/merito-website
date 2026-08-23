@@ -6,6 +6,7 @@ import { DEFAULT_LEVEL, type CandidateLevel } from "@/lib/razorpay/pricing";
 import type { InterviewStatus } from "@/app/hub/account/ProgressRail";
 import { buildPricingCards, buildBundleSummary } from "./pricingCatalog";
 import PricingCardsClient from "./PricingCardsClient";
+import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 
 export default async function PricingPage() {
   const supabase = await createSupabaseServerClient();
@@ -67,7 +68,7 @@ export default async function PricingPage() {
     .from("fitment_interviews")
     .select("status")
     .eq("user_id", user.id)
-    .eq("role_title", lead.role_title)
+    .or(leadIdOrRoleTitleFilter(lead.id, lead.role_title))
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();

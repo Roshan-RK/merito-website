@@ -121,17 +121,33 @@ export default async function InterviewReportPage({
   }
 
   if (viewState === "invited") {
-    let leadForLevelQuery = supabase
-      .from("fitment_leads")
-      .select("candidate_level")
-      .eq("user_id", userId);
-    leadForLevelQuery = interview.lead_id
-      ? leadForLevelQuery.or(`id.eq.${interview.lead_id},role_title.eq.${interview.role_title}`)
-      : leadForLevelQuery.eq("role_title", interview.role_title);
-    const { data: leadForLevel } = await leadForLevelQuery
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // interview.lead_id, when set, is an exact known-correct link -- look it
+    // up directly (no ordering ambiguity possible) so it can never lose to a
+    // newer fitment_leads row that merely shares the same role_title text
+    // (e.g. from "Change Target Role" reusing the same title). Only fall
+    // back to the role_title match when there's no lead_id, or the exact
+    // lookup misses (a lead that's since been deleted).
+    let leadForLevel = interview.lead_id
+      ? (
+          await supabase
+            .from("fitment_leads")
+            .select("candidate_level")
+            .eq("user_id", userId)
+            .eq("id", interview.lead_id)
+            .maybeSingle()
+        ).data
+      : null;
+    if (!leadForLevel) {
+      const { data } = await supabase
+        .from("fitment_leads")
+        .select("candidate_level")
+        .eq("user_id", userId)
+        .eq("role_title", interview.role_title)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      leadForLevel = data;
+    }
     const level = (leadForLevel?.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
     const generating = isInterviewGenerating("invited", interview.invited_at, level);
 
@@ -180,17 +196,30 @@ export default async function InterviewReportPage({
 
   const report = interview.report_raw as InterviewReportReady;
 
-  let leadQuery = supabase
-    .from("fitment_leads")
-    .select("name, ib_applied_job_id")
-    .eq("user_id", user.id);
-  leadQuery = interview.lead_id
-    ? leadQuery.or(`id.eq.${interview.lead_id},role_title.eq.${interview.role_title}`)
-    : leadQuery.eq("role_title", interview.role_title);
-  const { data: lead } = await leadQuery
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // Same exact-match-first priority as the "invited" branch above: an
+  // interview.lead_id, when set, is an exact known-correct link and must
+  // win over any role_title-only match, however recent.
+  let lead = interview.lead_id
+    ? (
+        await supabase
+          .from("fitment_leads")
+          .select("name, ib_applied_job_id")
+          .eq("user_id", user.id)
+          .eq("id", interview.lead_id)
+          .maybeSingle()
+      ).data
+    : null;
+  if (!lead) {
+    const { data } = await supabase
+      .from("fitment_leads")
+      .select("name, ib_applied_job_id")
+      .eq("user_id", user.id)
+      .eq("role_title", interview.role_title)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    lead = data;
+  }
 
   const candidateDetails = lead?.ib_applied_job_id
     ? await getCandidateResumeDetails(lead.ib_applied_job_id).catch((err) => {

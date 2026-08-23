@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { isReportUnlocked } from "@/lib/reportUnlocks";
 import { getReferenceCheckStatus } from "@/lib/referenceChecks";
 import { renderPageToPdf, requestCookiesFor } from "@/lib/pdf/renderPageToPdf";
+import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
 
   if (include.has("interview")) {
     let query = supabase.from("fitment_interviews").select("status").eq("user_id", user.id);
-    if (currentLead) query = query.or(`lead_id.eq.${currentLead.id},role_title.eq.${currentLead.role_title}`);
+    if (currentLead) query = query.or(leadIdOrRoleTitleFilter(currentLead.id, currentLead.role_title));
     const { data: interview } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
     if (interview && interview.status === "ready") {
       anyReady = true;

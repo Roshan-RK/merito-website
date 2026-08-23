@@ -6,6 +6,7 @@ import { buildLookupFitment, buildLookupPersonality, buildLookupInterview } from
 import type { LookupResponse, CandidateLevel } from "@/shared/recruiter-preview/types";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
+import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 import RecruiterPreviewClient from "./RecruiterPreviewClient";
 
 export default async function RecruiterPreviewPage() {
@@ -57,7 +58,7 @@ export default async function RecruiterPreviewPage() {
       .from("fitment_interviews")
       .select("status, report_raw, updated_at")
       .eq("user_id", user.id)
-      .or(`lead_id.eq.${currentLead.id},role_title.eq.${roleTitle}`)
+      .or(leadIdOrRoleTitleFilter(currentLead.id, roleTitle))
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();

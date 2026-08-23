@@ -8,12 +8,18 @@
 -- on lead_id (fitment_interviews_lead_id_idx is a plain, non-unique btree)
 -- and a user can legitimately have many interview rows sharing a user_id --
 -- one per role, ever -- so this is not a PK-collision bug like the prior
--- personality_tests fix. It is a dedup guard that can miss a genuine
--- duplicate: two rows can share the same lead_id (the same interview) while
--- differing in role_title text, in which case the old guard would wrongly
--- move a row that already has a match on keep_user_id. Widen the guard so
--- it skips the move when keep_user_id already has a row sharing EITHER
--- identity key -- lead_id (when set) or role_title.
+-- personality_tests fix, and role_title-only matching cannot in practice
+-- miss a duplicate here either: each lead belongs to one user, fitment_leads
+-- moves first (above), and t/k are already scoped to two different
+-- user_ids by this UPDATE's own WHERE/NOT EXISTS clauses, so a genuine
+-- `k.lead_id = t.lead_id` collision across those two users is not something
+-- this guard needs to defend against. This change is defensive symmetry
+-- with this phase's app-level rule of treating lead_id (when set) and
+-- role_title as equally valid identity keys for fitment_interviews
+-- everywhere else in the codebase (see lib/postgrestIdentityFilter.ts) --
+-- not a fix for an observed duplicate. Widen the guard so it skips the move
+-- when keep_user_id already has a row sharing EITHER identity key --
+-- lead_id (when set) or role_title.
 --
 -- Postgres functions are replaced whole, so this reproduces the entire
 -- merge_candidate_accounts body from 0054 verbatim, changing only the
