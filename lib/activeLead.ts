@@ -1,10 +1,12 @@
 export function resolveActiveLead<T extends { id: string }>(
   leads: T[],
-  requestedLeadId?: string | null
-): T | null {
-  if (leads.length === 0) return null;
-  if (requestedLeadId) {
-    const match = leads.find((lead) => lead.id === requestedLeadId);
+  leadIdOverride?: string
+): T {
+  if (leads.length === 0) {
+    throw new Error("resolveActiveLead: leads array must not be empty");
+  }
+  if (leadIdOverride) {
+    const match = leads.find((lead) => lead.id === leadIdOverride);
     if (match) return match;
   }
   return leads[0];
