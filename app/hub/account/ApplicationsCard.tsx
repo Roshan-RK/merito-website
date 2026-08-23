@@ -33,39 +33,46 @@ export default function ApplicationsCard({ applications, currentLeadId }: { appl
         {applications.map((app, i) => {
           const isCurrent = app.id === currentLeadId;
           return (
-            <div
+            <Link
               key={app.id}
-              className={isCurrent ? "bg-[#ed1a24]/[0.06]" : ""}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-                padding: "13px 14px",
-                borderRadius: 10,
-                borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.06)",
-              }}
+              href={`?lead=${app.id}`}
+              className="block"
             >
-              <div>
-                <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13.5, margin: 0 }}>
-                  {app.roleTitle}
-                  {isCurrent && (
-                    <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 10.5, marginLeft: 8, textTransform: "uppercase" }}>
-                      Current
-                    </span>
-                  )}
-                </p>
-                <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 11.5, margin: "2px 0 0" }}>
-                  {new Date(app.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                </p>
-              </div>
               <div
-                className="flex items-center justify-center font-[family-name:var(--font-poppins)] font-bold text-[#ed1a24]"
-                style={{ width: 40, height: 40, borderRadius: "50%", border: "2px solid #ed1a24", fontSize: 12.5, flexShrink: 0 }}
+                className={isCurrent ? "bg-[#ed1a24]/[0.06]" : ""}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  padding: "13px 14px",
+                  borderRadius: 10,
+                  borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.06)",
+                  cursor: "pointer",
+                  transition: "background-color 0.2s ease",
+                }}
               >
-                {app.score.toFixed(1)}
+                <div>
+                  <p className="font-[family-name:var(--font-poppins)] font-semibold text-white" style={{ fontSize: 13.5, margin: 0 }}>
+                    {app.roleTitle}
+                    {isCurrent && (
+                      <span className="font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]" style={{ fontSize: 10.5, marginLeft: 8, textTransform: "uppercase" }}>
+                        Current
+                      </span>
+                    )}
+                  </p>
+                  <p className="font-[family-name:var(--font-poppins)] text-white/40" style={{ fontSize: 11.5, margin: "2px 0 0" }}>
+                    {new Date(app.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
+                </div>
+                <div
+                  className="flex items-center justify-center font-[family-name:var(--font-poppins)] font-bold text-[#ed1a24]"
+                  style={{ width: 40, height: 40, borderRadius: "50%", border: "2px solid #ed1a24", fontSize: 12.5, flexShrink: 0 }}
+                >
+                  {app.score.toFixed(1)}
+                </div>
               </div>
-            </div>
+            </Link>
           );
         })}
       </div>
