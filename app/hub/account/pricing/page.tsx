@@ -8,11 +8,18 @@ import { buildPricingCards, buildBundleSummary } from "./pricingCatalog";
 import PricingCardsClient from "./PricingCardsClient";
 import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 
-export default async function PricingPage() {
+export default async function PricingPage({
+  searchParams,
+}: {
+  searchParams: { lead?: string };
+}) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Note: ?lead= param is accepted for URL consistency but not used
+  // (pricing tiers are candidate-wide based on latest lead's level)
 
   if (!user) {
     redirect("/hub/login");
