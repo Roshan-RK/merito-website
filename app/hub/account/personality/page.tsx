@@ -29,8 +29,11 @@ export default async function PersonalityTestPage({
 
   const current = leads?.[0];
 
-  const { role } = await searchParams;
+  const { role, lead } = await searchParams;
   let roleTitle = typeof role === "string" ? role : null;
+
+  // Note: ?lead= param is accepted for URL consistency but not used
+  // (personality tests are candidate-wide)
 
   if (!roleTitle) {
     roleTitle = current?.role_title ?? null;
