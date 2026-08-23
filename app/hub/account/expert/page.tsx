@@ -143,8 +143,9 @@ const CARD = "bg-[#141416] border border-white/[0.08]";
 export default async function ExpertBioPage({
   searchParams,
 }: {
-  searchParams: { lead?: string };
+  searchParams: Promise<{ lead?: string }>;
 }) {
+  const { lead: leadIdParam } = await searchParams;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -163,8 +164,6 @@ export default async function ExpertBioPage({
   if (!leads?.length) {
     redirect("/hub/account");
   }
-
-  const leadIdParam = searchParams.lead;
   const activeLead = leadIdParam
     ? leads.find(l => l.id === leadIdParam) || leads[0]
     : leads[0];

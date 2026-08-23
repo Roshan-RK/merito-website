@@ -17,8 +17,9 @@ const SECTION_ORDER = ["fitment", "personality", "interview", "references"] as c
 export default async function ShareSummaryPage({
   searchParams,
 }: {
-  searchParams: { lead?: string; include?: string };
+  searchParams: Promise<{ lead?: string; include?: string }>;
 }) {
+  const { lead: leadIdParam, include: includeParam } = await searchParams;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -28,8 +29,8 @@ export default async function ShareSummaryPage({
     redirect("/hub/login");
   }
 
-  const includeParam = typeof searchParams.include === "string" ? searchParams.include : "";
-  const include = new Set(includeParam.split(",").filter(Boolean));
+  const includeStr = typeof includeParam === "string" ? includeParam : "";
+  const include = new Set(includeStr.split(",").filter(Boolean));
 
   const { data: leads } = await supabase
     .from("fitment_leads")
@@ -40,8 +41,6 @@ export default async function ShareSummaryPage({
   if (!leads?.length) {
     redirect("/hub/account");
   }
-
-  const leadIdParam = searchParams.lead;
   const currentLead = leadIdParam
     ? leads.find(l => l.id === leadIdParam) || leads[0]
     : leads[0];

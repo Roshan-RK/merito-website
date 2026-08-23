@@ -17,8 +17,9 @@ const EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text
 export default async function FullReportPage({
   searchParams,
 }: {
-  searchParams: { lead?: string };
+  searchParams: Promise<{ lead?: string }>;
 }) {
+  const { lead: leadIdParam } = await searchParams;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -37,8 +38,6 @@ export default async function FullReportPage({
   if (!leads || leads.length === 0) {
     redirect("/hub/account");
   }
-
-  const leadIdParam = searchParams.lead;
   const current = leadIdParam
     ? leads.find(l => l.id === leadIdParam) || leads[0]
     : leads[0];

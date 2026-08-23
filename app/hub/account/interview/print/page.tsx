@@ -97,8 +97,9 @@ function noteToneFor(heading: string) {
 export default async function InterviewPrintPage({
   searchParams,
 }: {
-  searchParams: { lead?: string };
+  searchParams: Promise<{ lead?: string }>;
 }) {
+  const { lead: leadIdParam } = await searchParams;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -117,8 +118,6 @@ export default async function InterviewPrintPage({
   if (!leads?.length) {
     redirect("/hub/account");
   }
-
-  const leadIdParam = searchParams.lead;
   const activeLead = leadIdParam
     ? leads.find(l => l.id === leadIdParam) || leads[0]
     : leads[0];

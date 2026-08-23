@@ -11,8 +11,9 @@ import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 export default async function PricingPage({
   searchParams,
 }: {
-  searchParams: { lead?: string };
+  searchParams: Promise<{ lead?: string }>;
 }) {
+  await searchParams;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },

@@ -9,8 +9,9 @@ import ReferencesLockedState from "./ReferencesLockedState";
 export default async function ReferencesPage({
   searchParams,
 }: {
-  searchParams: { lead?: string };
+  searchParams: Promise<{ lead?: string }>;
 }) {
+  await searchParams;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
