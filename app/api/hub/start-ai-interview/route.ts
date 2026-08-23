@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         error:
-          "You've already completed an AI interview for this role. Each role can only be interviewed once. Change your target role to interview again.",
+          "You've already completed an AI interview for this opportunity. Each opportunity can only be interviewed once.",
       },
       { status: 409 }
     );
@@ -192,7 +192,7 @@ export async function POST(request: Request) {
   });
 
   if (insertError) {
-    // Postgres unique-violation on the partial (user_id, role_title) WHERE
+    // Postgres unique-violation on the partial (user_id, lead_id) WHERE
     // status='invited' index — a realistic double-click race where two
     // concurrent requests both pass the "no existing row" check above. The
     // IntervueBox-side invite already succeeded (possibly twice) either way,
