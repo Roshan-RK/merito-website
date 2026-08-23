@@ -13,16 +13,16 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const role = searchParams.get("role");
-  if (!role) {
-    return Response.json({ error: "role is required." }, { status: 400 });
+  const leadId = searchParams.get("lead");
+  if (!leadId) {
+    return Response.json({ error: "lead is required." }, { status: 400 });
   }
 
   const { data } = await supabase
     .from("fitment_interviews")
     .select("id, status, ib_agent_id, ib_candidate_id, stuck_at")
     .eq("user_id", user.id)
-    .eq("role_title", role)
+    .eq("lead_id", leadId)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
