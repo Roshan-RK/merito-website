@@ -18,7 +18,7 @@ const SECTION_ORDER = ["fitment", "personality", "interview", "references"] as c
 export default async function ShareSummaryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+  searchParams: { lead?: string; include?: string };
 }) {
   const supabase = await createSupabaseServerClient();
   const {
@@ -29,17 +29,24 @@ export default async function ShareSummaryPage({
     redirect("/hub/login");
   }
 
-  const params = await searchParams;
-  const includeParam = typeof params.include === "string" ? params.include : "";
+  const includeParam = typeof searchParams.include === "string" ? searchParams.include : "";
   const include = new Set(includeParam.split(",").filter(Boolean));
 
   const { data: leads } = await supabase
     .from("fitment_leads")
     .select("id, role_title, name, resume_match_status")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1);
-  const currentLead = leads?.[0];
+    .order("created_at", { ascending: false });
+
+  if (!leads?.length) {
+    redirect("/hub/account");
+  }
+
+  const leadIdParam = searchParams.lead;
+  const currentLead = leadIdParam
+    ? leads.find(l => l.id === leadIdParam) || leads[0]
+    : leads[0];
+
   const roleTitle = currentLead?.role_title ?? "-";
   const displayName = currentLead?.name || nameFromEmail(user.email ?? "");
 
@@ -61,9 +68,14 @@ export default async function ShareSummaryPage({
 
   let interviewDone = false;
   if (include.has("interview")) {
-    let query = supabase.from("fitment_interviews").select("status, updated_at").eq("user_id", user.id);
-    if (currentLead) query = query.or(leadIdOrRoleTitleFilter(currentLead.id, currentLead.role_title));
-    const { data: row } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
+    const { data: row } = await supabase
+      .from("fitment_interviews")
+      .select("status, updated_at")
+      .eq("user_id", user.id)
+      .eq("lead_id", currentLead.id)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
     interviewDone = row?.status === "ready";
   }
 

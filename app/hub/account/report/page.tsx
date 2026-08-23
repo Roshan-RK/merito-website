@@ -14,7 +14,11 @@ import ExportPreviewButton from "../ExportPreviewButton";
 
 const EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40";
 
-export default async function FullReportPage() {
+export default async function FullReportPage({
+  searchParams,
+}: {
+  searchParams: { lead?: string };
+}) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -34,7 +38,10 @@ export default async function FullReportPage() {
     redirect("/hub/account");
   }
 
-  const current = leads[0];
+  const leadIdParam = searchParams.lead;
+  const current = leadIdParam
+    ? leads.find(l => l.id === leadIdParam) || leads[0]
+    : leads[0];
   const level = (current.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
   const unlocked = await isReportUnlocked(user.id, current.role_title);
 

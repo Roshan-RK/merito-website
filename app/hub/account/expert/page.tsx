@@ -140,7 +140,11 @@ const EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text
 const SECTION_EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text-[#ed1a24]";
 const CARD = "bg-[#141416] border border-white/[0.08]";
 
-export default async function ExpertBioPage() {
+export default async function ExpertBioPage({
+  searchParams,
+}: {
+  searchParams: { lead?: string };
+}) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -152,12 +156,20 @@ export default async function ExpertBioPage() {
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("candidate_level")
+    .select("id, candidate_level")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1);
+    .order("created_at", { ascending: false });
 
-  const level = (leads?.[0]?.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
+  if (!leads?.length) {
+    redirect("/hub/account");
+  }
+
+  const leadIdParam = searchParams.lead;
+  const activeLead = leadIdParam
+    ? leads.find(l => l.id === leadIdParam) || leads[0]
+    : leads[0];
+
+  const level = (activeLead.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
   const priceLabel = formatPrice(PRODUCT_PRICING.counselling[level]);
 
   const { data: counsellingRequest } = await supabase

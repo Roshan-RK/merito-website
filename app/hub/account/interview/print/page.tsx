@@ -97,7 +97,7 @@ function noteToneFor(heading: string) {
 export default async function InterviewPrintPage({
   searchParams,
 }: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+  searchParams: { lead?: string };
 }) {
   const supabase = await createSupabaseServerClient();
   const {
@@ -108,22 +108,29 @@ export default async function InterviewPrintPage({
     redirect("/hub/login");
   }
 
-  const { lead: leadParam, role: roleParam } = await searchParams;
-  const leadId = typeof leadParam === "string" ? leadParam : null;
-  const roleTitle = typeof roleParam === "string" ? roleParam : null;
+  const { data: leads } = await supabase
+    .from("fitment_leads")
+    .select("id, role_title, name, ib_applied_job_id")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
 
-  let query = supabase
-    .from("fitment_interviews")
-    .select("role_title, status, report_raw, updated_at, lead_id")
-    .eq("user_id", user.id);
-
-  if (leadId) {
-    query = query.eq("lead_id", leadId);
-  } else if (roleTitle) {
-    query = query.eq("role_title", roleTitle);
+  if (!leads?.length) {
+    redirect("/hub/account");
   }
 
-  const { data: interview } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
+  const leadIdParam = searchParams.lead;
+  const activeLead = leadIdParam
+    ? leads.find(l => l.id === leadIdParam) || leads[0]
+    : leads[0];
+
+  const { data: interview } = await supabase
+    .from("fitment_interviews")
+    .select("role_title, status, report_raw, updated_at, lead_id")
+    .eq("user_id", user.id)
+    .eq("lead_id", activeLead.id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (!interview || interview.status !== "ready" || !interview.report_raw) {
     redirect("/hub/account/interview");
@@ -131,33 +138,8 @@ export default async function InterviewPrintPage({
 
   const report = interview.report_raw as InterviewReportReady;
 
-  // interview.lead_id, when set, is an exact known-correct link -- look it
-  // up directly (no ordering ambiguity possible) so it can never lose to a
-  // newer fitment_leads row that merely shares the same role_title text
-  // (e.g. from "Change Target Role" reusing the same title). Only fall back
-  // to the role_title match when there's no lead_id, or the exact lookup
-  // misses (a lead that's since been deleted).
-  let lead = interview.lead_id
-    ? (
-        await supabase
-          .from("fitment_leads")
-          .select("name, ib_applied_job_id")
-          .eq("user_id", user.id)
-          .eq("id", interview.lead_id)
-          .maybeSingle()
-      ).data
-    : null;
-  if (!lead) {
-    const { data } = await supabase
-      .from("fitment_leads")
-      .select("name, ib_applied_job_id")
-      .eq("user_id", user.id)
-      .eq("role_title", interview.role_title)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    lead = data;
-  }
+  // Use the activeLead we already fetched
+  const lead = activeLead as { name: string | null; ib_applied_job_id: string | null };
 
   const candidateDetails = lead?.ib_applied_job_id
     ? await getCandidateResumeDetails(lead.ib_applied_job_id).catch(() => null)

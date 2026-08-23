@@ -42,7 +42,11 @@ function Card({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default async function ReportPrintPage() {
+export default async function ReportPrintPage({
+  searchParams,
+}: {
+  searchParams: { lead?: string };
+}) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -56,13 +60,16 @@ export default async function ReportPrintPage() {
     .from("fitment_leads")
     .select("id, role_title, score, name, resume_match_status, resume_match_raw, ib_applied_job_id")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1);
+    .order("created_at", { ascending: false });
 
-  const current = leads?.[0];
-  if (!current) {
+  if (!leads?.length) {
     redirect("/hub/account");
   }
+
+  const leadIdParam = searchParams.lead;
+  const current = leadIdParam
+    ? leads.find(l => l.id === leadIdParam) || leads[0]
+    : leads[0];
 
   const unlocked = await isReportUnlocked(user.id, current.role_title);
   if (!unlocked || current.resume_match_status !== "READY" || !current.resume_match_raw) {

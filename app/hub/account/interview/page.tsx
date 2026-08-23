@@ -40,7 +40,7 @@ function StatTile({ icon: Icon, value, label }: { icon: React.ComponentType<{ si
 export default async function InterviewReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+  searchParams: { lead?: string };
 }) {
   const supabase = await createSupabaseServerClient();
   const {
@@ -52,50 +52,35 @@ export default async function InterviewReportPage({
   }
   const userId = user.id;
 
-  const { role } = await searchParams;
-  const roleTitle = typeof role === "string" ? role : null;
+  const { data: leads } = await supabase
+    .from("fitment_leads")
+    .select("id, role_title, candidate_level")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
-  async function latestReadyInterview(scopedToRole: string | null) {
-    let query = supabase
-      .from("fitment_interviews")
-      .select("role_title, status, report_raw, updated_at, ib_interview_status, stuck_at, invited_at, lead_id")
-      .eq("user_id", userId);
-    if (scopedToRole) {
-      query = query.eq("role_title", scopedToRole);
-    }
-    const { data } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
-    return data;
+  if (!leads?.length) {
+    redirect("/hub/account");
   }
 
-  // ProgressRail links here with the *current lead's* role_title. fitment_interviews
-  // does carry a lead_id FK now, but this page's own ?role= param is still
-  // free-text role_title (its external URL contract), so this exact-match
-  // lookup can still find nothing when the candidate's most recent fitment
-  // check is for a role they haven't interviewed for yet (interview taken for
-  // an older/different role_title). Fall back to the most-recent-ready-
-  // interview-overall in that case, matching what happens when no ?role= is
-  // passed at all.
-  let interview = await latestReadyInterview(roleTitle);
-  if ((!interview || interview.status !== "ready" || !interview.report_raw) && roleTitle) {
-    interview = await latestReadyInterview(null);
-  }
+  const leadIdParam = searchParams.lead;
+  const activeLead = leadIdParam
+    ? leads.find(l => l.id === leadIdParam) || leads[0]
+    : leads[0];
+
+  // Query interviews for the active lead
+  const { data: interview } = await supabase
+    .from("fitment_interviews")
+    .select("role_title, status, report_raw, updated_at, ib_interview_status, stuck_at, invited_at, lead_id")
+    .eq("user_id", userId)
+    .eq("lead_id", activeLead.id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   const viewState = resolveInterviewViewState(interview);
 
   if (viewState === "locked") {
-    const { data: leads } = await supabase
-      .from("fitment_leads")
-      .select("id, role_title, candidate_level")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(1);
-
-    const current = leads?.[0];
-    if (!current) {
-      redirect("/hub/account");
-    }
-
-    const level = (current.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
+    const level = (activeLead.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
 
     return (
       <main>
@@ -108,7 +93,7 @@ export default async function InterviewReportPage({
               Role-matched questions with a scored breakdown afterward.
             </p>
           </div>
-          <InterviewLockedState leadId={current.id} roleTitle={current.role_title} level={level} userEmail={user.email ?? ""} />
+          <InterviewLockedState leadId={activeLead.id} roleTitle={activeLead.role_title} level={level} userEmail={user.email ?? ""} />
         </div>
       </main>
     );
@@ -121,34 +106,7 @@ export default async function InterviewReportPage({
   }
 
   if (viewState === "invited") {
-    // interview.lead_id, when set, is an exact known-correct link -- look it
-    // up directly (no ordering ambiguity possible) so it can never lose to a
-    // newer fitment_leads row that merely shares the same role_title text
-    // (e.g. from "Change Target Role" reusing the same title). Only fall
-    // back to the role_title match when there's no lead_id, or the exact
-    // lookup misses (a lead that's since been deleted).
-    let leadForLevel = interview.lead_id
-      ? (
-          await supabase
-            .from("fitment_leads")
-            .select("candidate_level")
-            .eq("user_id", userId)
-            .eq("id", interview.lead_id)
-            .maybeSingle()
-        ).data
-      : null;
-    if (!leadForLevel) {
-      const { data } = await supabase
-        .from("fitment_leads")
-        .select("candidate_level")
-        .eq("user_id", userId)
-        .eq("role_title", interview.role_title)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      leadForLevel = data;
-    }
-    const level = (leadForLevel?.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
+    const level = (activeLead.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
     const generating = isInterviewGenerating("invited", interview.invited_at, level);
 
     return (
@@ -157,7 +115,7 @@ export default async function InterviewReportPage({
           {generating ? (
             <InterviewGeneratingState roleTitle={interview.role_title} />
           ) : (
-            <InterviewInProgressState roleTitle={interview.role_title} leadId={interview.lead_id ?? ""} />
+            <InterviewInProgressState roleTitle={interview.role_title} leadId={activeLead.id} />
           )}
         </div>
       </main>
@@ -196,30 +154,13 @@ export default async function InterviewReportPage({
 
   const report = interview.report_raw as InterviewReportReady;
 
-  // Same exact-match-first priority as the "invited" branch above: an
-  // interview.lead_id, when set, is an exact known-correct link and must
-  // win over any role_title-only match, however recent.
-  let lead = interview.lead_id
-    ? (
-        await supabase
-          .from("fitment_leads")
-          .select("name, ib_applied_job_id")
-          .eq("user_id", user.id)
-          .eq("id", interview.lead_id)
-          .maybeSingle()
-      ).data
-    : null;
-  if (!lead) {
-    const { data } = await supabase
-      .from("fitment_leads")
-      .select("name, ib_applied_job_id")
-      .eq("user_id", user.id)
-      .eq("role_title", interview.role_title)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    lead = data;
-  }
+  // Fetch additional lead details for the active lead
+  const { data: lead } = await supabase
+    .from("fitment_leads")
+    .select("name, ib_applied_job_id")
+    .eq("user_id", user.id)
+    .eq("id", activeLead.id)
+    .maybeSingle();
 
   const candidateDetails = lead?.ib_applied_job_id
     ? await getCandidateResumeDetails(lead.ib_applied_job_id).catch((err) => {
@@ -290,11 +231,11 @@ export default async function InterviewReportPage({
           </div>
           <div className="print:hidden flex items-center flex-wrap shrink-0" style={{ gap: 8 }}>
             <ExportPreviewButton
-              exportUrl={interview.lead_id ? `/api/hub/interview/export?lead=${encodeURIComponent(interview.lead_id)}` : `/api/hub/interview/export?role=${encodeURIComponent(interview.role_title)}`}
+              exportUrl={`/api/hub/interview/export?lead=${encodeURIComponent(activeLead.id)}`}
               title="Mock interview report"
             />
             <a
-              href={interview.lead_id ? `/api/hub/interview/export?lead=${encodeURIComponent(interview.lead_id)}` : `/api/hub/interview/export?role=${encodeURIComponent(interview.role_title)}`}
+              href={`/api/hub/interview/export?lead=${encodeURIComponent(activeLead.id)}`}
               download
               className="flex items-center hover:bg-white/[0.06] transition-colors font-[family-name:var(--font-poppins)] font-medium text-white"
               style={{ gap: 6, fontSize: 12, borderRadius: 12, padding: "7px 12px", background: "rgb(21,18,22)", border: "1px solid rgb(49,47,55)" }}

@@ -9,7 +9,11 @@ import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
 import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 import RecruiterPreviewClient from "./RecruiterPreviewClient";
 
-export default async function RecruiterPreviewPage() {
+export default async function RecruiterPreviewPage({
+  searchParams,
+}: {
+  searchParams: { lead?: string };
+}) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -23,9 +27,17 @@ export default async function RecruiterPreviewPage() {
     .from("fitment_leads")
     .select("id, role_title, name, resume_match_status, resume_match_raw, candidate_level")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1);
-  const currentLead = leads?.[0] ?? null;
+    .order("created_at", { ascending: false });
+
+  if (!leads?.length) {
+    redirect("/hub/account");
+  }
+
+  const leadIdParam = searchParams.lead;
+  const currentLead = leadIdParam
+    ? leads.find(l => l.id === leadIdParam) || leads[0]
+    : leads[0];
+
   const roleTitle = currentLead?.role_title ?? null;
   const candidateName = currentLead?.name || nameFromEmail(user.email ?? "");
   const candidateLevel = (currentLead?.candidate_level as CandidateLevel | null) ?? "entry";
@@ -55,7 +67,7 @@ export default async function RecruiterPreviewPage() {
       .from("fitment_interviews")
       .select("status, report_raw, updated_at")
       .eq("user_id", user.id)
-      .or(leadIdOrRoleTitleFilter(currentLead.id, roleTitle))
+      .eq("lead_id", currentLead.id)
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
