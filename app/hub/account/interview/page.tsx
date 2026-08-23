@@ -108,7 +108,7 @@ export default async function InterviewReportPage({
               Role-matched questions with a scored breakdown afterward.
             </p>
           </div>
-          <InterviewLockedState roleTitle={current.role_title} level={level} userEmail={user.email ?? ""} />
+          <InterviewLockedState leadId={current.id} roleTitle={current.role_title} level={level} userEmail={user.email ?? ""} />
         </div>
       </main>
     );
@@ -157,7 +157,7 @@ export default async function InterviewReportPage({
           {generating ? (
             <InterviewGeneratingState roleTitle={interview.role_title} />
           ) : (
-            <InterviewInProgressState roleTitle={interview.role_title} />
+            <InterviewInProgressState roleTitle={interview.role_title} leadId={interview.lead_id ?? ""} />
           )}
         </div>
       </main>
@@ -178,7 +178,7 @@ export default async function InterviewReportPage({
     return (
       <main>
         <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
-          <InterviewTerminatedState roleTitle={interview.role_title} />
+          <InterviewTerminatedState roleTitle={interview.role_title} leadId={interview.lead_id ?? ""} />
         </div>
       </main>
     );
@@ -290,11 +290,11 @@ export default async function InterviewReportPage({
           </div>
           <div className="print:hidden flex items-center flex-wrap shrink-0" style={{ gap: 8 }}>
             <ExportPreviewButton
-              exportUrl={`/api/hub/interview/export?role=${encodeURIComponent(interview.role_title)}`}
+              exportUrl={interview.lead_id ? `/api/hub/interview/export?lead=${encodeURIComponent(interview.lead_id)}` : `/api/hub/interview/export?role=${encodeURIComponent(interview.role_title)}`}
               title="Mock interview report"
             />
             <a
-              href={`/api/hub/interview/export?role=${encodeURIComponent(interview.role_title)}`}
+              href={interview.lead_id ? `/api/hub/interview/export?lead=${encodeURIComponent(interview.lead_id)}` : `/api/hub/interview/export?role=${encodeURIComponent(interview.role_title)}`}
               download
               className="flex items-center hover:bg-white/[0.06] transition-colors font-[family-name:var(--font-poppins)] font-medium text-white"
               style={{ gap: 6, fontSize: 12, borderRadius: 12, padding: "7px 12px", background: "rgb(21,18,22)", border: "1px solid rgb(49,47,55)" }}

@@ -14,7 +14,7 @@ const CHECKLIST = [
 // not "APPEARED" -- payment already happened and a magic-link invite was
 // already sent. The button below launches that link directly instead of
 // relying on the candidate finding IntervueBox's email.
-export default function InterviewInProgressState({ roleTitle }: { roleTitle: string }) {
+export default function InterviewInProgressState({ roleTitle, leadId }: { roleTitle: string; leadId: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +25,7 @@ export default function InterviewInProgressState({ roleTitle }: { roleTitle: str
       const res = await fetch("/api/hub/interview/launch-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roleTitle }),
+        body: JSON.stringify({ leadId }),
       });
       const data = await res.json();
       if (!res.ok) {

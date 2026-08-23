@@ -8,7 +8,7 @@ import InterviewResumeWarning from "./InterviewResumeWarning";
 // session ended before it finished. No payment gate: resuming is a free
 // vendor reinvite (mode: RESUME), same class of action as the existing
 // admin free-resend.
-export default function InterviewTerminatedState({ roleTitle }: { roleTitle: string }) {
+export default function InterviewTerminatedState({ roleTitle, leadId }: { roleTitle: string; leadId: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,7 +19,7 @@ export default function InterviewTerminatedState({ roleTitle }: { roleTitle: str
       const res = await fetch("/api/hub/interview/resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roleTitle }),
+        body: JSON.stringify({ leadId }),
       });
       const data = await res.json();
       if (!res.ok) {

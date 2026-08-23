@@ -4,8 +4,8 @@ const getUserMock = vi.fn();
 const maybeSingleMock = vi.fn();
 const limitMock = vi.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
 const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
-const eqRoleMock = vi.fn().mockReturnValue({ order: orderMock });
-const eqUserMock = vi.fn().mockReturnValue({ eq: eqRoleMock });
+const eqLeadMock = vi.fn().mockReturnValue({ order: orderMock });
+const eqUserMock = vi.fn().mockReturnValue({ eq: eqLeadMock });
 const selectMock = vi.fn().mockReturnValue({ eq: eqUserMock });
 const fromMock = vi.fn().mockReturnValue({ select: selectMock });
 
@@ -31,8 +31,8 @@ async function importRoute() {
   return await import("../route");
 }
 
-function requestFor(role: string) {
-  return new Request(`http://localhost/api/hub/interview/status?role=${encodeURIComponent(role)}`);
+function requestFor(leadId: string) {
+  return new Request(`http://localhost/api/hub/interview/status?lead=${encodeURIComponent(leadId)}`);
 }
 
 describe("GET /api/hub/interview/status", () => {
@@ -49,11 +49,11 @@ describe("GET /api/hub/interview/status", () => {
   it("returns 401 when there is no session", async () => {
     getUserMock.mockResolvedValue({ data: { user: null } });
     const { GET } = await importRoute();
-    const response = await GET(requestFor("Data Analyst"));
+    const response = await GET(requestFor("lead-1"));
     expect(response.status).toBe(401);
   });
 
-  it("returns 400 when role is missing", async () => {
+  it("returns 400 when lead is missing", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     const { GET } = await importRoute();
     const response = await GET(new Request("http://localhost/api/hub/interview/status"));
@@ -64,7 +64,7 @@ describe("GET /api/hub/interview/status", () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     maybeSingleMock.mockResolvedValue({ data: null });
     const { GET } = await importRoute();
-    const response = await GET(requestFor("Data Analyst"));
+    const response = await GET(requestFor("lead-1"));
     const body = await response.json();
     expect(body).toEqual({ status: "not_started" });
     expect(getInterviewReportMock).not.toHaveBeenCalled();
@@ -74,7 +74,7 @@ describe("GET /api/hub/interview/status", () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     maybeSingleMock.mockResolvedValue({ data: { id: "row-1", status: "ready" } });
     const { GET } = await importRoute();
-    const response = await GET(requestFor("Data Analyst"));
+    const response = await GET(requestFor("lead-1"));
     const body = await response.json();
     expect(body).toEqual({ status: "ready" });
     expect(getInterviewReportMock).not.toHaveBeenCalled();
@@ -89,7 +89,7 @@ describe("GET /api/hub/interview/status", () => {
     });
     getInterviewReportMock.mockResolvedValue({ status: "NOT_READY" });
     const { GET } = await importRoute();
-    const response = await GET(requestFor("Data Analyst"));
+    const response = await GET(requestFor("lead-1"));
     const body = await response.json();
     expect(body).toEqual({ status: "invited" });
     expect(updateMock).not.toHaveBeenCalled();
@@ -122,7 +122,7 @@ describe("GET /api/hub/interview/status", () => {
       knowledgeAnswers: [],
     });
     const { GET } = await importRoute();
-    const response = await GET(requestFor("Data Analyst"));
+    const response = await GET(requestFor("lead-1"));
     const body = await response.json();
     expect(body).toEqual({ status: "ready" });
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ status: "ready" }));
@@ -136,7 +136,7 @@ describe("GET /api/hub/interview/status", () => {
     });
     getInterviewReportMock.mockResolvedValue({ status: "NOT_READY" });
     const { GET } = await importRoute();
-    const response = await GET(requestFor("Data Analyst"));
+    const response = await GET(requestFor("lead-1"));
     const body = await response.json();
     expect(body).toEqual({ status: "stuck" });
     expect(updateMock).not.toHaveBeenCalled();
@@ -169,7 +169,7 @@ describe("GET /api/hub/interview/status", () => {
       knowledgeAnswers: [],
     });
     const { GET } = await importRoute();
-    const response = await GET(requestFor("Data Analyst"));
+    const response = await GET(requestFor("lead-1"));
     const body = await response.json();
     expect(body).toEqual({ status: "ready" });
   });
@@ -182,7 +182,7 @@ describe("GET /api/hub/interview/status", () => {
     getInterviewReportMock.mockResolvedValue({ status: "NOT_READY" });
 
     const { GET } = await importRoute();
-    const response = await GET(requestFor("Backend Engineer"));
+    const response = await GET(requestFor("lead-1"));
 
     expect(await response.json()).toEqual({ status: "terminated" });
     expect(generateInterviewReportMock).not.toHaveBeenCalled();
@@ -195,7 +195,7 @@ describe("GET /api/hub/interview/status", () => {
     });
     getInterviewReportMock.mockRejectedValue(new Error("boom"));
     const { GET } = await importRoute();
-    const response = await GET(requestFor("Data Analyst"));
+    const response = await GET(requestFor("lead-1"));
     const body = await response.json();
     expect(body).toEqual({ status: "invited" });
   });

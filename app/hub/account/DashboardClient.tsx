@@ -86,7 +86,7 @@ export default function DashboardClient({
     if (interviewStatus !== "invited") return;
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/hub/interview/status?role=${encodeURIComponent(roleTitle)}`);
+        const res = await fetch(`/api/hub/interview/status?lead=${encodeURIComponent(leadId)}`);
         if (!res.ok) return;
         const data = await res.json();
         if (data.status === "ready") {
@@ -104,7 +104,7 @@ export default function DashboardClient({
       }
     }, 15_000);
     return () => clearInterval(interval);
-  }, [interviewStatus, roleTitle]);
+  }, [interviewStatus, leadId]);
 
   const otherApplications = applications.filter((app) => app.id !== leadId);
 
@@ -232,6 +232,7 @@ export default function DashboardClient({
       )}
       {modal === "interview" && (
         <InterviewPaywallModal
+          leadId={leadId}
           roleTitle={roleTitle}
           level={level}
           userEmail={userEmail}

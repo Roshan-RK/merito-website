@@ -21,23 +21,23 @@ export async function POST(request: Request) {
     return Response.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  let body: { roleTitle?: string };
+  let body: { leadId?: string };
   try {
     body = await request.json();
   } catch {
     return Response.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const roleTitle = typeof body.roleTitle === "string" ? body.roleTitle.trim() : "";
-  if (!roleTitle) {
-    return Response.json({ error: "roleTitle is required." }, { status: 400 });
+  const leadId = typeof body.leadId === "string" ? body.leadId.trim() : "";
+  if (!leadId) {
+    return Response.json({ error: "leadId is required." }, { status: 400 });
   }
 
   const { data: existing } = await supabase
     .from("fitment_interviews")
     .select("status")
     .eq("user_id", user.id)
-    .eq("role_title", roleTitle)
+    .eq("lead_id", leadId)
     .eq("status", "invited")
     .maybeSingle();
 
@@ -57,23 +57,20 @@ export async function POST(request: Request) {
   // candidateId was never valid on the new job either. There's no cheap fix
   // without re-collecting the CV, so block instead of silently failing —
   // and check before the payment-credit consumption below so a blocked
-  // attempt is never charged. This checks by role_title (not lead_id) so it
-  // fires the same way whether reached via a retake or via Change Target
-  // Role reusing the same role title text.
+  // attempt is never charged. Now matched by lead_id (PK), ensuring each lead
+  // can only be interviewed once.
   const { data: priorAttempt } = await admin
     .from("fitment_interviews")
     .select("id")
     .eq("user_id", user.id)
-    .eq("role_title", roleTitle)
-    .order("updated_at", { ascending: false })
-    .limit(1)
+    .eq("lead_id", leadId)
     .maybeSingle();
 
   if (priorAttempt) {
     return Response.json(
       {
         error:
-          "You've already completed an AI interview for this role. Each role can only be interviewed once. Change your target role to interview again.",
+          "You've already completed an AI interview for this opportunity. Each opportunity can only be interviewed once.",
       },
       { status: 409 }
     );
@@ -108,23 +105,13 @@ export async function POST(request: Request) {
 
   const { data: lead, error: leadError } = await supabase
     .from("fitment_leads")
-    .select("id, ib_job_id, ib_applied_job_id, candidate_level")
-    .eq("user_id", user.id)
-    .eq("role_title", roleTitle)
-    .order("created_at", { ascending: false })
-    .limit(1)
+    .select("id, role_title, ib_job_id, ib_applied_job_id, candidate_level")
+    .eq("id", leadId)
     .maybeSingle();
 
   if (leadError || !lead) {
     return Response.json({ error: "No fitment check found for this role." }, { status: 400 });
   }
-
-  let candidateId: string | undefined;
-  let ibAgentId: string | undefined;
-  let magicLink: string | null = null;
-  let magicLinkExpiresAt: string | null = null;
-  let stage: "getApplicant" | "createInterviewAgent" | "sendInterviewInvitation" = "getApplicant";
-  const ibJobId = lead.ib_job_id;
 
   // Payment was already consumed above (before this fallible chain runs, so
   // a candidate never sees "pay again" while we retry) — if the chain fails
@@ -143,14 +130,22 @@ export async function POST(request: Request) {
     await recordPipelineFailure({
       kind: "interview_invite_failed",
       userId,
-      leadId,
+      leadId: lead!.id,
       orderId: consumedOrderId,
-      detail: { stage, roleTitle, ibJobId, candidateId, ibAgentId, ...detail },
+      detail: { stage, roleTitle: lead!.role_title, ibJobId, candidateId, ibAgentId, ...detail },
     });
     if (consumedOrderId) {
       await admin.from("razorpay_transactions").update({ consumed_at: null }).eq("order_id", consumedOrderId);
     }
   }
+
+  let candidateId: string | undefined;
+  let ibAgentId: string | undefined;
+  let magicLink: string | null = null;
+  let magicLinkExpiresAt: string | null = null;
+  let stage: "getApplicant" | "createInterviewAgent" | "sendInterviewInvitation" = "getApplicant";
+  const ibJobId = lead.ib_job_id;
+
 
   try {
     ({ candidateId } = await getApplicant(lead.ib_applied_job_id));
@@ -158,7 +153,7 @@ export async function POST(request: Request) {
     stage = "createInterviewAgent";
     const candidateLevel = (lead.candidate_level as CandidateLevel) || "mid";
 
-    ({ ibAgentId } = await createInterviewAgent(ibJobId, roleTitle, candidateLevel));
+    ({ ibAgentId } = await createInterviewAgent(ibJobId, lead.role_title, candidateLevel));
 
     stage = "sendInterviewInvitation";
     const inviteResult = await sendInterviewInvitation(ibAgentId, [candidateId]);
@@ -187,7 +182,7 @@ export async function POST(request: Request) {
 
   const { error: insertError } = await admin.from("fitment_interviews").insert({
     user_id: user.id,
-    role_title: roleTitle,
+    role_title: lead.role_title,
     lead_id: lead.id,
     ib_job_id: ibJobId,
     ib_agent_id: ibAgentId,
@@ -198,7 +193,7 @@ export async function POST(request: Request) {
   });
 
   if (insertError) {
-    // Postgres unique-violation on the partial (user_id, role_title) WHERE
+    // Postgres unique-violation on the partial (user_id, lead_id) WHERE
     // status='invited' index — a realistic double-click race where two
     // concurrent requests both pass the "no existing row" check above. The
     // IntervueBox-side invite already succeeded (possibly twice) either way,
@@ -209,7 +204,7 @@ export async function POST(request: Request) {
         .from("fitment_interviews")
         .select("status")
         .eq("user_id", user.id)
-        .eq("role_title", roleTitle)
+        .eq("lead_id", leadId)
         .eq("status", "invited")
         .maybeSingle();
 
@@ -231,7 +226,7 @@ export async function POST(request: Request) {
       userId: user.id,
       leadId: lead.id,
       orderId: consumedOrderId,
-      detail: { roleTitle, ibJobId, ibAgentId, ibCandidateId: candidateId, error: insertError.message },
+      detail: { roleTitle: lead.role_title, ibJobId, ibAgentId, ibCandidateId: candidateId, error: insertError.message },
     });
     return Response.json(
       { error: "Invitation sent, but we couldn't save the status. Please refresh." },

@@ -15,14 +15,17 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
+  const leadId = url.searchParams.get("lead");
   const roleTitle = url.searchParams.get("role");
 
   let query = supabase
     .from("fitment_interviews")
-    .select("role_title, status, report_raw")
+    .select("role_title, status, report_raw, lead_id")
     .eq("user_id", user.id);
 
-  if (roleTitle) {
+  if (leadId) {
+    query = query.eq("lead_id", leadId);
+  } else if (roleTitle) {
     query = query.eq("role_title", roleTitle);
   }
 
@@ -37,11 +40,11 @@ export async function GET(request: Request) {
 
   const pageCookies = requestCookiesFor(request, url.hostname);
 
-  const buffer = await renderPageToPdf(
-    `${url.origin}/hub/account/interview/print?role=${encodeURIComponent(interview.role_title)}`,
-    pageCookies,
-    { singlePage: true }
-  );
+  const printUrl = interview.lead_id
+    ? `${url.origin}/hub/account/interview/print?lead=${encodeURIComponent(interview.lead_id)}`
+    : `${url.origin}/hub/account/interview/print?role=${encodeURIComponent(interview.role_title)}`;
+
+  const buffer = await renderPageToPdf(printUrl, pageCookies, { singlePage: true });
 
   // ?inline=1 is used by ExportPreviewModal's <iframe> -- an "attachment"
   // disposition forces a download prompt instead of rendering in the iframe.
