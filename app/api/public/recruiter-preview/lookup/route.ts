@@ -19,6 +19,16 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid key." }, { status: 401 });
   }
 
+  const userAgent = request.headers.get("user-agent") || "";
+  const isOldClient =
+    userAgent.includes("merito-extension/1.") || userAgent.includes("merito-extension/2.");
+  if (isOldClient) {
+    return Response.json(
+      { error: "Please upgrade the Merito extension to v3.0+" },
+      { status: 400 }
+    );
+  }
+
   let body: { linkedinUrl?: unknown };
   try {
     body = await request.json();
