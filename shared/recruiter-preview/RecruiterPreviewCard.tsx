@@ -374,6 +374,7 @@ export function RecruiterPreviewCard({
   const [activeFitmentView, setActiveFitmentView] = useState<"own" | "jd">("own");
   const [revealedEmail, setRevealedEmail] = useState<string | null>(null);
   const [contactState, setContactState] = useState<"idle" | "revealing" | "error">("idle");
+  const [contactError, setContactError] = useState<string | null>(null);
 
   useEffect(() => {
     if (rescoreFitment) setActiveFitmentView("jd");
@@ -387,6 +388,7 @@ export function RecruiterPreviewCard({
       setRevealedEmail(result.email);
       setContactState("idle");
     } else {
+      setContactError(result && "error" in result ? result.error : null);
       setContactState("error");
     }
   }
@@ -548,7 +550,7 @@ export function RecruiterPreviewCard({
           ) : contactState === "revealing" ? (
             <div style={{ fontSize: 11.5, color: "#6C6779", fontFamily: SANS }}>Revealing…</div>
           ) : contactState === "error" ? (
-            <div style={{ fontSize: 11.5, color: "#ed1a24", fontFamily: SANS }}>Couldn&apos;t reveal email — try again.</div>
+            <div style={{ fontSize: 11.5, color: "#ed1a24", fontFamily: SANS }}>{contactError || "Couldn't reveal email — try again."}</div>
           ) : (
             <button
               onClick={handleRevealEmail}

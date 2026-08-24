@@ -151,7 +151,7 @@ export function ProspectOverlay({
           <img src={logoUrl} alt="Merito" style={{ height: 16 }} />
           <strong>Verify your email</strong>
         </div>
-        <p>This candidate has a Merito preview. Confirm your email in the extension popup, then click retry.</p>
+        <p>Confirm your email in the extension popup to use Merito, then click retry.</p>
         <button onClick={onScore}>Retry</button>
       </div>
     );
