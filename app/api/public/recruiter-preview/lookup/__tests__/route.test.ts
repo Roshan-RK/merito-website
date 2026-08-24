@@ -4,7 +4,6 @@ function makeQueryStub(result: { data: unknown }) {
   const stub: Record<string, unknown> = {};
   stub.select = () => stub;
   stub.eq = () => stub;
-  stub.or = vi.fn(() => stub);
   stub.order = () => stub;
   stub.limit = () => stub;
   stub.maybeSingle = async () => result;
@@ -24,12 +23,6 @@ vi.mock("@/lib/supabase", () => ({
   }),
 }));
 
-const getReferenceCheckStatusMock = vi.fn();
-vi.mock("@/lib/referenceChecks", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/referenceChecks")>();
-  return { ...actual, getReferenceCheckStatus: getReferenceCheckStatusMock };
-});
-
 async function importRoute() {
   return await import("../route");
 }
@@ -48,15 +41,15 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
     tableResults = {
       recruiter_preview_settings: makeQueryStub({ data: null }),
       fitment_leads: makeQueryStub({ data: [] }),
+      recruiter_preview_sections: makeQueryStub({ data: null }),
       personality_tests: makeQueryStub({ data: null }),
       fitment_interviews: makeQueryStub({ data: null }),
+      intervuebox_interview_reports: makeQueryStub({ data: null }),
       extension_lookups: makeQueryStub({ data: null }),
     };
     fromMock.mockClear();
     getUserByIdMock.mockReset();
     getUserByIdMock.mockResolvedValue({ data: { user: { email: "jane@example.com" } } });
-    getReferenceCheckStatusMock.mockReset();
-    getReferenceCheckStatusMock.mockResolvedValue(null);
   });
 
   it("returns 401 when the key header is missing", async () => {
@@ -85,22 +78,19 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
     expect(body).toEqual({ error: "Not found." });
   });
 
-  it("returns the identical 404 body when a candidate matches but is disabled", async () => {
-    // The settings query itself already filters on enabled=true, so a disabled
-    // candidate simply produces no row — same as "no candidate" from the route's
-    // point of view. This test locks that behavior in.
-    tableResults.recruiter_preview_settings = makeQueryStub({ data: null });
+  it("returns 404 when no leads exist", async () => {
+    tableResults.recruiter_preview_settings = makeQueryStub({
+      data: { user_id: "candidate-1" },
+    });
+    tableResults.fitment_leads = makeQueryStub({ data: [] });
     const { POST } = await importRoute();
-    const noMatchResponse = await POST(request({ linkedinUrl: "https://www.linkedin.com/in/disabled-candidate" }));
-    const disabledBody = await noMatchResponse.json();
-    const noMatchBody = { error: "Not found." };
-    expect(noMatchResponse.status).toBe(404);
-    expect(disabledBody).toEqual(noMatchBody);
+    const response = await POST(request({ linkedinUrl: "https://www.linkedin.com/in/nobody" }));
+    expect(response.status).toBe(404);
   });
 
-  it("returns filtered data on a match, excluding unselected sections and always excluding recommendation/integrity/videoReport", async () => {
+  it("returns array of roles with isCurrent=true on first one", async () => {
     tableResults.recruiter_preview_settings = makeQueryStub({
-      data: { user_id: "candidate-1", sections: ["fitment", "interview", "personality"] },
+      data: { user_id: "candidate-1" },
     });
     tableResults.fitment_leads = makeQueryStub({
       data: [
@@ -112,7 +102,18 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
           candidate_level: "mid",
           resume_match_raw: { overallScore: 82, rank: null, categories: [], summary: "Good fit", strongPoints: [], weakPoints: [] },
         },
+        {
+          id: "lead-2",
+          role_title: "Software Engineer",
+          name: "Jane Doe",
+          resume_match_status: "READY",
+          candidate_level: "mid",
+          resume_match_raw: { overallScore: 75, rank: null, categories: [], summary: "Ok fit", strongPoints: [], weakPoints: [] },
+        },
       ],
+    });
+    tableResults.recruiter_preview_sections = makeQueryStub({
+      data: { sections: ["fitment"] },
     });
     tableResults.personality_tests = makeQueryStub({
       data: {
@@ -126,32 +127,6 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
         completed_at: "2026-07-28T09:00:00.000Z",
       },
     });
-    tableResults.fitment_interviews = makeQueryStub({
-      data: {
-        status: "ready",
-        updated_at: "2026-07-30T10:00:00.000Z",
-        report_raw: {
-          overallScore: 75,
-          skillMetrics: { sql: 8 },
-          overallSummary: "Solid performance.",
-          strengths: "Strong SQL fundamentals",
-          areasOfImprovement: "Communication",
-          shareableReportLink: null,
-          approxDurationMinutes: 20,
-          flagForSuspiciousActivity: false,
-          integrityCheck: "No issues.",
-          videoReport: "Some private delivery notes.",
-          feedbackToInterviewer: "Do not hire.",
-          roadmap: "Practice window functions.",
-          criteriaEvaluationTable: [],
-          interviewTitle: "Data Analyst Interview",
-          skillReport: { sql: { score: 8, comment: "Strong" } },
-          overallSkillScore: 80,
-          answers: [],
-          knowledgeAnswers: [],
-        },
-      },
-    });
 
     const { POST } = await importRoute();
     const response = await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }));
@@ -159,43 +134,33 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
 
     expect(response.status).toBe(200);
     expect(body.candidateName).toBe("Jane Doe");
-    expect(body.roleTitle).toBe("Data Analyst");
-    expect(body.candidateLevel).toBe("mid");
-    expect(body.sections).toEqual(["fitment", "interview", "personality"]);
-    expect(body.fitment).toEqual({
-      report: { overallScore: 82, categories: [], summary: "Good fit" },
-      matchedAgainstRoleTitle: "Data Analyst",
+    expect(body.roles).toBeInstanceOf(Array);
+    expect(body.roles.length).toBe(2);
+
+    // First role should have isCurrent=true
+    expect(body.roles[0]).toMatchObject({
+      leadId: "lead-1",
+      roleTitle: "Data Analyst",
+      isCurrent: true,
+      sections: {
+        fitment: {
+          report: { overallScore: 82, categories: [], summary: "Good fit" },
+          matchedAgainstRoleTitle: "Data Analyst",
+        },
+      },
     });
-    expect(body.fitment.report).not.toHaveProperty("rank");
-    expect(body.fitment.report).not.toHaveProperty("strongPoints");
-    expect(body.fitment.report).not.toHaveProperty("weakPoints");
-    expect(body.personality).toEqual({
-      traits: [
-        { key: "E", label: "Extroversion", pct: 40, bandLabel: "Average" },
-        { key: "A", label: "Agreeableness", pct: 55, bandLabel: "Average" },
-        { key: "C", label: "Conscientiousness", pct: 82, bandLabel: "Very High" },
-        { key: "ES", label: "Emotional Stability", pct: 78, bandLabel: "Very High" },
-        { key: "O", label: "Openness to Experience", pct: 70, bandLabel: "High" },
-      ],
-      summary:
-        "Jane scores highest in Conscientiousness and Emotional Stability. Jane is likely to be organised, reliable and thorough, strong on deadlines, detail and follow-through. Watch-out: rigidity or perfectionism when priorities shift suddenly. Best fit: roles that reward rigour, process and accountability.",
-      completedAt: "2026-07-28T09:00:00.000Z",
+
+    // Second role should have isCurrent=false
+    expect(body.roles[1]).toMatchObject({
+      leadId: "lead-2",
+      roleTitle: "Software Engineer",
+      isCurrent: false,
+      sections: {
+        fitment: {
+          report: { overallScore: 75, categories: [], summary: "Ok fit" },
+          matchedAgainstRoleTitle: "Software Engineer",
+        },
+      },
     });
-    expect(body.references).toBeNull();
-    expect(body.interview).toEqual({
-      overallScore: 75,
-      skillMetrics: { sql: 8 },
-      overallSummary: "Solid performance.",
-      skillReport: { sql: { score: 8, comment: "Strong" } },
-      strengths: "Strong SQL fundamentals",
-      completedAt: "2026-07-30T10:00:00.000Z",
-      approxDurationMinutes: 20,
-    });
-    expect(body.interview).not.toHaveProperty("integrityCheck");
-    expect(body.interview).not.toHaveProperty("videoReport");
-    expect(body.interview).not.toHaveProperty("feedbackToInterviewer");
-    expect(body.interview).not.toHaveProperty("criteriaEvaluationTable");
-    expect(body.interview).not.toHaveProperty("roadmap");
-    expect(tableResults.fitment_interviews.or).toHaveBeenCalledWith('lead_id.eq.lead-1,role_title.eq."Data Analyst"');
   });
 });

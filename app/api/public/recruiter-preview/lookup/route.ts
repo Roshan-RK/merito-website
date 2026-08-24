@@ -1,5 +1,4 @@
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { getReferenceCheckStatus, computeReferenceReport } from "@/lib/referenceChecks";
 import { nameFromEmail, type Scores } from "@/lib/personality";
 import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "@/lib/linkedinUrl";
 import { recordLookup } from "@/lib/extensionLookups";
@@ -7,13 +6,9 @@ import {
   buildLookupFitment,
   buildLookupPersonality,
   buildLookupInterview,
-  type LookupFitment,
-  type LookupPersonality,
-  type LookupInterview,
 } from "@/lib/recruiterPreview";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
-import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 
 export const runtime = "nodejs";
 
@@ -44,7 +39,7 @@ export async function POST(request: Request) {
 
   const { data: settingsRow } = await admin
     .from("recruiter_preview_settings")
-    .select("user_id, sections")
+    .select("user_id")
     .eq("linkedin_url", normalized)
     .eq("enabled", true)
     .maybeSingle();
@@ -56,82 +51,94 @@ export async function POST(request: Request) {
   }
 
   const userId = settingsRow.user_id as string;
-  const sections = new Set((settingsRow.sections as string[] | null) ?? []);
 
+  // Fetch all leads (not just 1)
   const { data: leads } = await admin
     .from("fitment_leads")
     .select("id, role_title, name, resume_match_status, resume_match_raw, candidate_level")
     .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(1);
-  const currentLead = leads?.[0] ?? null;
-  const roleTitle = currentLead?.role_title ?? null;
-  const candidateLevel = (currentLead?.candidate_level as "entry" | "mid" | "senior" | null) ?? "entry";
+    .order("created_at", { ascending: false });
 
-  let candidateName = currentLead?.name as string | undefined;
+  if (!leads || leads.length === 0) {
+    return Response.json({ error: "Not found." }, { status: 404 });
+  }
+
+  // Fetch candidate name (same logic as before)
+  let candidateName = leads[0]?.name as string | undefined;
   if (!candidateName) {
     const { data: authUser } = await admin.auth.admin.getUserById(userId);
     candidateName = nameFromEmail(authUser?.user?.email ?? "");
   }
 
-  let fitment: LookupFitment | null = null;
-  if (
-    sections.has("fitment") &&
-    currentLead &&
-    currentLead.resume_match_status === "READY" &&
-    currentLead.resume_match_raw &&
-    roleTitle
-  ) {
-    fitment = buildLookupFitment(currentLead.resume_match_raw as ResumeMatchReportReady, roleTitle);
-  }
-
-  let personality: LookupPersonality | null = null;
-  if (sections.has("personality")) {
-    const { data: personalityRow } = await admin
-      .from("personality_tests")
-      .select("scores, completed_at")
+  // Build roles array
+  const roles = [];
+  for (let i = 0; i < leads.length; i++) {
+    const lead = leads[i];
+    const { data: sectionRow } = await admin
+      .from("recruiter_preview_sections")
+      .select("sections")
       .eq("user_id", userId)
+      .eq("lead_id", lead.id)
       .maybeSingle();
-    if (personalityRow?.scores) {
-      personality = buildLookupPersonality(
-        personalityRow.scores as Scores,
-        candidateName,
-        (personalityRow.completed_at as string | null) ?? null
-      );
-    }
-  }
 
-  let interview: LookupInterview | null = null;
-  if (sections.has("interview") && currentLead && roleTitle) {
-    const { data: interviewRow } = await admin
-      .from("fitment_interviews")
-      .select("status, report_raw, updated_at")
-      .eq("user_id", userId)
-      .or(leadIdOrRoleTitleFilter(currentLead.id, roleTitle))
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (interviewRow && interviewRow.status === "ready" && interviewRow.report_raw) {
-      interview = buildLookupInterview(interviewRow.report_raw as InterviewReportReady, interviewRow.updated_at as string);
-    }
-  }
+    // Skip if no section config
+    if (!sectionRow) continue;
 
-  let references: ReturnType<typeof computeReferenceReport> | null = null;
-  if (sections.has("references")) {
-    const referenceStatus = await getReferenceCheckStatus(userId);
-    if (referenceStatus?.status === "completed") {
-      references = computeReferenceReport(referenceStatus.referees);
+    const enabledSections = (sectionRow.sections as string[]) || [];
+    const roleTitle = lead.role_title ?? null;
+    const candidateLevel = (lead.candidate_level as "entry" | "mid" | "senior" | null) ?? "entry";
+
+    // Build sections (only enabled ones)
+    const sections: Record<string, any> = {};
+
+    if (enabledSections.includes("fitment") && lead.resume_match_status === "READY" && lead.resume_match_raw && roleTitle) {
+      sections.fitment = buildLookupFitment(lead.resume_match_raw as ResumeMatchReportReady, roleTitle);
     }
+
+    if (enabledSections.includes("personality")) {
+      const { data: personalityRow } = await admin
+        .from("personality_tests")
+        .select("scores, completed_at")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (personalityRow?.scores) {
+        sections.personality = buildLookupPersonality(
+          personalityRow.scores as Scores,
+          candidateName,
+          (personalityRow.completed_at as string | null) ?? null
+        );
+      }
+    }
+
+    if (enabledSections.includes("interview")) {
+      const { data: interviewRow } = await admin
+        .from("fitment_interviews")
+        .select("ib_agent_id, ib_candidate_id, status")
+        .eq("user_id", userId)
+        .eq("lead_id", lead.id)
+        .maybeSingle();
+      if (interviewRow?.status === "completed") {
+        const { data: reportRow } = await admin
+          .from("intervuebox_interview_reports")
+          .select("report_raw")
+          .eq("ib_candidate_id", interviewRow.ib_candidate_id)
+          .maybeSingle();
+        if (reportRow?.report_raw) {
+          sections.interview = buildLookupInterview(reportRow.report_raw as InterviewReportReady, candidateLevel);
+        }
+      }
+    }
+
+    roles.push({
+      leadId: lead.id,
+      roleTitle: lead.role_title,
+      isCurrent: i === 0, // Latest is current
+      sections,
+    });
   }
 
   return Response.json({
     candidateName,
-    roleTitle,
-    candidateLevel,
-    sections: Array.from(sections),
-    fitment,
-    personality,
-    interview,
-    references,
+    roles,
   });
 }
