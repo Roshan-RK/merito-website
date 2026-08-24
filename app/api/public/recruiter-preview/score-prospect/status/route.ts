@@ -1,5 +1,6 @@
 import { buildLookupFitment } from "@/lib/recruiterPreview";
 import { getProspectScoreStatus } from "@/lib/recruiterSourcedProspects";
+import { isRecruiterEmailVerified } from "@/lib/recruiterIdentity";
 
 export const runtime = "nodejs";
 
@@ -18,9 +19,18 @@ export async function GET(request: Request) {
     return Response.json({ error: "Invalid key." }, { status: 401 });
   }
 
-  const prospectId = new URL(request.url).searchParams.get("prospectId");
+  const url = new URL(request.url);
+  const prospectId = url.searchParams.get("prospectId");
   if (!prospectId) {
     return Response.json({ error: "Not found." }, { status: 404 });
+  }
+
+  const recruiterEmail = url.searchParams.get("recruiterEmail");
+  if (!recruiterEmail || recruiterEmail.trim().length === 0) {
+    return Response.json({ error: "Please confirm your email first.", verificationRequired: true }, { status: 403 });
+  }
+  if (!(await isRecruiterEmailVerified(recruiterEmail.trim()))) {
+    return Response.json({ error: "Please confirm your email first.", verificationRequired: true }, { status: 403 });
   }
 
   const result = await getProspectScoreStatus(prospectId);

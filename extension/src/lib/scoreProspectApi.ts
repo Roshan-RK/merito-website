@@ -39,11 +39,12 @@ export async function scoreProspect(input: {
   }
 }
 
-export async function getProspectScoreStatus(prospectId: string): Promise<ScoreProspectResult> {
+export async function getProspectScoreStatus(prospectId: string, recruiterEmail: string): Promise<ScoreProspectResult> {
   const extensionKey = import.meta.env.VITE_RECRUITER_EXTENSION_KEY as string;
   try {
     const url = new URL(SCORE_PROSPECT_STATUS_URL);
     url.searchParams.set("prospectId", prospectId);
+    url.searchParams.set("recruiterEmail", recruiterEmail);
     const response = await fetch(url, { headers: { "x-merito-extension-key": extensionKey } });
     if (!response.ok) return { status: "error" };
     const data = (await response.json()) as { status: "pending" | "ready"; prospectId?: string; fitment?: ScoreProspectResponse["fitment"] };

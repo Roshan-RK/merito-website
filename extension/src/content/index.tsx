@@ -83,13 +83,13 @@ async function runProspectFlow(linkedinUrl: string) {
 const PROSPECT_POLL_INTERVAL_MS = 5_000;
 const PROSPECT_POLL_MAX_ATTEMPTS = 36; // ~3 minutes at 5s intervals
 
-function renderProspectReady(fitment: NonNullable<ScoreProspectResponse["fitment"]>, prospectId: string) {
+function renderProspectReady(fitment: NonNullable<ScoreProspectResponse["fitment"]>, prospectId: string, recruiterEmail: string) {
   mountRoot().render(
     <ProspectOverlay
       state={{ status: "ready", fitment, prospectId }}
       onScore={() => {}}
       onShortlist={async () => {
-        const shortlistResult = (await chrome.runtime.sendMessage({ type: "SHORTLIST_PROSPECT", prospectId })) as {
+        const shortlistResult = (await chrome.runtime.sendMessage({ type: "SHORTLIST_PROSPECT", prospectId, recruiterEmail })) as {
           claimUrl: string;
           inviteText: string;
         } | null;
@@ -103,12 +103,12 @@ function renderProspectReady(fitment: NonNullable<ScoreProspectResponse["fitment
   );
 }
 
-async function pollProspectStatus(linkedinUrl: string, prospectId: string, retry: () => void, attempt = 1) {
+async function pollProspectStatus(linkedinUrl: string, prospectId: string, recruiterEmail: string, retry: () => void, attempt = 1) {
   if (linkedinUrl !== currentUrl) return; // navigated away — scoring keeps running server-side, cache picks it up on return
 
   let result: { status: string; data?: ScoreProspectResponse };
   try {
-    result = (await chrome.runtime.sendMessage({ type: "CHECK_PROSPECT_STATUS", prospectId })) as {
+    result = (await chrome.runtime.sendMessage({ type: "CHECK_PROSPECT_STATUS", prospectId, recruiterEmail })) as {
       status: string;
       data?: ScoreProspectResponse;
     };
@@ -121,7 +121,7 @@ async function pollProspectStatus(linkedinUrl: string, prospectId: string, retry
   if (linkedinUrl !== currentUrl) return;
 
   if (result.status === "ready" && result.data?.fitment) {
-    renderProspectReady(result.data.fitment, result.data.prospectId);
+    renderProspectReady(result.data.fitment, result.data.prospectId, recruiterEmail);
     return;
   }
   if (result.status !== "pending") {
@@ -133,7 +133,7 @@ async function pollProspectStatus(linkedinUrl: string, prospectId: string, retry
     return;
   }
 
-  setTimeout(() => pollProspectStatus(linkedinUrl, prospectId, retry, attempt + 1), PROSPECT_POLL_INTERVAL_MS);
+  setTimeout(() => pollProspectStatus(linkedinUrl, prospectId, recruiterEmail, retry, attempt + 1), PROSPECT_POLL_INTERVAL_MS);
 }
 
 async function scoreProspectNow(
@@ -173,12 +173,12 @@ async function scoreProspectNow(
     return;
   }
   if (result.status === "ready" && result.data?.fitment) {
-    renderProspectReady(result.data.fitment, result.data.prospectId);
+    renderProspectReady(result.data.fitment, result.data.prospectId, recruiterEmail);
     return;
   }
   if (result.status === "pending" && result.prospectId) {
     mountRoot().render(<ProspectOverlay state={{ status: "scoring" }} onScore={() => {}} onShortlist={() => {}} />);
-    pollProspectStatus(linkedinUrl, result.prospectId, retry);
+    pollProspectStatus(linkedinUrl, result.prospectId, recruiterEmail, retry);
     return;
   }
 

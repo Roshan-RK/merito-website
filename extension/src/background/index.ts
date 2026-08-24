@@ -26,7 +26,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
   if (message?.type === "CHECK_PROSPECT_STATUS" && typeof message.prospectId === "string") {
-    getProspectScoreStatus(message.prospectId).then(sendResponse);
+    const recruiterEmail = typeof message.recruiterEmail === "string" ? message.recruiterEmail : "";
+    getProspectScoreStatus(message.prospectId, recruiterEmail).then(sendResponse);
     return true;
   }
   if (
@@ -53,7 +54,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
   if (message?.type === "SHORTLIST_PROSPECT" && typeof message.prospectId === "string") {
-    shortlistProspect(message.prospectId).then(sendResponse);
+    const recruiterEmail = typeof message.recruiterEmail === "string" ? message.recruiterEmail : "";
+    shortlistProspect(message.prospectId, recruiterEmail).then(sendResponse);
     return true;
   }
   if (message?.type === "REQUEST_CONTACT_DETAILS" && typeof message.linkedinUrl === "string") {
