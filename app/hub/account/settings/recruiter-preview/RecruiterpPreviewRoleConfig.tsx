@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabaseAuth";
 import { logAuditEvent } from "@/lib/recruiterPreviewAudit";
 import type { Database } from "@/lib/database.types";
 
