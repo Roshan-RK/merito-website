@@ -4,6 +4,7 @@ import { Overlay, type RescoreState } from "../overlay/Overlay";
 import { ProspectOverlay } from "../overlay/ProspectOverlay";
 import { scrapeProfile } from "../lib/scrapeProfile";
 import type { LookupResponse, RescoreResponse, ScoreProspectResponse } from "../../../shared/recruiter-preview/types";
+import type { LookupResult } from "../lib/lookupApi";
 
 const JD_STORAGE_KEY = "meritoJdText";
 const EMAIL_STORAGE_KEY = "meritoRecruiterEmail";
@@ -44,10 +45,13 @@ function renderOverlay(data: LookupResponse, rescore: RescoreState) {
 }
 
 async function requestContactDetails(): Promise<{ email: string } | { error: string } | null> {
-  return (await chrome.runtime.sendMessage({ type: "REQUEST_CONTACT_DETAILS", linkedinUrl: currentUrl })) as
-    | { email: string }
-    | { error: string }
-    | null;
+  const stored = await chrome.storage.local.get([EMAIL_STORAGE_KEY]);
+  const recruiterEmail = (stored[EMAIL_STORAGE_KEY] as string) ?? "";
+  return (await chrome.runtime.sendMessage({
+    type: "REQUEST_CONTACT_DETAILS",
+    linkedinUrl: currentUrl,
+    recruiterEmail,
+  })) as { email: string } | { error: string } | null;
 }
 
 async function runProspectFlow(linkedinUrl: string) {
@@ -212,33 +216,45 @@ async function handleUrlChange() {
 
   if (!LINKEDIN_URL_PATTERN.test(normalized)) return;
 
-  let result: LookupResponse | null;
+  const stored = await chrome.storage.local.get([EMAIL_STORAGE_KEY]);
+  const recruiterEmail = (stored[EMAIL_STORAGE_KEY] as string) ?? "";
+  const retry = () => {
+    currentUrl = ""; // handleUrlChange no-ops if normalized === currentUrl, so clear it to force a re-fetch
+    handleUrlChange();
+  };
+
+  let result: LookupResult;
   try {
     result = (await chrome.runtime.sendMessage({
       type: "LOOKUP_CANDIDATE",
       linkedinUrl: normalized,
-    })) as LookupResponse | null;
+      recruiterEmail,
+    })) as LookupResult;
   } catch {
     // Stale/reloaded extension context, or a transient network failure —
     // surface it instead of leaving the page with no overlay at all.
     if (normalized !== currentUrl) return;
-    const retry = () => {
-      currentUrl = ""; // handleUrlChange no-ops if normalized === currentUrl, so clear it to force a re-fetch
-      handleUrlChange();
-    };
     mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={retry} onShortlist={() => {}} />);
     return;
   }
 
   if (normalized !== currentUrl) return;
 
-  if (!result) {
+  if (result.status === "verification_required") {
+    mountRoot().render(<ProspectOverlay state={{ status: "lookup_verification_required" }} onScore={retry} onShortlist={() => {}} />);
+    return;
+  }
+  if (result.status === "error") {
+    mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={retry} onShortlist={() => {}} />);
+    return;
+  }
+  if (result.status === "not_found") {
     runProspectFlow(normalized);
     return;
   }
 
-  currentLookup = result;
-  renderOverlay(result, { status: "idle" });
+  currentLookup = result.data;
+  renderOverlay(result.data, { status: "idle" });
   runRescoreIfJdSet(normalized);
 }
 

@@ -11,6 +11,7 @@ export type ProspectState =
   | { status: "loading" }
   | { status: "scoring" }
   | { status: "verification_required" }
+  | { status: "lookup_verification_required" }
   | { status: "cap_exceeded" }
   | { status: "error" }
   | { status: "ready"; fitment: NonNullable<LookupResponse["fitment"]>; prospectId: string }
@@ -139,6 +140,18 @@ export function ProspectOverlay({
       <div style={CARD_STYLE}>
         <Header />
         <p>Confirm your email (check your inbox) then click retry.</p>
+        <button onClick={onScore}>Retry</button>
+      </div>
+    );
+  }
+  if (state.status === "lookup_verification_required") {
+    return (
+      <div style={CARD_STYLE}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <img src={logoUrl} alt="Merito" style={{ height: 16 }} />
+          <strong>Verify your email</strong>
+        </div>
+        <p>This candidate has a Merito preview. Confirm your email in the extension popup, then click retry.</p>
         <button onClick={onScore}>Retry</button>
       </div>
     );
