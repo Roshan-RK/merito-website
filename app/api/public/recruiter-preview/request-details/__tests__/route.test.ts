@@ -27,15 +27,20 @@ vi.mock("@/lib/recruiterViewEmails", () => ({
   sendRecruiterViewedEmail: sendRecruiterViewedEmailMock,
 }));
 
+const isRecruiterEmailVerifiedMock = vi.fn();
+vi.mock("@/lib/recruiterIdentity", () => ({
+  isRecruiterEmailVerified: isRecruiterEmailVerifiedMock,
+}));
+
 async function importRoute() {
   return await import("../route");
 }
 
-function request(body: unknown, key = "test-key") {
+function request(body: Record<string, unknown>, key = "test-key") {
   return new Request("http://localhost/api/public/recruiter-preview/request-details", {
     method: "POST",
     headers: key ? { "x-merito-extension-key": key } : {},
-    body: JSON.stringify(body),
+    body: JSON.stringify({ recruiterEmail: "recruiter@example.com", ...body }),
   });
 }
 
@@ -49,6 +54,8 @@ describe("POST /api/public/recruiter-preview/request-details", () => {
     fromMock.mockClear();
     logAndGetContactEmailMock.mockReset();
     sendRecruiterViewedEmailMock.mockClear();
+    isRecruiterEmailVerifiedMock.mockReset();
+    isRecruiterEmailVerifiedMock.mockResolvedValue(true);
   });
 
   it("returns 401 when the key header is missing", async () => {
@@ -108,5 +115,25 @@ describe("POST /api/public/recruiter-preview/request-details", () => {
     await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }));
 
     expect(sendRecruiterViewedEmailMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns 403 when recruiterEmail is missing", async () => {
+    const { POST } = await importRoute();
+    const response = await POST(
+      request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", recruiterEmail: undefined })
+    );
+    expect(response.status).toBe(403);
+    expect(logAndGetContactEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when recruiterEmail is not verified", async () => {
+    isRecruiterEmailVerifiedMock.mockResolvedValue(false);
+    const { POST } = await importRoute();
+    const response = await POST(
+      request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", recruiterEmail: "unverified@example.com" })
+    );
+    expect(response.status).toBe(403);
+    expect(logAndGetContactEmailMock).not.toHaveBeenCalled();
+    expect(sendRecruiterViewedEmailMock).not.toHaveBeenCalled();
   });
 });
