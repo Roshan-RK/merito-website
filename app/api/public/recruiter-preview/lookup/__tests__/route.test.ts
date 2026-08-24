@@ -15,6 +15,7 @@ function makeQueryStub(result: { data: unknown }) {
 let tableResults: Record<string, ReturnType<typeof makeQueryStub>>;
 const fromMock = vi.fn((table: string) => tableResults[table]);
 const getUserByIdMock = vi.fn();
+const isRecruiterEmailVerifiedMock = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({
@@ -23,15 +24,19 @@ vi.mock("@/lib/supabase", () => ({
   }),
 }));
 
+vi.mock("@/lib/recruiterIdentity", () => ({
+  isRecruiterEmailVerified: isRecruiterEmailVerifiedMock,
+}));
+
 async function importRoute() {
   return await import("../route");
 }
 
-function request(body: unknown, key = "test-key") {
+function request(body: Record<string, unknown>, key = "test-key") {
   return new Request("http://localhost/api/public/recruiter-preview/lookup", {
     method: "POST",
     headers: key ? { "x-merito-extension-key": key } : {},
-    body: JSON.stringify(body),
+    body: JSON.stringify({ recruiterEmail: "recruiter@example.com", ...body }),
   });
 }
 
@@ -50,6 +55,8 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
     fromMock.mockClear();
     getUserByIdMock.mockReset();
     getUserByIdMock.mockResolvedValue({ data: { user: { email: "jane@example.com" } } });
+    isRecruiterEmailVerifiedMock.mockReset();
+    isRecruiterEmailVerifiedMock.mockResolvedValue(true);
   });
 
   it("returns 401 when the key header is missing", async () => {
@@ -260,5 +267,37 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
     // Only lead-1 should be in response, lead-2 should be skipped
     expect(body.roles).toHaveLength(1);
     expect(body.roles[0].leadId).toBe("lead-1");
+  });
+
+  it("returns 403 when recruiterEmail is missing", async () => {
+    const { POST } = await importRoute();
+    const response = await POST(
+      request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", recruiterEmail: undefined })
+    );
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body).toEqual({ error: "Please confirm your email first.", verificationRequired: true });
+  });
+
+  it("returns 403 when recruiterEmail is not verified", async () => {
+    isRecruiterEmailVerifiedMock.mockResolvedValue(false);
+    const { POST } = await importRoute();
+    const response = await POST(
+      request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", recruiterEmail: "unverified@example.com" })
+    );
+    expect(response.status).toBe(403);
+  });
+
+  it("checks verification for the trimmed recruiterEmail", async () => {
+    const { POST } = await importRoute();
+    await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", recruiterEmail: "  recruiter@example.com  " }));
+    expect(isRecruiterEmailVerifiedMock).toHaveBeenCalledWith("recruiter@example.com");
+  });
+
+  it("does not record a lookup when recruiterEmail is unverified", async () => {
+    isRecruiterEmailVerifiedMock.mockResolvedValue(false);
+    const { POST } = await importRoute();
+    await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }));
+    expect(fromMock).not.toHaveBeenCalledWith("extension_lookups");
   });
 });

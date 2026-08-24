@@ -2,6 +2,7 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { nameFromEmail, type Scores } from "@/lib/personality";
 import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "@/lib/linkedinUrl";
 import { recordLookup } from "@/lib/extensionLookups";
+import { isRecruiterEmailVerified } from "@/lib/recruiterIdentity";
 import {
   buildLookupFitment,
   buildLookupPersonality,
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { linkedinUrl?: unknown };
+  let body: { linkedinUrl?: unknown; recruiterEmail?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -43,6 +44,14 @@ export async function POST(request: Request) {
   const normalized = normalizeLinkedinUrl(body.linkedinUrl.trim());
   if (!LINKEDIN_URL_PATTERN.test(normalized)) {
     return Response.json({ error: "Not found." }, { status: 404 });
+  }
+
+  if (typeof body.recruiterEmail !== "string" || body.recruiterEmail.trim().length === 0) {
+    return Response.json({ error: "Please confirm your email first.", verificationRequired: true }, { status: 403 });
+  }
+  const recruiterEmail = body.recruiterEmail.trim();
+  if (!(await isRecruiterEmailVerified(recruiterEmail))) {
+    return Response.json({ error: "Please confirm your email first.", verificationRequired: true }, { status: 403 });
   }
 
   const admin = getSupabaseServerClient();
