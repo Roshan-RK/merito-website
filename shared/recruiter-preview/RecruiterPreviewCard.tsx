@@ -371,6 +371,7 @@ export function RecruiterPreviewCard({
   rescoreFitment?: LookupResponse["fitment"] | null;
 }) {
   const sections = new Set(data.sections);
+  const interviewMetricKeys = data.interview ? new Set(Object.keys(data.interview.skillMetrics)) : null;
   const [activeFitmentView, setActiveFitmentView] = useState<"own" | "jd">("own");
   const [revealedEmail, setRevealedEmail] = useState<string | null>(null);
   const [contactState, setContactState] = useState<"idle" | "revealing" | "error">("idle");
@@ -725,9 +726,11 @@ export function RecruiterPreviewCard({
               ))}
             </div>
           )}
-          {Object.entries(data.interview.skillReport).map(([skill, entry]) => (
-            <SkillRow key={skill} skill={skill} score={entry.score} comment={entry.comment} />
-          ))}
+          {Object.entries(data.interview.skillReport)
+            .filter(([skill]) => !interviewMetricKeys?.has(skill))
+            .map(([skill, entry]) => (
+              <SkillRow key={skill} skill={DELIVERY_PARAM_LABELS[skill] ?? skill} score={entry.score} comment={entry.comment} />
+            ))}
         </DetailSection>
       )}
 
