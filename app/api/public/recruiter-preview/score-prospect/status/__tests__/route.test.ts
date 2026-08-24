@@ -68,6 +68,13 @@ describe("GET /api/public/recruiter-preview/score-prospect/status", () => {
     expect(body).toEqual({ status: "pending" });
   });
 
+  it("returns 502 when scoring failed", async () => {
+    getProspectScoreStatusMock.mockResolvedValue({ status: "failed" });
+    const { GET } = await importRoute();
+    const response = await GET(request(VALID_PARAMS));
+    expect(response.status).toBe(502);
+  });
+
   it("returns ready status with fitment when scoring is complete", async () => {
     getProspectScoreStatusMock.mockResolvedValue({
       status: "ready",
