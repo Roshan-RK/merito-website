@@ -45,13 +45,17 @@ function renderOverlay(data: LookupResponse, rescore: RescoreState) {
 }
 
 async function requestContactDetails(): Promise<{ email: string } | { error: string } | null> {
-  const stored = await chrome.storage.local.get([EMAIL_STORAGE_KEY]);
-  const recruiterEmail = (stored[EMAIL_STORAGE_KEY] as string) ?? "";
-  return (await chrome.runtime.sendMessage({
-    type: "REQUEST_CONTACT_DETAILS",
-    linkedinUrl: currentUrl,
-    recruiterEmail,
-  })) as { email: string } | { error: string } | null;
+  try {
+    const stored = await chrome.storage.local.get([EMAIL_STORAGE_KEY]);
+    const recruiterEmail = (stored[EMAIL_STORAGE_KEY] as string) ?? "";
+    return (await chrome.runtime.sendMessage({
+      type: "REQUEST_CONTACT_DETAILS",
+      linkedinUrl: currentUrl,
+      recruiterEmail,
+    })) as { email: string } | { error: string } | null;
+  } catch {
+    return null;
+  }
 }
 
 async function runProspectFlow(linkedinUrl: string) {
@@ -216,8 +220,6 @@ async function handleUrlChange() {
 
   if (!LINKEDIN_URL_PATTERN.test(normalized)) return;
 
-  const stored = await chrome.storage.local.get([EMAIL_STORAGE_KEY]);
-  const recruiterEmail = (stored[EMAIL_STORAGE_KEY] as string) ?? "";
   const retry = () => {
     currentUrl = ""; // handleUrlChange no-ops if normalized === currentUrl, so clear it to force a re-fetch
     handleUrlChange();
@@ -225,14 +227,17 @@ async function handleUrlChange() {
 
   let result: LookupResult;
   try {
+    const stored = await chrome.storage.local.get([EMAIL_STORAGE_KEY]);
+    const recruiterEmail = (stored[EMAIL_STORAGE_KEY] as string) ?? "";
     result = (await chrome.runtime.sendMessage({
       type: "LOOKUP_CANDIDATE",
       linkedinUrl: normalized,
       recruiterEmail,
     })) as LookupResult;
   } catch {
-    // Stale/reloaded extension context, or a transient network failure —
-    // surface it instead of leaving the page with no overlay at all.
+    // Stale/reloaded extension context, storage access failure, or a
+    // transient network failure — surface it instead of leaving the page
+    // with no overlay at all.
     if (normalized !== currentUrl) return;
     mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={retry} onShortlist={() => {}} />);
     return;
