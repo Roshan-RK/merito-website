@@ -88,6 +88,38 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
     expect(response.status).toBe(404);
   });
 
+  it("returns 400 when extension version is v1.x", async () => {
+    const { POST } = await importRoute();
+    const req = new Request("http://localhost/api/public/recruiter-preview/lookup", {
+      method: "POST",
+      headers: {
+        "x-merito-extension-key": "test-key",
+        "user-agent": "merito-extension/1.5.0",
+      },
+      body: JSON.stringify({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }),
+    });
+    const response = await POST(req);
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toContain("upgrade");
+  });
+
+  it("returns 400 when extension version is v2.x", async () => {
+    const { POST } = await importRoute();
+    const req = new Request("http://localhost/api/public/recruiter-preview/lookup", {
+      method: "POST",
+      headers: {
+        "x-merito-extension-key": "test-key",
+        "user-agent": "merito-extension/2.9.1",
+      },
+      body: JSON.stringify({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }),
+    });
+    const response = await POST(req);
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toContain("upgrade");
+  });
+
   it("returns array of roles with isCurrent=true on first one", async () => {
     tableResults.recruiter_preview_settings = makeQueryStub({
       data: { user_id: "candidate-1" },
@@ -162,5 +194,71 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
         },
       },
     });
+  });
+
+  it("skips unconfigured leads (no section row)", async () => {
+    const sectionCalls: string[] = [];
+
+    function makeSectionStub() {
+      const stub: Record<string, unknown> = {};
+      stub.select = () => stub;
+      stub.eq = (field: string, value: unknown) => {
+        if (field === "lead_id") {
+          sectionCalls.push(value as string);
+        }
+        return stub;
+      };
+      stub.order = () => stub;
+      stub.limit = () => stub;
+      stub.maybeSingle = async () => {
+        // lead-1 has config, lead-2 doesn't
+        const lastLeadId = sectionCalls[sectionCalls.length - 1];
+        return lastLeadId === "lead-1"
+          ? { data: { sections: ["fitment"] } }
+          : { data: null };
+      };
+      return stub;
+    }
+
+    tableResults.recruiter_preview_settings = makeQueryStub({
+      data: { user_id: "candidate-1" },
+    });
+    tableResults.fitment_leads = makeQueryStub({
+      data: [
+        {
+          id: "lead-1",
+          role_title: "Data Analyst",
+          name: "Jane Doe",
+          resume_match_status: "READY",
+          candidate_level: "mid",
+          resume_match_raw: { overallScore: 82, rank: null, categories: [], summary: "Good fit", strongPoints: [], weakPoints: [] },
+        },
+        {
+          id: "lead-2",
+          role_title: "Software Engineer",
+          name: "Jane Doe",
+          resume_match_status: "READY",
+          candidate_level: "mid",
+          resume_match_raw: { overallScore: 75, rank: null, categories: [], summary: "Ok fit", strongPoints: [], weakPoints: [] },
+        },
+      ],
+    });
+
+    // Override from mock to return section stub
+    fromMock.mockImplementation((table: string) => {
+      if (table === "recruiter_preview_sections") {
+        return makeSectionStub();
+      }
+      return tableResults[table];
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    // Only lead-1 should be in response, lead-2 should be skipped
+    expect(body.roles).toHaveLength(1);
+    expect(body.roles[0].leadId).toBe("lead-1");
   });
 });
