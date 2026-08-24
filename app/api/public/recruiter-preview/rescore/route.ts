@@ -4,6 +4,7 @@ import { createRateLimiter } from "@/lib/rateLimit";
 import { buildLookupFitment } from "@/lib/recruiterPreview";
 import { hashJd, getCachedRescore, runRescore, type CandidateForRescore } from "@/lib/recruiterJdRescore";
 import type { CandidateLevel } from "@/lib/intervuebox/agents";
+import { isRecruiterEmailVerified } from "@/lib/recruiterIdentity";
 
 export const runtime = "nodejs";
 // runRescore polls for up to RESCORE_MAX_WAIT_MS (default 90s) waiting on
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid key." }, { status: 401 });
   }
 
-  let body: { linkedinUrl?: unknown; jdText?: unknown };
+  let body: { linkedinUrl?: unknown; jdText?: unknown; recruiterEmail?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -50,6 +51,13 @@ export async function POST(request: Request) {
     return Response.json({ error: "Not found." }, { status: 404 });
   }
   const jdText = body.jdText.trim().slice(0, MAX_JD_CHARS);
+
+  if (typeof body.recruiterEmail !== "string" || body.recruiterEmail.trim().length === 0) {
+    return Response.json({ error: "Please confirm your email first.", verificationRequired: true }, { status: 403 });
+  }
+  if (!(await isRecruiterEmailVerified(body.recruiterEmail.trim()))) {
+    return Response.json({ error: "Please confirm your email first.", verificationRequired: true }, { status: 403 });
+  }
 
   const admin = getSupabaseServerClient();
   const { data: settingsRow } = await admin

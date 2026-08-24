@@ -17,7 +17,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     typeof message.linkedinUrl === "string" &&
     typeof message.jdText === "string"
   ) {
-    rescoreCandidate(message.linkedinUrl, message.jdText).then(sendResponse);
+    const recruiterEmail = typeof message.recruiterEmail === "string" ? message.recruiterEmail : "";
+    rescoreCandidate(message.linkedinUrl, message.jdText, recruiterEmail).then(sendResponse);
     return true;
   }
   if (message?.type === "SCORE_PROSPECT" && typeof message.input === "object") {

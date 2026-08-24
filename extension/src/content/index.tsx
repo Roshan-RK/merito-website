@@ -186,8 +186,9 @@ async function scoreProspectNow(
 }
 
 async function runRescoreIfJdSet(linkedinUrl: string) {
-  const stored = await chrome.storage.local.get([JD_STORAGE_KEY]);
+  const stored = await chrome.storage.local.get([JD_STORAGE_KEY, EMAIL_STORAGE_KEY]);
   const jdText = stored[JD_STORAGE_KEY] as string | undefined;
+  const recruiterEmail = (stored[EMAIL_STORAGE_KEY] as string) ?? "";
   if (!jdText || !currentLookup) return;
 
   renderOverlay(currentLookup, { status: "loading" });
@@ -197,6 +198,7 @@ async function runRescoreIfJdSet(linkedinUrl: string) {
       type: "RESCORE_CANDIDATE",
       linkedinUrl,
       jdText,
+      recruiterEmail,
     })) as RescoreResponse | null;
   } catch {
     if (!currentLookup || linkedinUrl !== currentUrl) return;

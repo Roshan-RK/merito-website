@@ -28,6 +28,11 @@ vi.mock("@/lib/recruiterJdRescore", async (importOriginal) => {
   };
 });
 
+const isRecruiterEmailVerifiedMock = vi.fn();
+vi.mock("@/lib/recruiterIdentity", () => ({
+  isRecruiterEmailVerified: isRecruiterEmailVerifiedMock,
+}));
+
 async function importRoute() {
   return await import("../route");
 }
@@ -40,7 +45,11 @@ function request(body: unknown, key = "test-key") {
   });
 }
 
-const VALID_BODY = { linkedinUrl: "https://www.linkedin.com/in/jane-doe", jdText: "We need a backend engineer." };
+const VALID_BODY = {
+  linkedinUrl: "https://www.linkedin.com/in/jane-doe",
+  jdText: "We need a backend engineer.",
+  recruiterEmail: "recruiter@example.com",
+};
 
 describe("POST /api/public/recruiter-preview/rescore", () => {
   beforeEach(() => {
@@ -52,6 +61,8 @@ describe("POST /api/public/recruiter-preview/rescore", () => {
     fromMock.mockClear();
     getCachedRescoreMock.mockReset().mockResolvedValue(null);
     runRescoreMock.mockReset();
+    isRecruiterEmailVerifiedMock.mockReset();
+    isRecruiterEmailVerifiedMock.mockResolvedValue(true);
   });
 
   it("returns 401 when the key header is missing", async () => {
@@ -70,6 +81,21 @@ describe("POST /api/public/recruiter-preview/rescore", () => {
     const { POST } = await importRoute();
     const response = await POST(request({ linkedinUrl: VALID_BODY.linkedinUrl }));
     expect(response.status).toBe(404);
+  });
+
+  it("returns 403 when recruiterEmail is missing", async () => {
+    const { POST } = await importRoute();
+    const response = await POST(request({ ...VALID_BODY, recruiterEmail: undefined }));
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body).toEqual({ error: "Please confirm your email first.", verificationRequired: true });
+  });
+
+  it("returns 403 when recruiterEmail is not verified", async () => {
+    isRecruiterEmailVerifiedMock.mockResolvedValue(false);
+    const { POST } = await importRoute();
+    const response = await POST(request(VALID_BODY));
+    expect(response.status).toBe(403);
   });
 
   it("returns 404 when no candidate matches or is disabled", async () => {

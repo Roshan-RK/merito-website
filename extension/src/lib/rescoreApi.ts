@@ -2,7 +2,7 @@ import type { RescoreResponse } from "../../../shared/recruiter-preview/types";
 
 const RESCORE_URL = "https://www.merito.ai/api/public/recruiter-preview/rescore";
 
-export async function rescoreCandidate(linkedinUrl: string, jdText: string): Promise<RescoreResponse | null> {
+export async function rescoreCandidate(linkedinUrl: string, jdText: string, recruiterEmail: string): Promise<RescoreResponse | null> {
   const extensionKey = import.meta.env.VITE_RECRUITER_EXTENSION_KEY as string;
   try {
     const response = await fetch(RESCORE_URL, {
@@ -11,7 +11,7 @@ export async function rescoreCandidate(linkedinUrl: string, jdText: string): Pro
         "Content-Type": "application/json",
         "x-merito-extension-key": extensionKey,
       },
-      body: JSON.stringify({ linkedinUrl, jdText }),
+      body: JSON.stringify({ linkedinUrl, jdText, recruiterEmail }),
     });
     if (!response.ok) return null;
     return (await response.json()) as RescoreResponse;
