@@ -8,7 +8,8 @@ import { extractJdTextFromFile } from "../lib/extractJdTextApi";
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "LOOKUP_CANDIDATE" && typeof message.linkedinUrl === "string") {
-    lookupCandidate(message.linkedinUrl).then(sendResponse);
+    const recruiterEmail = typeof message.recruiterEmail === "string" ? message.recruiterEmail : "";
+    lookupCandidate(message.linkedinUrl, recruiterEmail).then(sendResponse);
     return true;
   }
   if (
