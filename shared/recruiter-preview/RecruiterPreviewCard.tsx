@@ -726,11 +726,15 @@ export function RecruiterPreviewCard({
               ))}
             </div>
           )}
-          {Object.entries(data.interview.skillReport)
-            .filter(([skill]) => !interviewMetricKeys?.has(skill))
-            .map(([skill, entry]) => (
+          {Object.entries(data.interview.skillReport).map(([skill, entry]) =>
+            interviewMetricKeys?.has(skill) ? (
+              <p key={skill} style={{ fontSize: 11, color: "#6C6779", margin: "0 0 10px", lineHeight: 1.5, fontFamily: SANS }}>
+                <strong style={{ color: "#211D2C" }}>{DELIVERY_PARAM_LABELS[skill] ?? skill}:</strong> {entry.comment}
+              </p>
+            ) : (
               <SkillRow key={skill} skill={DELIVERY_PARAM_LABELS[skill] ?? skill} score={entry.score} comment={entry.comment} />
-            ))}
+            )
+          )}
         </DetailSection>
       )}
 
