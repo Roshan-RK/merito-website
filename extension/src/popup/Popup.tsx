@@ -116,8 +116,8 @@ export function Popup() {
     <div style={{ padding: 16, fontFamily: SANS, width: 320, boxSizing: "border-box" }}>
       <h2 style={{ fontSize: 14, margin: "0 0 8px" }}>Score against your JD</h2>
       <p style={{ fontSize: 11.5, color: "#6C6779", margin: "0 0 8px" }}>
-        Your HR email and company confirm you're a recruiter before scoring profiles that aren't yet on Merito
-        (10/month). If you don&apos;t see a confirmation email, check spam.
+        Your HR email and company confirm you're a recruiter — this unlocks previewing Merito candidates and scoring
+        profiles that aren't yet on Merito (10/month). If you don&apos;t see a confirmation email, check spam.
       </p>
       <input
         type="text"
