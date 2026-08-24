@@ -1,6 +1,9 @@
 const REQUEST_DETAILS_URL = "https://www.merito.ai/api/public/recruiter-preview/request-details";
 
-export async function requestContactDetails(linkedinUrl: string): Promise<{ email: string } | { error: string } | null> {
+export async function requestContactDetails(
+  linkedinUrl: string,
+  recruiterEmail: string
+): Promise<{ email: string } | { error: string } | null> {
   const extensionKey = import.meta.env.VITE_RECRUITER_EXTENSION_KEY as string;
   try {
     const response = await fetch(REQUEST_DETAILS_URL, {
@@ -9,7 +12,7 @@ export async function requestContactDetails(linkedinUrl: string): Promise<{ emai
         "Content-Type": "application/json",
         "x-merito-extension-key": extensionKey,
       },
-      body: JSON.stringify({ linkedinUrl }),
+      body: JSON.stringify({ linkedinUrl, recruiterEmail }),
     });
     const data = (await response.json()) as { email?: string; error?: string };
     if (!response.ok || !data.email) {

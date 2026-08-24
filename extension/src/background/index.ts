@@ -56,7 +56,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
   if (message?.type === "REQUEST_CONTACT_DETAILS" && typeof message.linkedinUrl === "string") {
-    requestContactDetails(message.linkedinUrl).then(sendResponse);
+    const recruiterEmail = typeof message.recruiterEmail === "string" ? message.recruiterEmail : "";
+    requestContactDetails(message.linkedinUrl, recruiterEmail).then(sendResponse);
     return true;
   }
   if (message?.type === "EXTRACT_JD_FILE" && message.file instanceof File) {

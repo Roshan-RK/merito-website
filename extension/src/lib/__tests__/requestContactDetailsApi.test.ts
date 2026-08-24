@@ -13,30 +13,32 @@ describe("requestContactDetails", () => {
     fetchMock.mockReset();
   });
 
-  it("posts to the request-details endpoint with the key header and linkedinUrl", async () => {
+  it("posts to the request-details endpoint with the key header, linkedinUrl, and recruiterEmail", async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ email: "jane@example.com" }) });
     const { requestContactDetails } = await importModule();
-    const result = await requestContactDetails("https://www.linkedin.com/in/jane-doe");
+    const result = await requestContactDetails("https://www.linkedin.com/in/jane-doe", "recruiter@example.com");
     expect(fetchMock).toHaveBeenCalledWith(
       "https://www.merito.ai/api/public/recruiter-preview/request-details",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({ "x-merito-extension-key": "test-key" }),
-        body: JSON.stringify({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }),
+        body: JSON.stringify({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", recruiterEmail: "recruiter@example.com" }),
       })
     );
     expect(result).toEqual({ email: "jane@example.com" });
   });
 
   it("returns the server error message on a non-ok response", async () => {
-    fetchMock.mockResolvedValue({ ok: false, json: async () => ({ error: "Not found." }) });
+    fetchMock.mockResolvedValue({ ok: false, json: async () => ({ error: "Please confirm your email first.", verificationRequired: true }) });
     const { requestContactDetails } = await importModule();
-    expect(await requestContactDetails("https://www.linkedin.com/in/jane-doe")).toEqual({ error: "Not found." });
+    expect(await requestContactDetails("https://www.linkedin.com/in/jane-doe", "recruiter@example.com")).toEqual({
+      error: "Please confirm your email first.",
+    });
   });
 
   it("returns null on a network error", async () => {
     fetchMock.mockRejectedValue(new Error("network down"));
     const { requestContactDetails } = await importModule();
-    expect(await requestContactDetails("https://www.linkedin.com/in/jane-doe")).toBeNull();
+    expect(await requestContactDetails("https://www.linkedin.com/in/jane-doe", "recruiter@example.com")).toBeNull();
   });
 });
