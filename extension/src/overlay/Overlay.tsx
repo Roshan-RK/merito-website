@@ -98,6 +98,7 @@ export function Overlay({
   }
 
   const flattened = flattenLookupRole(data, selectedLeadId);
+  const effectiveActiveSection = flattened.sections.includes(activeSection) ? activeSection : "fitment";
   const availableRoles = data.roles.map((r) => ({ leadId: r.leadId, roleTitle: r.roleTitle }));
 
   return (
@@ -116,7 +117,7 @@ export function Overlay({
       <RescoreBanner state={rescore} />
       <RecruiterPreviewCard
         data={flattened}
-        activeSection={activeSection}
+        activeSection={effectiveActiveSection}
         onSelectSection={selectSection}
         logoUrl={logoUrl}
         onClose={() => setExpanded(false)}
