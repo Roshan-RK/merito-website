@@ -98,7 +98,15 @@ export function Overlay({
   }
 
   const flattened = flattenLookupRole(data, selectedLeadId);
-  const effectiveActiveSection = pickActiveSection(flattened.sections, activeSection) as SectionKey;
+  // A JD rescore result is shown under the "fitment" tab regardless of
+  // whether the selected role has its own fitment section -- include it as
+  // a fallback candidate so switching roles while a rescore is active
+  // doesn't make the JD breakdown unreachable.
+  const sectionsForFallback =
+    rescore.status === "ready" && !flattened.sections.includes("fitment")
+      ? [...flattened.sections, "fitment"]
+      : flattened.sections;
+  const effectiveActiveSection = pickActiveSection(sectionsForFallback, activeSection) as SectionKey;
   const availableRoles = data.roles.map((r) => ({ leadId: r.leadId, roleTitle: r.roleTitle }));
 
   return (
