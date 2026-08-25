@@ -3,7 +3,7 @@ import { defineManifest } from "@crxjs/vite-plugin";
 export default defineManifest({
   manifest_version: 3,
   name: "Merito Recruiter Preview",
-  version: "0.1.0",
+  version: "0.2.0",
   description: "See a candidate's verified Merito Hub report while viewing their LinkedIn profile.",
   icons: {
     16: "src/assets/icon-16.png",

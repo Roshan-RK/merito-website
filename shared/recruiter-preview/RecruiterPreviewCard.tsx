@@ -614,7 +614,27 @@ export function RecruiterPreviewCard({
           ) : contactState === "revealing" ? (
             <div style={{ fontSize: 11.5, color: "#6C6779", fontFamily: SANS }}>Revealing…</div>
           ) : contactState === "error" ? (
-            <div style={{ fontSize: 11.5, color: "#ed1a24", fontFamily: SANS }}>{contactError || "Couldn't reveal email — try again."}</div>
+            <div>
+              <div style={{ fontSize: 11.5, color: "#ed1a24", fontFamily: SANS, marginBottom: 6 }}>
+                {contactError || "Couldn't reveal email — try again."}
+              </div>
+              <button
+                onClick={handleRevealEmail}
+                style={{
+                  background: "none",
+                  border: "1px solid #E6E1ED",
+                  borderRadius: 8,
+                  padding: "6px 10px",
+                  fontSize: 11.5,
+                  fontFamily: SANS,
+                  fontWeight: 600,
+                  color: "#4B4894",
+                  cursor: "pointer",
+                }}
+              >
+                Retry
+              </button>
+            </div>
           ) : (
             <button
               onClick={handleRevealEmail}
