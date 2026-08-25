@@ -20,7 +20,10 @@ export async function rescoreCandidate(linkedinUrl: string, jdText: string, recr
       body: JSON.stringify({ linkedinUrl, jdText, recruiterEmail }),
     });
     if (response.status === 403) return { status: "verification_required" };
-    if (response.status === 429) return { status: "cap_exceeded" };
+    if (response.status === 429) {
+      const body = (await response.json().catch(() => null)) as { capExceeded?: boolean } | null;
+      return body?.capExceeded ? { status: "cap_exceeded" } : { status: "error" };
+    }
     if (!response.ok) return { status: "error" };
     const data = (await response.json()) as RescoreResponse;
     if (!data.fitment) return { status: "error" };

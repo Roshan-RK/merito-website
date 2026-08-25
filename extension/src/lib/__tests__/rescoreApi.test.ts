@@ -40,10 +40,23 @@ describe("rescoreCandidate", () => {
   });
 
   it("returns cap_exceeded on a 429 response", async () => {
-    fetchMock.mockResolvedValue({ ok: false, status: 429 });
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 429,
+      json: async () => ({ capExceeded: true, error: "Monthly scoring limit reached." }),
+    });
     const { rescoreCandidate } = await importRescoreApi();
     const result = await rescoreCandidate("https://www.linkedin.com/in/jane-doe", "JD", "recruiter@example.com");
     expect(result).toEqual({ status: "cap_exceeded" });
+  });
+
+  it("returns error on a 429 response without the capExceeded flag", async () => {
+    // The per-candidate rate limiter also answers 429 -- that is not the
+    // monthly cap, and must not claim the recruiter is out of checks.
+    fetchMock.mockResolvedValue({ ok: false, status: 429, json: async () => ({ error: "Too many requests." }) });
+    const { rescoreCandidate } = await importRescoreApi();
+    const result = await rescoreCandidate("https://www.linkedin.com/in/jane-doe", "JD", "recruiter@example.com");
+    expect(result).toEqual({ status: "error" });
   });
 
   it("returns verification_required on a 403 response", async () => {

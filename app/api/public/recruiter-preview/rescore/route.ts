@@ -82,7 +82,7 @@ export async function POST(request: Request) {
 
   const monthlyCount = await getMonthlyCheckCount(recruiterEmail);
   if (monthlyCount >= MONTHLY_CHECK_CAP) {
-    return Response.json({ error: "Monthly scoring limit reached." }, { status: 429 });
+    return Response.json({ error: "Monthly scoring limit reached.", capExceeded: true }, { status: 429 });
   }
 
   if (!rescoreRateLimit(userId)) {

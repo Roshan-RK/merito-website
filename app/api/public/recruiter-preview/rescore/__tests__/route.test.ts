@@ -204,7 +204,7 @@ describe("POST /api/public/recruiter-preview/rescore", () => {
     const body = await response.json();
 
     expect(response.status).toBe(429);
-    expect(body).toEqual({ error: "Monthly scoring limit reached." });
+    expect(body).toEqual({ error: "Monthly scoring limit reached.", capExceeded: true });
     expect(runRescoreMock).not.toHaveBeenCalled();
     expect(recordCandidateCheckMock).not.toHaveBeenCalled();
   });
