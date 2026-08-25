@@ -4,7 +4,7 @@ const prospectCountMock = vi.fn();
 const candidateCountMock = vi.fn();
 const insertMock = vi.fn().mockResolvedValue({ error: null });
 
-function countChain(mock: ReturnType<typeof vi.fn>) {
+function countChain(mock: () => { count: number }) {
   return {
     select: () => ({
       eq: () => ({
