@@ -3,8 +3,9 @@ import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "./linkedinUrl";
 import { Overlay, type RescoreState } from "../overlay/Overlay";
 import { ProspectOverlay } from "../overlay/ProspectOverlay";
 import { scrapeProfile } from "../lib/scrapeProfile";
-import type { LookupWireResponse, RescoreResponse, ScoreProspectResponse } from "../../../shared/recruiter-preview/types";
+import type { LookupWireResponse, ScoreProspectResponse } from "../../../shared/recruiter-preview/types";
 import type { LookupResult } from "../lib/lookupApi";
+import type { RescoreResult } from "../lib/rescoreApi";
 
 const JD_STORAGE_KEY = "meritoJdText";
 const EMAIL_STORAGE_KEY = "meritoRecruiterEmail";
@@ -53,6 +54,7 @@ function renderOverlay(data: LookupWireResponse, rescore: RescoreState) {
       onRequestContactDetails={requestContactDetails}
       selectedLeadId={selectedLeadId}
       onSelectRole={selectRole}
+      onCheckFitment={() => checkFitmentNow(currentUrl)}
     />
   );
 }
@@ -204,32 +206,40 @@ async function scoreProspectNow(
   mountRoot().render(<ProspectOverlay state={{ status: "error" }} onScore={retry} onShortlist={() => {}} />);
 }
 
-async function runRescoreIfJdSet(linkedinUrl: string) {
+// Explicit, recruiter-initiated only -- checking a Merito candidate's JD
+// match spends one of the recruiter's monthly checks (combined pool with
+// prospect scoring), so it must never fire silently on navigation or JD
+// change. See docs/superpowers/specs/2026-08-25-reveal-credits-design.md.
+async function checkFitmentNow(linkedinUrl: string) {
   const stored = await chrome.storage.local.get([JD_STORAGE_KEY, EMAIL_STORAGE_KEY]);
   const jdText = stored[JD_STORAGE_KEY] as string | undefined;
   const recruiterEmail = (stored[EMAIL_STORAGE_KEY] as string) ?? "";
   if (!jdText || !currentLookup) return;
 
   renderOverlay(currentLookup, { status: "loading" });
-  let result: RescoreResponse | null;
+  let result: RescoreResult;
   try {
     result = (await chrome.runtime.sendMessage({
       type: "RESCORE_CANDIDATE",
       linkedinUrl,
       jdText,
       recruiterEmail,
-    })) as RescoreResponse | null;
+    })) as RescoreResult;
   } catch {
     if (!currentLookup || linkedinUrl !== currentUrl) return;
-    renderOverlay(currentLookup, { status: "idle" });
+    renderOverlay(currentLookup, { status: "prompt" });
     return;
   }
 
   if (!currentLookup || linkedinUrl !== currentUrl) return;
-  if (result?.fitment) {
+  if (result.status === "ready") {
     renderOverlay(currentLookup, { status: "ready", fitment: result.fitment });
+  } else if (result.status === "cap_exceeded") {
+    renderOverlay(currentLookup, { status: "cap_exceeded" });
   } else {
-    renderOverlay(currentLookup, { status: "idle" });
+    // verification_required or error -- revert to the check prompt so the
+    // button reappears for a retry, rather than a dedicated error state.
+    renderOverlay(currentLookup, { status: "prompt" });
   }
 }
 
@@ -281,14 +291,16 @@ async function handleUrlChange() {
 
   currentLookup = result.data;
   selectedLeadId = result.data.roles.find((r) => r.isCurrent)?.leadId ?? result.data.roles[0]?.leadId ?? null;
-  renderOverlay(result.data, { status: "idle" });
-  runRescoreIfJdSet(normalized);
+  const stored = await chrome.storage.local.get([JD_STORAGE_KEY]);
+  const jdText = stored[JD_STORAGE_KEY] as string | undefined;
+  renderOverlay(result.data, jdText ? { status: "prompt" } : { status: "idle" });
 }
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local" || !(JD_STORAGE_KEY in changes)) return;
   if (currentLookup) {
-    runRescoreIfJdSet(currentUrl);
+    const newJdText = changes[JD_STORAGE_KEY].newValue as string | undefined;
+    renderOverlay(currentLookup, newJdText ? { status: "prompt" } : { status: "idle" });
     return;
   }
   // Prospect (non-Merito) overlay isn't tied to currentLookup — reset it back
