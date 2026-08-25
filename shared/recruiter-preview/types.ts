@@ -49,7 +49,8 @@ export type LookupResponse = {
 // What the lookup endpoint actually sends on the wire (one entry per role
 // the candidate has configured recruiter-preview sections for). Client code
 // flattens this to `LookupResponse` (the shape the render components use)
-// by picking the `isCurrent` role -- see lookupApi.ts.
+// via a selected leadId, falling back to the `isCurrent` role -- see
+// flattenLookupRole in lookupApi.ts.
 export type LookupRoleEntry = {
   leadId: string;
   roleTitle: string | null;
@@ -67,7 +68,7 @@ export type LookupWireResponse = {
   roles: LookupRoleEntry[];
 };
 
-export type AvailableRole = { leadId: string; roleTitle: string | null };
+export type AvailableRole = Pick<LookupRoleEntry, "leadId" | "roleTitle">;
 
 export type RescoreResponse = { fitment: LookupResponse["fitment"] };
 
