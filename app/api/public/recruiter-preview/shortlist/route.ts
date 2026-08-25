@@ -26,8 +26,9 @@ export async function POST(request: Request) {
   if (!(await isRecruiterEmailVerified(body.recruiterEmail.trim()))) {
     return Response.json({ error: "Please confirm your email first.", verificationRequired: true }, { status: 403 });
   }
+  const recruiterEmail = body.recruiterEmail.trim();
 
-  const result = await shortlistProspect(body.prospectId);
+  const result = await shortlistProspect(body.prospectId, recruiterEmail);
   if (!result) {
     return Response.json({ error: "Not found." }, { status: 404 });
   }

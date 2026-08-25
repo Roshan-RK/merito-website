@@ -202,16 +202,25 @@ describe("getProspectScoreStatus", () => {
   it("returns failed when the prospect row doesn't exist", async () => {
     maybeSingleMock.mockResolvedValue({ data: null });
     const { getProspectScoreStatus } = await importModule();
-    const result = await getProspectScoreStatus("missing-id");
+    const result = await getProspectScoreStatus("missing-id", "recruiter@example.com");
+    expect(result.status).toBe("failed");
+  });
+
+  it("returns failed when the prospect belongs to a different recruiter", async () => {
+    maybeSingleMock.mockResolvedValue({
+      data: { status: "ready", resume_match_raw: READY_REPORT, jd_text: INPUT.jdText, ib_applied_job_id: "APJ_1", recruiter_email: "owner@example.com" },
+    });
+    const { getProspectScoreStatus } = await importModule();
+    const result = await getProspectScoreStatus("prospect-1", "someone-else@example.com");
     expect(result.status).toBe("failed");
   });
 
   it("returns the stored ready result without calling IntervueBox again", async () => {
     maybeSingleMock.mockResolvedValue({
-      data: { status: "ready", resume_match_raw: READY_REPORT, jd_text: INPUT.jdText, ib_applied_job_id: "APJ_1" },
+      data: { status: "ready", resume_match_raw: READY_REPORT, jd_text: INPUT.jdText, ib_applied_job_id: "APJ_1", recruiter_email: "recruiter@example.com" },
     });
     const { getProspectScoreStatus } = await importModule();
-    const result = await getProspectScoreStatus("prospect-1");
+    const result = await getProspectScoreStatus("prospect-1", "recruiter@example.com");
 
     expect(result.status).toBe("ready");
     if (result.status === "ready") expect(result.report.overallScore).toBe(82);
@@ -220,20 +229,20 @@ describe("getProspectScoreStatus", () => {
   });
 
   it("returns failed when the row is marked failed", async () => {
-    maybeSingleMock.mockResolvedValue({ data: { status: "failed", jd_text: INPUT.jdText } });
+    maybeSingleMock.mockResolvedValue({ data: { status: "failed", jd_text: INPUT.jdText, recruiter_email: "recruiter@example.com" } });
     const { getProspectScoreStatus } = await importModule();
-    const result = await getProspectScoreStatus("prospect-1");
+    const result = await getProspectScoreStatus("prospect-1", "recruiter@example.com");
     expect(result.status).toBe("failed");
   });
 
   it("retries addApplicant when no applicant is linked yet, staying pending if still parsing", async () => {
     maybeSingleMock.mockResolvedValue({
-      data: { status: "pending", ib_job_id: "JOB_1", ib_resume_id: "RES_1", ib_applied_job_id: null, candidate_name: "Jane", jd_text: INPUT.jdText },
+      data: { status: "pending", ib_job_id: "JOB_1", ib_resume_id: "RES_1", ib_applied_job_id: null, candidate_name: "Jane", jd_text: INPUT.jdText, recruiter_email: "recruiter@example.com" },
     });
     const { addApplicant } = await import("@/lib/intervuebox/applicants");
     vi.mocked(addApplicant).mockRejectedValue(await stillParsingError());
     const { getProspectScoreStatus } = await importModule();
-    const result = await getProspectScoreStatus("prospect-1");
+    const result = await getProspectScoreStatus("prospect-1", "recruiter@example.com");
 
     expect(result.status).toBe("pending");
     expect(updateEqMock).not.toHaveBeenCalled();
@@ -241,14 +250,14 @@ describe("getProspectScoreStatus", () => {
 
   it("links the applicant, then reports pending while the match report is still generating", async () => {
     maybeSingleMock.mockResolvedValue({
-      data: { status: "pending", ib_job_id: "JOB_1", ib_resume_id: "RES_1", ib_applied_job_id: null, candidate_name: "Jane", jd_text: INPUT.jdText },
+      data: { status: "pending", ib_job_id: "JOB_1", ib_resume_id: "RES_1", ib_applied_job_id: null, candidate_name: "Jane", jd_text: INPUT.jdText, recruiter_email: "recruiter@example.com" },
     });
     const { addApplicant } = await import("@/lib/intervuebox/applicants");
     vi.mocked(addApplicant).mockResolvedValue({ ibAppliedJobId: "APJ_1" });
     const { getResumeMatchReport } = await import("@/lib/intervuebox/reports");
     vi.mocked(getResumeMatchReport).mockResolvedValue({ status: "PENDING" });
     const { getProspectScoreStatus } = await importModule();
-    const result = await getProspectScoreStatus("prospect-1");
+    const result = await getProspectScoreStatus("prospect-1", "recruiter@example.com");
 
     expect(result.status).toBe("pending");
     expect(updateEqMock).toHaveBeenCalledWith("id", "prospect-1");
@@ -256,12 +265,12 @@ describe("getProspectScoreStatus", () => {
 
   it("returns ready and persists the report once IntervueBox finishes", async () => {
     maybeSingleMock.mockResolvedValue({
-      data: { status: "pending", ib_job_id: "JOB_1", ib_resume_id: "RES_1", ib_applied_job_id: "APJ_1", candidate_name: "Jane", jd_text: INPUT.jdText },
+      data: { status: "pending", ib_job_id: "JOB_1", ib_resume_id: "RES_1", ib_applied_job_id: "APJ_1", candidate_name: "Jane", jd_text: INPUT.jdText, recruiter_email: "recruiter@example.com" },
     });
     const { getResumeMatchReport } = await import("@/lib/intervuebox/reports");
     vi.mocked(getResumeMatchReport).mockResolvedValue(READY_REPORT);
     const { getProspectScoreStatus } = await importModule();
-    const result = await getProspectScoreStatus("prospect-1");
+    const result = await getProspectScoreStatus("prospect-1", "recruiter@example.com");
 
     expect(result.status).toBe("ready");
     if (result.status === "ready") expect(result.report.overallScore).toBe(82);

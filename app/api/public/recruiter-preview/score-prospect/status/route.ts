@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     return Response.json({ error: "Please confirm your email first.", verificationRequired: true }, { status: 403 });
   }
 
-  const result = await getProspectScoreStatus(prospectId);
+  const result = await getProspectScoreStatus(prospectId, recruiterEmail.trim());
 
   if (result.status === "failed") {
     return Response.json({ error: "Something went wrong." }, { status: 502 });

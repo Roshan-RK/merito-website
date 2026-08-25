@@ -68,6 +68,13 @@ describe("GET /api/public/recruiter-preview/score-prospect/status", () => {
     expect(body).toEqual({ status: "pending" });
   });
 
+  it("passes the caller's recruiterEmail through to getProspectScoreStatus for ownership scoping", async () => {
+    getProspectScoreStatusMock.mockResolvedValue({ status: "pending" });
+    const { GET } = await importRoute();
+    await GET(request(VALID_PARAMS));
+    expect(getProspectScoreStatusMock).toHaveBeenCalledWith("p1", "recruiter@example.com");
+  });
+
   it("returns 502 when scoring failed", async () => {
     getProspectScoreStatusMock.mockResolvedValue({ status: "failed" });
     const { GET } = await importRoute();

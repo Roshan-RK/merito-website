@@ -199,15 +199,18 @@ export async function startScoringProspect(input: ScoreProspectInput): Promise<S
   return { status: "pending", prospectId: inserted.id as string };
 }
 
-export async function getProspectScoreStatus(prospectId: string): Promise<ProspectScoreStatusResult> {
+export async function getProspectScoreStatus(prospectId: string, recruiterEmail: string): Promise<ProspectScoreStatusResult> {
   const admin = getSupabaseServerClient();
   const { data: row, error: fetchError } = await admin
     .from("recruiter_sourced_prospects")
-    .select("status, ib_job_id, ib_resume_id, ib_applied_job_id, candidate_name, resume_match_raw, jd_text")
+    .select("status, ib_job_id, ib_resume_id, ib_applied_job_id, candidate_name, resume_match_raw, jd_text, recruiter_email")
     .eq("id", prospectId)
     .maybeSingle();
 
   if (fetchError || !row) {
+    return { status: "failed" };
+  }
+  if ((row.recruiter_email as string).toLowerCase() !== recruiterEmail.toLowerCase()) {
     return { status: "failed" };
   }
 

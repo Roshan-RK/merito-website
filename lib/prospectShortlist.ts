@@ -16,7 +16,7 @@ function buildInviteText(candidateName: string | null, roleLabel: string, claimU
   return `Hi ${name}, I came across your profile and think you'd be a strong fit for ${roleLabel}. I scored your background with Merito's tool — check out your fit and claim your profile here: ${claimUrl}`;
 }
 
-export async function shortlistProspect(prospectId: string): Promise<{ claimUrl: string; inviteText: string } | null> {
+export async function shortlistProspect(prospectId: string, recruiterEmail: string): Promise<{ claimUrl: string; inviteText: string } | null> {
   const admin = getSupabaseServerClient();
   const { data } = await admin
     .from("recruiter_sourced_prospects")
@@ -25,6 +25,7 @@ export async function shortlistProspect(prospectId: string): Promise<{ claimUrl:
     .maybeSingle();
 
   if (!data) return null;
+  if ((data.recruiter_email as string).toLowerCase() !== recruiterEmail.toLowerCase()) return null;
 
   const roleLabel = deriveRoleLabel(data.jd_text as string);
   let token = data.claim_token as string | null;

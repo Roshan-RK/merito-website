@@ -50,6 +50,13 @@ describe("POST /api/public/recruiter-preview/shortlist", () => {
     expect(body.claimUrl).toBe("https://www.merito.in/claim/abc");
   });
 
+  it("passes the caller's recruiterEmail through to shortlistProspect for ownership scoping", async () => {
+    shortlistMock.mockResolvedValue({ claimUrl: "https://www.merito.in/claim/abc", inviteText: "Hi Jane..." });
+    const { POST } = await importRoute();
+    await POST(request({ prospectId: "p1", recruiterEmail: "someone@example.com" }));
+    expect(shortlistMock).toHaveBeenCalledWith("p1", "someone@example.com");
+  });
+
   it("returns 403 when recruiterEmail is missing", async () => {
     const { POST } = await importRoute();
     const response = await POST(request({ prospectId: "p1", recruiterEmail: undefined }));
