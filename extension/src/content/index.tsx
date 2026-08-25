@@ -292,6 +292,7 @@ async function handleUrlChange() {
   currentLookup = result.data;
   selectedLeadId = result.data.roles.find((r) => r.isCurrent)?.leadId ?? result.data.roles[0]?.leadId ?? null;
   const stored = await chrome.storage.local.get([JD_STORAGE_KEY]);
+  if (normalized !== currentUrl) return;
   const jdText = stored[JD_STORAGE_KEY] as string | undefined;
   renderOverlay(result.data, jdText ? { status: "prompt" } : { status: "idle" });
 }
