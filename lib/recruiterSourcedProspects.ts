@@ -9,8 +9,7 @@ import { buildSyntheticResumePdf, buildResumeText, type ScrapedCandidateFields }
 import { isRecruiterEmailVerified } from "@/lib/recruiterIdentity";
 import { hashJd } from "@/lib/recruiterJdRescore";
 import { logRecruiterAction } from "@/lib/recruiterActionLog";
-
-export const MONTHLY_PROSPECT_CAP = 10;
+import { MONTHLY_CHECK_CAP, getMonthlyCheckCount } from "@/lib/recruiterChecks";
 
 export type ScoreProspectInput = {
   recruiterEmail: string;
@@ -37,21 +36,6 @@ export type ProspectScoreStatusResult =
   | { status: "pending" }
   | { status: "ready"; prospectId: string; report: ResumeMatchReportReady; jdText: string }
   | { status: "failed" };
-
-export async function getMonthlyProspectCount(recruiterEmail: string): Promise<number> {
-  const admin = getSupabaseServerClient();
-  const monthStart = new Date();
-  monthStart.setUTCDate(1);
-  monthStart.setUTCHours(0, 0, 0, 0);
-
-  const { count } = await admin
-    .from("recruiter_sourced_prospects")
-    .select("id", { count: "exact", head: true })
-    .eq("recruiter_email", recruiterEmail.toLowerCase())
-    .gte("created_at", monthStart.toISOString());
-
-  return count ?? 0;
-}
 
 function deriveJobTitle(jdText: string): string {
   const firstLine = jdText
@@ -142,8 +126,8 @@ export async function startScoringProspect(input: ScoreProspectInput): Promise<S
     };
   }
 
-  const count = await getMonthlyProspectCount(email);
-  if (count >= MONTHLY_PROSPECT_CAP) {
+  const count = await getMonthlyCheckCount(email);
+  if (count >= MONTHLY_CHECK_CAP) {
     return { status: "cap_exceeded" };
   }
 

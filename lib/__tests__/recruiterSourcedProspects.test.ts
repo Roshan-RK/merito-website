@@ -18,6 +18,11 @@ vi.mock("@/lib/syntheticResume", () => ({
   buildResumeText: vi.fn().mockReturnValue("Jane Doe\nEngineer"),
 }));
 vi.mock("@/lib/recruiterIdentity", () => ({ isRecruiterEmailVerified: vi.fn() }));
+const getMonthlyCheckCountMock = vi.fn();
+vi.mock("@/lib/recruiterChecks", () => ({
+  MONTHLY_CHECK_CAP: 10,
+  getMonthlyCheckCount: getMonthlyCheckCountMock,
+}));
 vi.mock("@/lib/intervuebox/client", async () => {
   const actual = await vi.importActual<typeof import("@/lib/intervuebox/client")>("@/lib/intervuebox/client");
   return { IntervueBoxError: actual.IntervueBoxError };
@@ -26,13 +31,11 @@ vi.mock("@/lib/intervuebox/client", async () => {
 const insertSelectSingleMock = vi.fn().mockResolvedValue({ data: { id: "prospect-1" }, error: null });
 const insertMock = vi.fn(() => ({ select: () => ({ single: insertSelectSingleMock }) }));
 const updateEqMock = vi.fn().mockResolvedValue({ error: null });
-const countThenMock = vi.fn();
 const maybeSingleMock = vi.fn().mockResolvedValue({ data: null });
 const fromMock = vi.fn((table: string) => {
   if (table !== "recruiter_sourced_prospects") throw new Error(`unexpected table ${table}`);
   const selectChain = {
     eq: () => selectChain,
-    gte: () => ({ then: countThenMock }),
     maybeSingle: maybeSingleMock,
   };
   return {
@@ -80,7 +83,7 @@ beforeEach(async () => {
   insertSelectSingleMock.mockClear().mockResolvedValue({ data: { id: "prospect-1" }, error: null });
   insertMock.mockClear();
   updateEqMock.mockClear().mockResolvedValue({ error: null });
-  countThenMock.mockReset().mockImplementation((resolve: (v: { count: number }) => void) => resolve({ count: 0 }));
+  getMonthlyCheckCountMock.mockReset().mockResolvedValue(0);
   maybeSingleMock.mockReset().mockResolvedValue({ data: null });
   const { isRecruiterEmailVerified } = await import("@/lib/recruiterIdentity");
   vi.mocked(isRecruiterEmailVerified).mockReset().mockResolvedValue(true);
@@ -105,7 +108,7 @@ describe("startScoringProspect", () => {
   });
 
   it("returns cap_exceeded at 10 prospects this month", async () => {
-    countThenMock.mockImplementation((resolve: (v: { count: number }) => void) => resolve({ count: 10 }));
+    getMonthlyCheckCountMock.mockResolvedValue(10);
     const { startScoringProspect } = await importModule();
     const result = await startScoringProspect(INPUT);
     expect(result.status).toBe("cap_exceeded");
