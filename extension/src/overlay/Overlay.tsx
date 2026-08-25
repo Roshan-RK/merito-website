@@ -10,7 +10,9 @@ const SANS = "-apple-system, 'Segoe UI', Roboto, sans-serif";
 
 export type RescoreState =
   | { status: "idle" }
+  | { status: "prompt" }
   | { status: "loading" }
+  | { status: "cap_exceeded" }
   | { status: "ready"; fitment: NonNullable<LookupResponse["fitment"]> };
 
 function Badge({ onClick }: { onClick: () => void }) {
@@ -77,12 +79,14 @@ export function Overlay({
   onRequestContactDetails,
   selectedLeadId,
   onSelectRole,
+  onCheckFitment,
 }: {
   data: LookupWireResponse;
   rescore?: RescoreState;
   onRequestContactDetails?: () => Promise<{ email: string } | { error: string } | null>;
   selectedLeadId: string | null;
   onSelectRole: (leadId: string) => void;
+  onCheckFitment?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionKey>("fitment");
@@ -132,6 +136,7 @@ export function Overlay({
         onRequestContactDetails={onRequestContactDetails}
         jdRescoreStatus={rescore.status}
         onOpenExtension={openExtensionPopup}
+        onCheckFitment={onCheckFitment}
         rescoreFitment={rescore.status === "ready" ? rescore.fitment : null}
         availableRoles={availableRoles}
         selectedLeadId={selectedLeadId ?? undefined}
