@@ -3,7 +3,7 @@ import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "./linkedinUrl";
 import { Overlay, type RescoreState } from "../overlay/Overlay";
 import { ProspectOverlay } from "../overlay/ProspectOverlay";
 import { scrapeProfile } from "../lib/scrapeProfile";
-import type { LookupResponse, RescoreResponse, ScoreProspectResponse } from "../../../shared/recruiter-preview/types";
+import type { LookupWireResponse, RescoreResponse, ScoreProspectResponse } from "../../../shared/recruiter-preview/types";
 import type { LookupResult } from "../lib/lookupApi";
 
 const JD_STORAGE_KEY = "meritoJdText";
@@ -13,7 +13,9 @@ const LEVEL_STORAGE_KEY = "meritoCandidateLevel";
 let currentUrl = "";
 let shadowHost: HTMLDivElement | null = null;
 let reactRoot: Root | null = null;
-let currentLookup: LookupResponse | null = null;
+let currentLookup: LookupWireResponse | null = null;
+let selectedLeadId: string | null = null;
+let lastRescoreState: RescoreState = { status: "idle" };
 
 function mountRoot(): Root {
   if (!shadowHost) {
@@ -38,10 +40,26 @@ function unmountOverlay() {
     shadowHost = null;
   }
   currentLookup = null;
+  selectedLeadId = null;
+  lastRescoreState = { status: "idle" };
 }
 
-function renderOverlay(data: LookupResponse, rescore: RescoreState) {
-  mountRoot().render(<Overlay data={data} rescore={rescore} onRequestContactDetails={requestContactDetails} />);
+function renderOverlay(data: LookupWireResponse, rescore: RescoreState) {
+  lastRescoreState = rescore;
+  mountRoot().render(
+    <Overlay
+      data={data}
+      rescore={rescore}
+      onRequestContactDetails={requestContactDetails}
+      selectedLeadId={selectedLeadId}
+      onSelectRole={selectRole}
+    />
+  );
+}
+
+function selectRole(leadId: string) {
+  selectedLeadId = leadId;
+  if (currentLookup) renderOverlay(currentLookup, lastRescoreState);
 }
 
 async function requestContactDetails(): Promise<{ email: string } | { error: string } | null> {
@@ -52,6 +70,7 @@ async function requestContactDetails(): Promise<{ email: string } | { error: str
       type: "REQUEST_CONTACT_DETAILS",
       linkedinUrl: currentUrl,
       recruiterEmail,
+      leadId: selectedLeadId,
     })) as { email: string } | { error: string } | null;
   } catch {
     return null;
@@ -261,6 +280,7 @@ async function handleUrlChange() {
   }
 
   currentLookup = result.data;
+  selectedLeadId = result.data.roles.find((r) => r.isCurrent)?.leadId ?? result.data.roles[0]?.leadId ?? null;
   renderOverlay(result.data, { status: "idle" });
   runRescoreIfJdSet(normalized);
 }
