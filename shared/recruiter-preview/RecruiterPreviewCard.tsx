@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { AvailableRole, CandidateLevel, LookupResponse } from "./types";
 
-export type JdRescoreStatus = "idle" | "loading" | "ready";
+export type JdRescoreStatus = "idle" | "prompt" | "loading" | "cap_exceeded" | "ready";
 
 export type SectionKey = "fitment" | "personality" | "interview" | "references";
 
@@ -349,6 +349,40 @@ function DeliveryParam({ label, score }: { label: string; score: number }) {
   );
 }
 
+function JdMatchBanner({ text, buttonLabel, onButtonClick }: { text: string; buttonLabel?: string; onButtonClick?: () => void }) {
+  return (
+    <div
+      style={{
+        margin: "10px 16px 0",
+        padding: "10px 12px",
+        borderRadius: 10,
+        background: "#FAF9FC",
+        border: "1px solid #E6E1ED",
+      }}
+    >
+      <div style={{ fontSize: 11.5, fontFamily: SANS, color: "#6C6779", marginBottom: buttonLabel ? 6 : 0 }}>{text}</div>
+      {buttonLabel && onButtonClick && (
+        <button
+          onClick={onButtonClick}
+          style={{
+            background: "#4B4894",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            padding: "6px 10px",
+            fontSize: 11.5,
+            fontFamily: SANS,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          {buttonLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function RecruiterPreviewCard({
   data,
   activeSection,
@@ -358,6 +392,7 @@ export function RecruiterPreviewCard({
   onRequestContactDetails,
   jdRescoreStatus,
   onOpenExtension,
+  onCheckFitment,
   rescoreFitment,
   availableRoles,
   selectedLeadId,
@@ -371,6 +406,7 @@ export function RecruiterPreviewCard({
   onRequestContactDetails?: () => Promise<{ email: string } | { error: string } | null>;
   jdRescoreStatus?: JdRescoreStatus;
   onOpenExtension?: () => void;
+  onCheckFitment?: () => void;
   rescoreFitment?: LookupResponse["fitment"] | null;
   availableRoles?: AvailableRole[];
   selectedLeadId?: string;
@@ -540,36 +576,24 @@ export function RecruiterPreviewCard({
         )}
       </div>
 
-      {onOpenExtension && jdRescoreStatus !== "ready" && (
-        <div
-          style={{
-            margin: "10px 16px 0",
-            padding: "10px 12px",
-            borderRadius: 10,
-            background: "#FAF9FC",
-            border: "1px solid #E6E1ED",
-          }}
-        >
-          <div style={{ fontSize: 11.5, fontFamily: SANS, color: "#6C6779", marginBottom: 6 }}>
-            Set a JD in the extension popup to score this candidate against it.
-          </div>
-          <button
-            onClick={onOpenExtension}
-            style={{
-              background: "#4B4894",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              padding: "6px 10px",
-              fontSize: 11.5,
-              fontFamily: SANS,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Open Merito extension
-          </button>
-        </div>
+      {jdRescoreStatus === "idle" && onOpenExtension && (
+        <JdMatchBanner
+          text="Set a JD in the extension popup to score this candidate against it."
+          buttonLabel="Open Merito extension"
+          onButtonClick={onOpenExtension}
+        />
+      )}
+
+      {jdRescoreStatus === "prompt" && onCheckFitment && (
+        <JdMatchBanner
+          text="Check this candidate against your JD? Uses one of your monthly checks."
+          buttonLabel="Check fitment"
+          onButtonClick={onCheckFitment}
+        />
+      )}
+
+      {jdRescoreStatus === "cap_exceeded" && (
+        <JdMatchBanner text="You've reached your 10 scored profiles this month. Resets next month." />
       )}
 
       {onRequestContactDetails && (
