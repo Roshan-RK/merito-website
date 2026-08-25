@@ -503,6 +503,7 @@ export function RecruiterPreviewCard({
               <select
                 value={selectedLeadId}
                 onChange={(e) => onSelectRole(e.target.value)}
+                aria-label="Assessed for role"
                 style={{
                   fontFamily: SANS,
                   fontSize: 12.5,
