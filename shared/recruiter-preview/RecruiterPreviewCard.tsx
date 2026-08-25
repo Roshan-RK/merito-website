@@ -496,7 +496,7 @@ export function RecruiterPreviewCard({
           </div>
         </div>
         <div style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 19, marginTop: 10 }}>{data.candidateName}</div>
-        {data.roleTitle && (
+        {(data.roleTitle || (availableRoles && availableRoles.length > 1)) && (
           <div style={{ fontSize: 12.5, color: "#6C6779", marginTop: 1, fontFamily: SANS }}>
             Assessed for{" "}
             {availableRoles && availableRoles.length > 1 && selectedLeadId && onSelectRole ? (
