@@ -3,6 +3,7 @@ import { normalizeLinkedinUrl, LINKEDIN_URL_PATTERN } from "@/lib/linkedinUrl";
 import { createRateLimiter } from "@/lib/rateLimit";
 import { buildLookupFitment } from "@/lib/recruiterPreview";
 import { hashJd, getCachedRescore, runRescore, type CandidateForRescore } from "@/lib/recruiterJdRescore";
+import { MONTHLY_CHECK_CAP, getMonthlyCheckCount, recordCandidateCheck } from "@/lib/recruiterChecks";
 import type { CandidateLevel } from "@/lib/intervuebox/agents";
 import { isRecruiterEmailVerified } from "@/lib/recruiterIdentity";
 
@@ -58,6 +59,7 @@ export async function POST(request: Request) {
   if (!(await isRecruiterEmailVerified(body.recruiterEmail.trim()))) {
     return Response.json({ error: "Please confirm your email first.", verificationRequired: true }, { status: 403 });
   }
+  const recruiterEmail = body.recruiterEmail.trim();
 
   const admin = getSupabaseServerClient();
   const { data: settingsRow } = await admin
@@ -76,6 +78,11 @@ export async function POST(request: Request) {
   const cached = await getCachedRescore(userId, jdHash);
   if (cached) {
     return Response.json({ fitment: buildLookupFitment(cached, deriveRoleLabel(jdText)) });
+  }
+
+  const monthlyCount = await getMonthlyCheckCount(recruiterEmail);
+  if (monthlyCount >= MONTHLY_CHECK_CAP) {
+    return Response.json({ error: "Monthly scoring limit reached." }, { status: 429 });
   }
 
   if (!rescoreRateLimit(userId)) {
@@ -102,6 +109,8 @@ export async function POST(request: Request) {
     candidateLevel: (lead.candidate_level as CandidateLevel) || "entry",
     resumeText: (lead.resume_text as string | null) || undefined,
   };
+
+  await recordCandidateCheck(recruiterEmail, userId, jdHash);
 
   try {
     const report = await runRescore(candidate, jdText, jdHash);

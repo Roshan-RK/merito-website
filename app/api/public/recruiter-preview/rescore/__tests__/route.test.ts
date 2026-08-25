@@ -33,6 +33,14 @@ vi.mock("@/lib/recruiterIdentity", () => ({
   isRecruiterEmailVerified: isRecruiterEmailVerifiedMock,
 }));
 
+const getMonthlyCheckCountMock = vi.fn();
+const recordCandidateCheckMock = vi.fn();
+vi.mock("@/lib/recruiterChecks", () => ({
+  MONTHLY_CHECK_CAP: 10,
+  getMonthlyCheckCount: getMonthlyCheckCountMock,
+  recordCandidateCheck: recordCandidateCheckMock,
+}));
+
 async function importRoute() {
   return await import("../route");
 }
@@ -63,6 +71,8 @@ describe("POST /api/public/recruiter-preview/rescore", () => {
     runRescoreMock.mockReset();
     isRecruiterEmailVerifiedMock.mockReset();
     isRecruiterEmailVerifiedMock.mockResolvedValue(true);
+    getMonthlyCheckCountMock.mockReset().mockResolvedValue(0);
+    recordCandidateCheckMock.mockReset().mockResolvedValue(undefined);
   });
 
   it("returns 401 when the key header is missing", async () => {
@@ -180,5 +190,48 @@ describe("POST /api/public/recruiter-preview/rescore", () => {
       lastStatus = response.status;
     }
     expect(lastStatus).toBe(429);
+  });
+
+  it("returns 429 with the monthly-limit copy when the recruiter is at the combined cap, without calling runRescore", async () => {
+    tableResults.recruiter_preview_settings = makeQueryStub({ data: { user_id: "user-1" } });
+    tableResults.fitment_leads = makeQueryStub({
+      data: [{ ib_resume_id: "RES_1", name: "Jane Doe", email: "jane@example.com", phone: "9999999999", candidate_level: "mid" }],
+    });
+    getMonthlyCheckCountMock.mockResolvedValue(10);
+
+    const { POST } = await importRoute();
+    const response = await POST(request(VALID_BODY));
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(body).toEqual({ error: "Monthly scoring limit reached." });
+    expect(runRescoreMock).not.toHaveBeenCalled();
+    expect(recordCandidateCheckMock).not.toHaveBeenCalled();
+  });
+
+  it("records a candidate check before running a fresh rescore under the cap", async () => {
+    tableResults.recruiter_preview_settings = makeQueryStub({ data: { user_id: "user-1" } });
+    tableResults.fitment_leads = makeQueryStub({
+      data: [{ ib_resume_id: "RES_1", name: "Jane Doe", email: "jane@example.com", phone: "9999999999", candidate_level: "mid" }],
+    });
+    runRescoreMock.mockResolvedValue({ overallScore: 70, rank: null, categories: [], summary: "Decent", strongPoints: [], weakPoints: [] });
+
+    const { POST } = await importRoute();
+    const response = await POST(request(VALID_BODY));
+
+    expect(response.status).toBe(200);
+    const { hashJd } = await import("@/lib/recruiterJdRescore");
+    expect(recordCandidateCheckMock).toHaveBeenCalledWith(VALID_BODY.recruiterEmail, "user-1", hashJd(VALID_BODY.jdText));
+  });
+
+  it("does not consult the cap on a cache hit", async () => {
+    tableResults.recruiter_preview_settings = makeQueryStub({ data: { user_id: "user-1" } });
+    getCachedRescoreMock.mockResolvedValue({ overallScore: 88, rank: null, categories: [], summary: "Great", strongPoints: [], weakPoints: [] });
+
+    const { POST } = await importRoute();
+    const response = await POST(request(VALID_BODY));
+
+    expect(response.status).toBe(200);
+    expect(getMonthlyCheckCountMock).not.toHaveBeenCalled();
   });
 });
