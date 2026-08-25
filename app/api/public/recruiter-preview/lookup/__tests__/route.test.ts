@@ -4,6 +4,7 @@ function makeQueryStub(result: { data: unknown }) {
   const stub: Record<string, unknown> = {};
   stub.select = () => stub;
   stub.eq = () => stub;
+  stub.or = () => stub;
   stub.order = () => stub;
   stub.limit = () => stub;
   stub.maybeSingle = async () => result;
@@ -49,10 +50,10 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
       recruiter_preview_sections: makeQueryStub({ data: null }),
       personality_tests: makeQueryStub({ data: null }),
       fitment_interviews: makeQueryStub({ data: null }),
-      intervuebox_interview_reports: makeQueryStub({ data: null }),
       extension_lookups: makeQueryStub({ data: null }),
     };
     fromMock.mockClear();
+    fromMock.mockImplementation((table: string) => tableResults[table]);
     getUserByIdMock.mockReset();
     getUserByIdMock.mockResolvedValue({ data: { user: { email: "jane@example.com" } } });
     isRecruiterEmailVerifiedMock.mockReset();
@@ -267,6 +268,83 @@ describe("POST /api/public/recruiter-preview/lookup", () => {
     // Only lead-1 should be in response, lead-2 should be skipped
     expect(body.roles).toHaveLength(1);
     expect(body.roles[0].leadId).toBe("lead-1");
+  });
+
+  it("builds the interview section from fitment_interviews directly when status is ready", async () => {
+    tableResults.recruiter_preview_settings = makeQueryStub({
+      data: { user_id: "candidate-1" },
+    });
+    tableResults.fitment_leads = makeQueryStub({
+      data: [
+        {
+          id: "lead-1",
+          role_title: "Data Analyst",
+          name: "Jane Doe",
+          resume_match_status: "READY",
+          candidate_level: "mid",
+          resume_match_raw: null,
+        },
+      ],
+    });
+    tableResults.recruiter_preview_sections = makeQueryStub({
+      data: { sections: ["interview"] },
+    });
+    tableResults.fitment_interviews = makeQueryStub({
+      data: {
+        status: "ready",
+        updated_at: "2026-07-28T09:00:00.000Z",
+        report_raw: {
+          overallScore: 7.5,
+          skillMetrics: { sql: 8 },
+          overallSummary: "Strong candidate",
+          strengths: "SQL",
+          skillReport: { sql: { score: 8, comment: "Solid" } },
+          approxDurationMinutes: 20,
+        },
+      },
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.roles[0].sections.interview).toMatchObject({
+      overallScore: 7.5,
+      overallSummary: "Strong candidate",
+      completedAt: "2026-07-28T09:00:00.000Z",
+    });
+  });
+
+  it("does not build the interview section when status is not ready", async () => {
+    tableResults.recruiter_preview_settings = makeQueryStub({
+      data: { user_id: "candidate-1" },
+    });
+    tableResults.fitment_leads = makeQueryStub({
+      data: [
+        {
+          id: "lead-1",
+          role_title: "Data Analyst",
+          name: "Jane Doe",
+          resume_match_status: "READY",
+          candidate_level: "mid",
+          resume_match_raw: null,
+        },
+      ],
+    });
+    tableResults.recruiter_preview_sections = makeQueryStub({
+      data: { sections: ["interview"] },
+    });
+    tableResults.fitment_interviews = makeQueryStub({
+      data: { status: "invited", updated_at: null, report_raw: null },
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe" }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.roles[0].sections.interview).toBeUndefined();
   });
 
   it("returns 403 when recruiterEmail is missing", async () => {

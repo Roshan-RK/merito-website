@@ -10,6 +10,7 @@ import {
 } from "@/lib/recruiterPreview";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import type { InterviewReportReady } from "@/lib/intervuebox/interviewReports";
+import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
 
 export const runtime = "nodejs";
 
@@ -129,22 +130,17 @@ export async function POST(request: Request) {
       }
     }
 
-    if (enabledSections.includes("interview")) {
+    if (enabledSections.includes("interview") && roleTitle) {
       const { data: interviewRow } = await admin
         .from("fitment_interviews")
-        .select("ib_agent_id, ib_candidate_id, status")
+        .select("status, report_raw, updated_at")
         .eq("user_id", userId)
-        .eq("lead_id", lead.id)
+        .or(leadIdOrRoleTitleFilter(lead.id, roleTitle))
+        .order("updated_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
-      if (interviewRow?.status === "completed") {
-        const { data: reportRow } = await admin
-          .from("intervuebox_interview_reports")
-          .select("report_raw")
-          .eq("ib_candidate_id", interviewRow.ib_candidate_id)
-          .maybeSingle();
-        if (reportRow?.report_raw) {
-          sections.interview = buildLookupInterview(reportRow.report_raw as InterviewReportReady, candidateLevel);
-        }
+      if (interviewRow?.status === "ready" && interviewRow.report_raw) {
+        sections.interview = buildLookupInterview(interviewRow.report_raw as InterviewReportReady, interviewRow.updated_at as string);
       }
     }
 
@@ -152,6 +148,7 @@ export async function POST(request: Request) {
       leadId: lead.id,
       roleTitle: lead.role_title,
       isCurrent: i === 0, // Latest is current
+      candidateLevel,
       sections,
     });
   }

@@ -14,7 +14,7 @@ describe("lookupCandidate", () => {
   });
 
   it("posts to the lookup endpoint with the key header, normalized URL, and recruiterEmail", async () => {
-    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ candidateName: "Jane" }) });
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ candidateName: "Jane", roles: [] }) });
     const { lookupCandidate } = await importLookupApi();
     await lookupCandidate("https://www.linkedin.com/in/jane-doe", "recruiter@example.com");
     expect(fetchMock).toHaveBeenCalledWith(
@@ -27,11 +27,66 @@ describe("lookupCandidate", () => {
     );
   });
 
-  it("returns found with the payload on a 200 response", async () => {
-    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ candidateName: "Jane" }) });
+  it("flattens the isCurrent role from the server's roles[] response into the render shape", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        candidateName: "Jane",
+        roles: [
+          {
+            leadId: "lead-1",
+            roleTitle: "Data Analyst",
+            isCurrent: true,
+            candidateLevel: "mid",
+            sections: {
+              fitment: { report: { overallScore: 82, categories: [], summary: "Good fit" }, matchedAgainstRoleTitle: "Data Analyst" },
+            },
+          },
+          {
+            leadId: "lead-2",
+            roleTitle: "Software Engineer",
+            isCurrent: false,
+            candidateLevel: "senior",
+            sections: {},
+          },
+        ],
+      }),
+    });
     const { lookupCandidate } = await importLookupApi();
     const result = await lookupCandidate("https://www.linkedin.com/in/jane-doe", "recruiter@example.com");
-    expect(result).toEqual({ status: "found", data: { candidateName: "Jane" } });
+    expect(result).toEqual({
+      status: "found",
+      data: {
+        candidateName: "Jane",
+        roleTitle: "Data Analyst",
+        candidateLevel: "mid",
+        sections: ["fitment"],
+        fitment: { report: { overallScore: 82, categories: [], summary: "Good fit" }, matchedAgainstRoleTitle: "Data Analyst" },
+        personality: null,
+        interview: null,
+        references: null,
+      },
+    });
+  });
+
+  it("falls back gracefully when no role has section config (empty roles[])", async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ candidateName: "Jane", roles: [] }) });
+    const { lookupCandidate } = await importLookupApi();
+    const result = await lookupCandidate("https://www.linkedin.com/in/jane-doe", "recruiter@example.com");
+    expect(result).toEqual({
+      status: "found",
+      data: {
+        candidateName: "Jane",
+        roleTitle: null,
+        candidateLevel: "entry",
+        sections: [],
+        fitment: null,
+        personality: null,
+        interview: null,
+        references: null,
+      },
+    });
   });
 
   it("returns not_found on a 404 response", async () => {
