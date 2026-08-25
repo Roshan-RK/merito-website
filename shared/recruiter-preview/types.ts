@@ -47,10 +47,11 @@ export type LookupResponse = {
 };
 
 // What the lookup endpoint actually sends on the wire (one entry per role
-// the candidate has configured recruiter-preview sections for). Client code
-// flattens this to `LookupResponse` (the shape the render components use)
-// via a selected leadId, falling back to the `isCurrent` role -- see
-// flattenLookupRole in lookupApi.ts.
+// the candidate has configured recruiter-preview sections for). The
+// extension flattens this to `LookupResponse` (the shape the render
+// components use) via a selected leadId, falling back to the `isCurrent`
+// role and then the first role -- see flattenLookupRole in
+// extension/src/lib/lookupApi.ts.
 export type LookupRoleEntry = {
   leadId: string;
   roleTitle: string | null;
