@@ -224,6 +224,23 @@ describe("POST /api/public/recruiter-preview/rescore", () => {
     expect(recordCandidateCheckMock).toHaveBeenCalledWith(VALID_BODY.recruiterEmail, "user-1", hashJd(VALID_BODY.jdText));
   });
 
+  it("still records a candidate check even when the rescore itself fails", async () => {
+    tableResults.recruiter_preview_settings = makeQueryStub({ data: { user_id: "user-1" } });
+    tableResults.fitment_leads = makeQueryStub({
+      data: [{ ib_resume_id: "RES_1", name: "Jane Doe", email: "jane@example.com", phone: "9999999999", candidate_level: "mid" }],
+    });
+    runRescoreMock.mockRejectedValue(new Error("IntervueBox down"));
+
+    const { POST } = await importRoute();
+    const response = await POST(request(VALID_BODY));
+    const body = await response.json();
+
+    expect(response.status).toBe(502);
+    expect(body).toEqual({ error: "Something went wrong." });
+    const { hashJd } = await import("@/lib/recruiterJdRescore");
+    expect(recordCandidateCheckMock).toHaveBeenCalledWith(VALID_BODY.recruiterEmail, "user-1", hashJd(VALID_BODY.jdText));
+  });
+
   it("does not consult the cap on a cache hit", async () => {
     tableResults.recruiter_preview_settings = makeQueryStub({ data: { user_id: "user-1" } });
     getCachedRescoreMock.mockResolvedValue({ overallScore: 88, rank: null, categories: [], summary: "Great", strongPoints: [], weakPoints: [] });
