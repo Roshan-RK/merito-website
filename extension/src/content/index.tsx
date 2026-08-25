@@ -17,6 +17,7 @@ let reactRoot: Root | null = null;
 let currentLookup: LookupWireResponse | null = null;
 let selectedLeadId: string | null = null;
 let lastRescoreState: RescoreState = { status: "idle" };
+let checkRequestId = 0;
 
 function mountRoot(): Root {
   if (!shadowHost) {
@@ -216,6 +217,7 @@ async function checkFitmentNow(linkedinUrl: string) {
   const recruiterEmail = (stored[EMAIL_STORAGE_KEY] as string) ?? "";
   if (!jdText || !currentLookup) return;
 
+  const requestId = ++checkRequestId;
   renderOverlay(currentLookup, { status: "loading" });
   let result: RescoreResult;
   try {
@@ -226,20 +228,28 @@ async function checkFitmentNow(linkedinUrl: string) {
       recruiterEmail,
     })) as RescoreResult;
   } catch {
-    if (!currentLookup || linkedinUrl !== currentUrl) return;
+    // chrome.runtime.sendMessage itself failed (extension reloaded, no
+    // background listener, etc.) -- the request never reached the server,
+    // so no credit was at risk. Safe to revert straight to the prompt.
+    if (!currentLookup || linkedinUrl !== currentUrl || requestId !== checkRequestId) return;
     renderOverlay(currentLookup, { status: "prompt" });
     return;
   }
 
-  if (!currentLookup || linkedinUrl !== currentUrl) return;
+  if (!currentLookup || linkedinUrl !== currentUrl || requestId !== checkRequestId) return;
   if (result.status === "ready") {
     renderOverlay(currentLookup, { status: "ready", fitment: result.fitment });
   } else if (result.status === "cap_exceeded") {
     renderOverlay(currentLookup, { status: "cap_exceeded" });
-  } else {
-    // verification_required or error -- revert to the check prompt so the
-    // button reappears for a retry, rather than a dedicated error state.
+  } else if (result.status === "verification_required") {
+    // Rejected before any credit is spent (verification happens before the
+    // cap/record step server-side) -- safe to just revert to the prompt.
     renderOverlay(currentLookup, { status: "prompt" });
+  } else {
+    // A real failure (e.g. IntervueBox timeout, 502) -- a check may already
+    // have been recorded server-side before the failure, so this must not
+    // look identical to "never tried" (the prompt state).
+    renderOverlay(currentLookup, { status: "error" });
   }
 }
 
@@ -300,6 +310,10 @@ async function handleUrlChange() {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local" || !(JD_STORAGE_KEY in changes)) return;
   if (currentLookup) {
+    // Invalidate any in-flight check -- its eventual result would be scored
+    // against the JD that's about to be replaced, and must not silently
+    // overwrite whatever the recruiter sees after this reset.
+    checkRequestId++;
     const newJdText = changes[JD_STORAGE_KEY].newValue as string | undefined;
     renderOverlay(currentLookup, newJdText ? { status: "prompt" } : { status: "idle" });
     return;

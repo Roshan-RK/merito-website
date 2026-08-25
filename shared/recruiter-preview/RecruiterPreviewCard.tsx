@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { AvailableRole, CandidateLevel, LookupResponse } from "./types";
 
-export type JdRescoreStatus = "idle" | "prompt" | "loading" | "cap_exceeded" | "ready";
+export type JdRescoreStatus = "idle" | "prompt" | "loading" | "cap_exceeded" | "error" | "ready";
 
 export type SectionKey = "fitment" | "personality" | "interview" | "references";
 
@@ -594,6 +594,14 @@ export function RecruiterPreviewCard({
 
       {jdRescoreStatus === "cap_exceeded" && (
         <JdMatchBanner text="You've reached your 10 scored profiles this month. Resets next month." />
+      )}
+
+      {jdRescoreStatus === "error" && onCheckFitment && (
+        <JdMatchBanner
+          text="That check didn't complete — you may have used one of your monthly checks. Try again?"
+          buttonLabel="Try again"
+          onButtonClick={onCheckFitment}
+        />
       )}
 
       {onRequestContactDetails && (

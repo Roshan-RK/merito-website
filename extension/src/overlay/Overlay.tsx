@@ -13,6 +13,7 @@ export type RescoreState =
   | { status: "prompt" }
   | { status: "loading" }
   | { status: "cap_exceeded" }
+  | { status: "error" }
   | { status: "ready"; fitment: NonNullable<LookupResponse["fitment"]> };
 
 function Badge({ onClick }: { onClick: () => void }) {
