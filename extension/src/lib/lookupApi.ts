@@ -24,6 +24,12 @@ export function flattenLookupRole(wire: LookupWireResponse, leadId?: string | nu
   };
 }
 
+/** Picks a section to display: the requested one if the role actually has it, otherwise the role's first available section (falls back to "fitment" if the role has none at all). */
+export function pickActiveSection(sections: string[], requested: string): string {
+  if (sections.includes(requested)) return requested;
+  return sections[0] ?? "fitment";
+}
+
 export async function lookupCandidate(linkedinUrl: string, recruiterEmail: string): Promise<LookupResult> {
   const extensionKey = import.meta.env.VITE_RECRUITER_EXTENSION_KEY as string;
   try {

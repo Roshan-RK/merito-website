@@ -135,3 +135,20 @@ describe("flattenLookupRole", () => {
     });
   });
 });
+
+describe("pickActiveSection", () => {
+  it("keeps the requested section when the role has it", async () => {
+    const { pickActiveSection } = await importLookupApi();
+    expect(pickActiveSection(["fitment", "interview"], "interview")).toBe("interview");
+  });
+
+  it("falls back to the role's first available section when it doesn't have the requested one", async () => {
+    const { pickActiveSection } = await importLookupApi();
+    expect(pickActiveSection(["personality"], "fitment")).toBe("personality");
+  });
+
+  it("falls back to fitment when the role has no sections at all", async () => {
+    const { pickActiveSection } = await importLookupApi();
+    expect(pickActiveSection([], "interview")).toBe("fitment");
+  });
+});

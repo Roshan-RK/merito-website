@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import logoPath from "../assets/logo.png";
 import { RecruiterPreviewCard, type SectionKey } from "../../../shared/recruiter-preview/RecruiterPreviewCard";
 import type { LookupResponse, LookupWireResponse } from "../../../shared/recruiter-preview/types";
-import { flattenLookupRole } from "../lib/lookupApi";
+import { flattenLookupRole, pickActiveSection } from "../lib/lookupApi";
 
 const logoUrl = chrome.runtime.getURL(logoPath.replace(/^\//, ""));
 
@@ -98,7 +98,7 @@ export function Overlay({
   }
 
   const flattened = flattenLookupRole(data, selectedLeadId);
-  const effectiveActiveSection = flattened.sections.includes(activeSection) ? activeSection : "fitment";
+  const effectiveActiveSection = pickActiveSection(flattened.sections, activeSection) as SectionKey;
   const availableRoles = data.roles.map((r) => ({ leadId: r.leadId, roleTitle: r.roleTitle }));
 
   return (
