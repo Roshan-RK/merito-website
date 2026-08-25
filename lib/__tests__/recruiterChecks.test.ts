@@ -4,11 +4,13 @@ const prospectCountMock = vi.fn();
 const candidateCountMock = vi.fn();
 const insertMock = vi.fn().mockResolvedValue({ error: null });
 
-function countChain(mock: () => { count: number }) {
+type CountResult = { count: number | null; error?: { message: string } | null };
+
+function countChain(mock: () => CountResult) {
   return {
     select: () => ({
       eq: () => ({
-        gte: () => ({ then: (resolve: (v: { count: number }) => void) => resolve(mock()) }),
+        gte: () => ({ then: (resolve: (v: CountResult) => void) => resolve(mock()) }),
       }),
     }),
   };
@@ -54,6 +56,28 @@ describe("getMonthlyCheckCount", () => {
     const { getMonthlyCheckCount, MONTHLY_CHECK_CAP } = await importModule();
     const count = await getMonthlyCheckCount("recruiter@example.com");
     expect(count).toBeGreaterThanOrEqual(MONTHLY_CHECK_CAP);
+  });
+
+  it("fails closed at the cap when the prospect count query errors", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    prospectCountMock.mockReturnValue({ count: null, error: { message: "db unreachable" } });
+    candidateCountMock.mockReturnValue({ count: 0 });
+    const { getMonthlyCheckCount, MONTHLY_CHECK_CAP } = await importModule();
+    const count = await getMonthlyCheckCount("recruiter@example.com");
+    expect(count).toBe(MONTHLY_CHECK_CAP);
+    expect(count).toBe(10);
+    errorSpy.mockRestore();
+  });
+
+  it("fails closed at the cap when the candidate-check count query errors", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    prospectCountMock.mockReturnValue({ count: 2 });
+    candidateCountMock.mockReturnValue({ count: null, error: { message: "db unreachable" } });
+    const { getMonthlyCheckCount, MONTHLY_CHECK_CAP } = await importModule();
+    const count = await getMonthlyCheckCount("recruiter@example.com");
+    expect(count).toBe(MONTHLY_CHECK_CAP);
+    expect(count).toBe(10);
+    errorSpy.mockRestore();
   });
 });
 

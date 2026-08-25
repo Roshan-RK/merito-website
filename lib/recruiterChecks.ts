@@ -30,6 +30,16 @@ export async function getMonthlyCheckCount(recruiterEmail: string): Promise<numb
       .gte("created_at", monthStart),
   ]);
 
+  if (prospectResult.error || candidateResult.error) {
+    // Fail closed, not open: a quota check that can't confirm the count is
+    // under budget must not let scoring proceed as if it were free.
+    console.error("Failed to read monthly check count", {
+      prospectError: prospectResult.error,
+      candidateError: candidateResult.error,
+    });
+    return MONTHLY_CHECK_CAP;
+  }
+
   return (prospectResult.count ?? 0) + (candidateResult.count ?? 0);
 }
 
