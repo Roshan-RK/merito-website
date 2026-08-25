@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { CandidateLevel, LookupResponse } from "./types";
+import type { AvailableRole, CandidateLevel, LookupResponse } from "./types";
 
 export type JdRescoreStatus = "idle" | "loading" | "ready";
 
@@ -359,6 +359,9 @@ export function RecruiterPreviewCard({
   jdRescoreStatus,
   onOpenExtension,
   rescoreFitment,
+  availableRoles,
+  selectedLeadId,
+  onSelectRole,
 }: {
   data: LookupResponse;
   activeSection: SectionKey;
@@ -369,6 +372,9 @@ export function RecruiterPreviewCard({
   jdRescoreStatus?: JdRescoreStatus;
   onOpenExtension?: () => void;
   rescoreFitment?: LookupResponse["fitment"] | null;
+  availableRoles?: AvailableRole[];
+  selectedLeadId?: string;
+  onSelectRole?: (leadId: string) => void;
 }) {
   const sections = new Set(data.sections);
   const interviewMetricKeys = data.interview ? new Set(Object.keys(data.interview.skillMetrics)) : null;
@@ -492,7 +498,31 @@ export function RecruiterPreviewCard({
         <div style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 19, marginTop: 10 }}>{data.candidateName}</div>
         {data.roleTitle && (
           <div style={{ fontSize: 12.5, color: "#6C6779", marginTop: 1, fontFamily: SANS }}>
-            Assessed for <span style={{ color: "#211D2C", fontWeight: 500 }}>{data.roleTitle}</span>
+            Assessed for{" "}
+            {availableRoles && availableRoles.length > 1 && selectedLeadId && onSelectRole ? (
+              <select
+                value={selectedLeadId}
+                onChange={(e) => onSelectRole(e.target.value)}
+                style={{
+                  fontFamily: SANS,
+                  fontSize: 12.5,
+                  color: "#211D2C",
+                  fontWeight: 500,
+                  border: "none",
+                  background: "transparent",
+                  padding: 0,
+                  cursor: "pointer",
+                }}
+              >
+                {availableRoles.map((role) => (
+                  <option key={role.leadId} value={role.leadId}>
+                    {role.roleTitle ?? "Untitled role"}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span style={{ color: "#211D2C", fontWeight: 500 }}>{data.roleTitle}</span>
+            )}
             {" · "}
             <span
               style={{
