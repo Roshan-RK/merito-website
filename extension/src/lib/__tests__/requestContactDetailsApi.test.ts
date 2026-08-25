@@ -40,6 +40,18 @@ describe("requestContactDetails", () => {
     );
   });
 
+  it("omits leadId from the body when it is explicitly null", async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ email: "jane@example.com" }) });
+    const { requestContactDetails } = await importModule();
+    await requestContactDetails("https://www.linkedin.com/in/jane-doe", "recruiter@example.com", null);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://www.merito.ai/api/public/recruiter-preview/request-details",
+      expect.objectContaining({
+        body: JSON.stringify({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", recruiterEmail: "recruiter@example.com" }),
+      })
+    );
+  });
+
   it("returns the server error message on a non-ok response", async () => {
     fetchMock.mockResolvedValue({ ok: false, json: async () => ({ error: "Please confirm your email first.", verificationRequired: true }) });
     const { requestContactDetails } = await importModule();
