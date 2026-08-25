@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 import logoPath from "../assets/logo.png";
 import { RecruiterPreviewCard, type SectionKey } from "../../../shared/recruiter-preview/RecruiterPreviewCard";
-import type { LookupResponse } from "../../../shared/recruiter-preview/types";
+import type { LookupResponse, LookupWireResponse } from "../../../shared/recruiter-preview/types";
+import { flattenLookupRole } from "../lib/lookupApi";
 
 const logoUrl = chrome.runtime.getURL(logoPath.replace(/^\//, ""));
 
@@ -74,10 +75,14 @@ export function Overlay({
   data,
   rescore = { status: "idle" },
   onRequestContactDetails,
+  selectedLeadId,
+  onSelectRole,
 }: {
-  data: LookupResponse;
+  data: LookupWireResponse;
   rescore?: RescoreState;
   onRequestContactDetails?: () => Promise<{ email: string } | { error: string } | null>;
+  selectedLeadId: string | null;
+  onSelectRole: (leadId: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionKey>("fitment");
@@ -91,6 +96,9 @@ export function Overlay({
   if (!expanded) {
     return <Badge onClick={() => setExpanded(true)} />;
   }
+
+  const flattened = flattenLookupRole(data, selectedLeadId);
+  const availableRoles = data.roles.map((r) => ({ leadId: r.leadId, roleTitle: r.roleTitle }));
 
   return (
     <div
@@ -107,7 +115,7 @@ export function Overlay({
     >
       <RescoreBanner state={rescore} />
       <RecruiterPreviewCard
-        data={data}
+        data={flattened}
         activeSection={activeSection}
         onSelectSection={selectSection}
         logoUrl={logoUrl}
@@ -116,6 +124,9 @@ export function Overlay({
         jdRescoreStatus={rescore.status}
         onOpenExtension={openExtensionPopup}
         rescoreFitment={rescore.status === "ready" ? rescore.fitment : null}
+        availableRoles={availableRoles}
+        selectedLeadId={selectedLeadId ?? undefined}
+        onSelectRole={onSelectRole}
       />
     </div>
   );
