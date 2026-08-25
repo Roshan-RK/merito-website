@@ -40,15 +40,27 @@ describe("recordLookup", () => {
 
   it("does not query for a prior view or send an email when there is no match", async () => {
     const { recordLookup } = await importModule();
-    await recordLookup({ linkedinUrl: "https://www.linkedin.com/in/nobody", matchedUserId: null });
-    expect(insertMock).toHaveBeenCalledWith({ linkedin_url: "https://www.linkedin.com/in/nobody", matched_user_id: null });
+    await recordLookup({ linkedinUrl: "https://www.linkedin.com/in/nobody", matchedUserId: null, recruiterEmail: "recruiter@example.com" });
+    expect(insertMock).toHaveBeenCalledWith({
+      linkedin_url: "https://www.linkedin.com/in/nobody",
+      matched_user_id: null,
+      recruiter_email: "recruiter@example.com",
+    });
     expect(sendRecruiterViewedEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("lowercases the recruiter email before recording", async () => {
+    const { recordLookup } = await importModule();
+    await recordLookup({ linkedinUrl: "https://www.linkedin.com/in/nobody", matchedUserId: null, recruiterEmail: "Recruiter@Example.com" });
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ recruiter_email: "recruiter@example.com" })
+    );
   });
 
   it("sends the view email when there is no prior lookup for this candidate", async () => {
     tableResults.extension_lookups = makeQueryStub({ data: [{ created_at: new Date().toISOString() }] });
     const { recordLookup } = await importModule();
-    await recordLookup({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", matchedUserId: "user-1" });
+    await recordLookup({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", matchedUserId: "user-1", recruiterEmail: "recruiter@example.com" });
     expect(sendRecruiterViewedEmailMock).toHaveBeenCalledWith("jane@example.com", "Jane Doe");
   });
 
@@ -58,7 +70,7 @@ describe("recordLookup", () => {
       data: [{ created_at: new Date().toISOString() }, { created_at: twoDaysAgo }],
     });
     const { recordLookup } = await importModule();
-    await recordLookup({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", matchedUserId: "user-1" });
+    await recordLookup({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", matchedUserId: "user-1", recruiterEmail: "recruiter@example.com" });
     expect(sendRecruiterViewedEmailMock).toHaveBeenCalled();
   });
 
@@ -68,7 +80,7 @@ describe("recordLookup", () => {
       data: [{ created_at: new Date().toISOString() }, { created_at: oneHourAgo }],
     });
     const { recordLookup } = await importModule();
-    await recordLookup({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", matchedUserId: "user-1" });
+    await recordLookup({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", matchedUserId: "user-1", recruiterEmail: "recruiter@example.com" });
     expect(sendRecruiterViewedEmailMock).not.toHaveBeenCalled();
   });
 
@@ -76,7 +88,7 @@ describe("recordLookup", () => {
     tableResults.extension_lookups = makeQueryStub({ data: [{ created_at: new Date().toISOString() }] });
     tableResults.fitment_leads = makeQueryStub({ data: [] });
     const { recordLookup } = await importModule();
-    await expect(recordLookup({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", matchedUserId: "user-1" })).resolves.toBeUndefined();
+    await expect(recordLookup({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", matchedUserId: "user-1", recruiterEmail: "recruiter@example.com" })).resolves.toBeUndefined();
     expect(sendRecruiterViewedEmailMock).not.toHaveBeenCalled();
   });
 });

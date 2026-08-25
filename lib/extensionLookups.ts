@@ -3,9 +3,19 @@ import { sendRecruiterViewedEmail } from "@/lib/recruiterViewEmails";
 
 const VIEW_EMAIL_DEDUPE_MS = 24 * 60 * 60 * 1000;
 
-export async function recordLookup({ linkedinUrl, matchedUserId }: { linkedinUrl: string; matchedUserId: string | null }): Promise<void> {
+export async function recordLookup({
+  linkedinUrl,
+  matchedUserId,
+  recruiterEmail,
+}: {
+  linkedinUrl: string;
+  matchedUserId: string | null;
+  recruiterEmail: string;
+}): Promise<void> {
   const supabase = getSupabaseServerClient();
-  const { error } = await supabase.from("extension_lookups").insert({ linkedin_url: linkedinUrl, matched_user_id: matchedUserId });
+  const { error } = await supabase
+    .from("extension_lookups")
+    .insert({ linkedin_url: linkedinUrl, matched_user_id: matchedUserId, recruiter_email: recruiterEmail.toLowerCase() });
   if (error) {
     console.error(`Failed to record extension lookup: ${error.message}`);
     return;

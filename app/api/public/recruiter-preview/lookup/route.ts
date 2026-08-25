@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     .eq("enabled", true)
     .maybeSingle();
 
-  await recordLookup({ linkedinUrl: normalized, matchedUserId: settingsRow?.user_id ?? null });
+  await recordLookup({ linkedinUrl: normalized, matchedUserId: settingsRow?.user_id ?? null, recruiterEmail });
 
   if (!settingsRow) {
     return Response.json({ error: "Not found." }, { status: 404 });
