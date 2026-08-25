@@ -105,6 +105,35 @@ describe("POST /api/public/recruiter-preview/request-details", () => {
     expect(sendRecruiterViewedEmailMock).toHaveBeenCalledWith("jane@example.com", "Jane Doe");
   });
 
+  it("uses the lead matching the given leadId when present", async () => {
+    tableResults.recruiter_preview_settings = makeQueryStub({ data: { user_id: "user-1" } });
+    tableResults.fitment_leads = makeQueryStub({
+      data: [
+        { id: "lead-2", role_title: "Software Engineer", name: "Jane Doe" },
+        { id: "lead-1", role_title: "Data Analyst", name: "Jane Doe" },
+      ],
+    });
+    logAndGetContactEmailMock.mockResolvedValue("jane@example.com");
+
+    const { POST } = await importRoute();
+    await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", leadId: "lead-1" }));
+
+    expect(logAndGetContactEmailMock).toHaveBeenCalledWith("user-1", "https://www.linkedin.com/in/jane-doe", "Data Analyst");
+  });
+
+  it("falls back to the most recent lead when leadId doesn't belong to this candidate", async () => {
+    tableResults.recruiter_preview_settings = makeQueryStub({ data: { user_id: "user-1" } });
+    tableResults.fitment_leads = makeQueryStub({
+      data: [{ id: "lead-2", role_title: "Software Engineer", name: "Jane Doe" }],
+    });
+    logAndGetContactEmailMock.mockResolvedValue("jane@example.com");
+
+    const { POST } = await importRoute();
+    await POST(request({ linkedinUrl: "https://www.linkedin.com/in/jane-doe", leadId: "someone-elses-lead" }));
+
+    expect(logAndGetContactEmailMock).toHaveBeenCalledWith("user-1", "https://www.linkedin.com/in/jane-doe", "Software Engineer");
+  });
+
   it("notifies again on a second reveal for the same candidate (not deduped)", async () => {
     tableResults.recruiter_preview_settings = makeQueryStub({ data: { user_id: "user-1" } });
     tableResults.fitment_leads = makeQueryStub({ data: [{ role_title: "Backend Engineer", name: "Jane Doe" }] });

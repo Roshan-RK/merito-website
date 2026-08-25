@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid key." }, { status: 401 });
   }
 
-  let body: { linkedinUrl?: unknown; recruiterEmail?: unknown };
+  let body: { linkedinUrl?: unknown; recruiterEmail?: unknown; leadId?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -49,13 +49,18 @@ export async function POST(request: Request) {
   }
   const userId = settingsRow.user_id as string;
 
+  const requestedLeadId = typeof body.leadId === "string" && body.leadId.trim().length > 0 ? body.leadId.trim() : null;
+
   const { data: leads } = await admin
     .from("fitment_leads")
-    .select("role_title, name")
+    .select("id, role_title, name")
     .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(1);
-  const lead = leads?.[0] as { role_title?: string; name?: string } | undefined;
+    .order("created_at", { ascending: false });
+  const candidateLeads = (leads ?? []) as { id: string; role_title?: string; name?: string }[];
+  // Only ever matches a lead already scoped to this userId above -- a
+  // leadId for someone else's lead, a deleted lead, or an old extension
+  // build that never sends one all fall back to the most recent lead.
+  const lead = (requestedLeadId ? candidateLeads.find((l) => l.id === requestedLeadId) : undefined) ?? candidateLeads[0];
 
   const email = await logAndGetContactEmail(userId, normalized, lead?.role_title ?? null);
   if (!email) {
