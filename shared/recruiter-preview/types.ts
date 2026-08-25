@@ -67,6 +67,8 @@ export type LookupWireResponse = {
   roles: LookupRoleEntry[];
 };
 
+export type AvailableRole = { leadId: string; roleTitle: string | null };
+
 export type RescoreResponse = { fitment: LookupResponse["fitment"] };
 
 export type RevealContactResponse = { email: string };

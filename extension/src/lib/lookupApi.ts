@@ -3,14 +3,15 @@ import type { LookupResponse, LookupWireResponse } from "../../../shared/recruit
 const LOOKUP_URL = "https://www.merito.ai/api/public/recruiter-preview/lookup";
 
 export type LookupResult =
-  | { status: "found"; data: LookupResponse }
+  | { status: "found"; data: LookupWireResponse }
   | { status: "not_found" }
   | { status: "verification_required" }
   | { status: "error" };
 
-/** The server sends one entry per configured role; the card only ever shows the current one. */
-function flattenLookupResponse(wire: LookupWireResponse): LookupResponse {
-  const role = wire.roles.find((r) => r.isCurrent) ?? wire.roles[0] ?? null;
+/** Picks one role's data out of the server's roles[] and flattens it to the render shape. */
+export function flattenLookupRole(wire: LookupWireResponse, leadId?: string | null): LookupResponse {
+  const role =
+    wire.roles.find((r) => r.leadId === leadId) ?? wire.roles.find((r) => r.isCurrent) ?? wire.roles[0] ?? null;
   return {
     candidateName: wire.candidateName,
     roleTitle: role?.roleTitle ?? null,
@@ -38,7 +39,7 @@ export async function lookupCandidate(linkedinUrl: string, recruiterEmail: strin
     if (response.status === 404) return { status: "not_found" };
     if (!response.ok) return { status: "error" };
     const wire = (await response.json()) as LookupWireResponse;
-    return { status: "found", data: flattenLookupResponse(wire) };
+    return { status: "found", data: wire };
   } catch {
     return { status: "error" };
   }
