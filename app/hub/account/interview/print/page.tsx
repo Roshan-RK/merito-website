@@ -97,9 +97,9 @@ function noteToneFor(heading: string) {
 export default async function InterviewPrintPage({
   searchParams,
 }: {
-  searchParams: Promise<{ lead?: string }>;
+  searchParams: Promise<{ lead?: string; role?: string }>;
 }) {
-  const { lead: leadIdParam } = await searchParams;
+  const { lead: leadIdParam, role: roleParam } = await searchParams;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -118,9 +118,15 @@ export default async function InterviewPrintPage({
   if (!leads?.length) {
     redirect("/hub/account");
   }
+  // Prefer ?lead= (exact, unambiguous). Fall back to a ?role= text match only
+  // for legacy export URLs -- app/api/hub/interview/export/route.tsx emits
+  // ?role= when the interview row has no lead_id (predates multi-role, so that
+  // candidate has a single lead anyway). ?lead= is absent -> newest lead.
   const activeLead = leadIdParam
     ? leads.find(l => l.id === leadIdParam) || leads[0]
-    : leads[0];
+    : roleParam
+      ? leads.find(l => l.role_title === roleParam) || leads[0]
+      : leads[0];
 
   const { data: interview } = await supabase
     .from("fitment_interviews")
