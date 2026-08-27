@@ -119,7 +119,6 @@ export default async function InterviewReportPage({
       <main>
         <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
           <InterviewAppearedState roleTitle={interview.role_title} />
-          <InterviewStatusPoller leadId={activeLead.id} currentStatus="appeared" />
         </div>
       </main>
     );

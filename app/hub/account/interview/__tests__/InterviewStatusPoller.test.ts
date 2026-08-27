@@ -11,31 +11,32 @@ import { pollInterviewStatus } from "../InterviewStatusPoller";
 describe("pollInterviewStatus", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("calls onChanged when the polled status differs from the current status", async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: "ready" }) });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: "ready" }) }));
     const onChanged = vi.fn();
     await pollInterviewStatus("lead-1", "invited", onChanged);
     expect(onChanged).toHaveBeenCalledTimes(1);
   });
 
   it("does not call onChanged while the status is unchanged", async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: "invited" }) });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: "invited" }) }));
     const onChanged = vi.fn();
     await pollInterviewStatus("lead-1", "invited", onChanged);
     expect(onChanged).not.toHaveBeenCalled();
   });
 
   it("swallows a failed poll (res.ok === false) without calling onChanged", async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: false });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
     const onChanged = vi.fn();
     await pollInterviewStatus("lead-1", "invited", onChanged);
     expect(onChanged).not.toHaveBeenCalled();
   });
 
   it("swallows a network rejection without calling onChanged", async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error("network"));
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network")));
     const onChanged = vi.fn();
     await pollInterviewStatus("lead-1", "invited", onChanged);
     expect(onChanged).not.toHaveBeenCalled();
