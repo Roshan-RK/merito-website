@@ -120,6 +120,44 @@ describe("POST /api/hub/start-ai-interview", () => {
     expect(sendInterviewInvitationMock).not.toHaveBeenCalled();
   });
 
+  it("returns 500 and never consumes payment when the idempotency pre-check select itself errors", async () => {
+    process.env.RAZORPAY_BYPASS = "false";
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    existingMaybeSingleMock.mockResolvedValue({
+      data: null,
+      error: { code: "42703", message: "column fitment_interviews.lead_id does not exist" },
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(buildRequest({ leadId: "lead-1" }));
+
+    expect(response.status).toBe(500);
+    expect(creditMaybeSingleMock).not.toHaveBeenCalled();
+    expect(consumeUpdateMock).not.toHaveBeenCalled();
+    expect(getApplicantMock).not.toHaveBeenCalled();
+    expect(sendInterviewInvitationMock).not.toHaveBeenCalled();
+    delete process.env.RAZORPAY_BYPASS;
+  });
+
+  it("returns 500 and never consumes payment when the prior-attempt select itself errors", async () => {
+    process.env.RAZORPAY_BYPASS = "false";
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+    priorAttemptMaybeSingleMock.mockResolvedValue({
+      data: null,
+      error: { code: "42703", message: "column fitment_interviews.lead_id does not exist" },
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(buildRequest({ leadId: "lead-1" }));
+
+    expect(response.status).toBe(500);
+    expect(creditMaybeSingleMock).not.toHaveBeenCalled();
+    expect(consumeUpdateMock).not.toHaveBeenCalled();
+    expect(getApplicantMock).not.toHaveBeenCalled();
+    delete process.env.RAZORPAY_BYPASS;
+  });
+
   it("starts a new attempt (bypassed) even when the latest attempt for this lead is already ready", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     existingMaybeSingleMock.mockResolvedValue({ data: null, error: null });

@@ -33,13 +33,25 @@ export async function POST(request: Request) {
     return Response.json({ error: "leadId is required." }, { status: 400 });
   }
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("fitment_interviews")
     .select("status")
     .eq("user_id", user.id)
     .eq("lead_id", leadId)
     .eq("status", "invited")
     .maybeSingle();
+
+  // This runs before any payment is consumed. A swallowed error here (e.g. a
+  // missing column after a half-applied migration) once let the idempotency
+  // guard silently fall through, so every retry re-charged the candidate and
+  // re-sent a vendor invite. Fail loud and early instead.
+  if (existingError) {
+    console.error("start-ai-interview: idempotency pre-check failed", { leadId, error: existingError });
+    return Response.json(
+      { error: "Something went wrong starting your AI interview. Please try again." },
+      { status: 500 }
+    );
+  }
 
   if (existing) {
     return Response.json({ status: "invited" });
@@ -59,12 +71,21 @@ export async function POST(request: Request) {
   // and check before the payment-credit consumption below so a blocked
   // attempt is never charged. Now matched by lead_id (PK), ensuring each lead
   // can only be interviewed once.
-  const { data: priorAttempt } = await admin
+  const { data: priorAttempt, error: priorAttemptError } = await admin
     .from("fitment_interviews")
     .select("id")
     .eq("user_id", user.id)
     .eq("lead_id", leadId)
     .maybeSingle();
+
+  // Also before payment consumption -- same reasoning as the pre-check above.
+  if (priorAttemptError) {
+    console.error("start-ai-interview: prior-attempt check failed", { leadId, error: priorAttemptError });
+    return Response.json(
+      { error: "Something went wrong starting your AI interview. Please try again." },
+      { status: 500 }
+    );
+  }
 
   if (priorAttempt) {
     return Response.json(
