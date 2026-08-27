@@ -24,11 +24,14 @@ export async function reconcileInterviewRow(
   try {
     const report = await getInterviewReport(row.ib_agent_id, row.ib_candidate_id);
     if (report.status === "READY") {
-      // Conditional flip: only the caller that actually moves the row off
-      // "invited" gets rows back, so only it inserts the "report is ready"
-      // notification -- prevents a duplicate when a cron sweep tick and a
-      // concurrent page poll both see the report land (mirrors the sweep's
-      // READY branch and this file's own TERMINATED branch).
+      // Conditional flip: gated on the row being "invited" or "terminated"
+      // (i.e. not already "ready") so a re-check that races an
+      // already-completed flip gets 0 rows back and inserts no duplicate
+      // "report is ready" notification -- while still recovering a
+      // "terminated" row whose report was generated after the fact (e.g. an
+      // admin ran generateInterviewReport on a terminated session). Was
+      // `.eq("status","invited")`, which stranded that terminated row on the
+      // "interrupted" card despite a real report existing.
       const { data: flipped } = await supabase
         .from("fitment_interviews")
         .update({
@@ -41,7 +44,7 @@ export async function reconcileInterviewRow(
           updated_at: new Date().toISOString(),
         })
         .eq("id", row.id)
-        .eq("status", "invited")
+        .in("status", ["invited", "terminated"])
         .select("id");
       if (flipped && flipped.length > 0) {
         await supabase.from("hub_notifications").insert({

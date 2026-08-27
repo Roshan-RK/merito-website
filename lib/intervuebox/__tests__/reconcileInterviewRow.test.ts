@@ -2,16 +2,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Supabase mock, built chainable enough for what reconcileInterviewRow()
 // actually does:
-//   READY / APPEARED / other:  .from("fitment_interviews").update({...}).eq("id", ...)   (awaited)
-//   TERMINATED:                 .from(...).update({...}).eq("id",...).eq("status","invited").select("id")
+//   APPEARED / other:  .from("fitment_interviews").update({...}).eq("id", ...)   (awaited)
+//   READY:             .from(...).update({...}).eq("id",...).in("status",["invited","terminated"]).select("id")
+//   TERMINATED:        .from(...).update({...}).eq("id",...).eq("status","invited").select("id")
 //   notifications:              .from("hub_notifications").insert({...})
 let flippedRows: Array<{ id: string }> = [{ id: "r1" }];
 const select = vi.fn(() => Promise.resolve({ data: flippedRows }));
 const eqStatus = vi.fn(() => ({ select }));
+const inStatus = vi.fn(() => ({ select }));
 const eqId = vi.fn(() => {
-  // Both awaitable (READY/APPEARED) and chainable (TERMINATED double-eq).
+  // Awaitable (APPEARED) and chainable (READY .in / TERMINATED double-eq).
   const chain = Promise.resolve({ error: null }) as unknown as Record<string, unknown>;
   chain.eq = eqStatus;
+  chain.in = inStatus;
   return chain;
 });
 const update = vi.fn(() => ({ eq: eqId }));
@@ -38,6 +41,7 @@ describe("reconcileInterviewRow", () => {
     update.mockClear();
     eqId.mockClear();
     eqStatus.mockClear();
+    inStatus.mockClear();
     select.mockClear();
     notifInsert.mockClear();
     flippedRows = [{ id: "r1" }];
@@ -50,11 +54,21 @@ describe("reconcileInterviewRow", () => {
     expect(await reconcileInterviewRow(ROW)).toBe("ready");
     expect(update).toHaveBeenCalledWith(expect.objectContaining({ status: "ready" }));
     expect(update).toHaveBeenCalledWith(expect.objectContaining({ report_raw: expect.objectContaining({ overallScore: 80 }) }));
-    // The flip is conditional on the row still being "invited" -- same
-    // race-safety shape as the terminated branch, so only the caller that
-    // actually moves the row notifies.
-    expect(eqStatus).toHaveBeenCalledWith("status", "invited");
+    // The flip is conditional on the row still being "invited"/"terminated"
+    // (not already "ready") -- so only the caller that actually moves the row
+    // notifies.
+    expect(inStatus).toHaveBeenCalledWith("status", ["invited", "terminated"]);
     expect(select).toHaveBeenCalledWith("id");
+    expect(notifInsert).toHaveBeenCalledWith(expect.objectContaining({ user_id: "u1", category: "interview" }));
+    expect(notifInsert.mock.calls[0][0].message).toContain("ready");
+  });
+
+  it("READY on a terminated row (report generated after the fact) -> recovers it: report_raw + status ready + stuck_at null, notifies, returns 'ready'", async () => {
+    getInterviewReport.mockResolvedValue({ status: "READY", overallScore: 80, answers: [], skillReport: {} });
+    expect(await reconcileInterviewRow({ ...ROW, status: "terminated" })).toBe("ready");
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ status: "ready", stuck_at: null }));
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ report_raw: expect.objectContaining({ overallScore: 80 }) }));
+    expect(inStatus).toHaveBeenCalledWith("status", ["invited", "terminated"]);
     expect(notifInsert).toHaveBeenCalledWith(expect.objectContaining({ user_id: "u1", category: "interview" }));
     expect(notifInsert.mock.calls[0][0].message).toContain("ready");
   });
@@ -63,7 +77,7 @@ describe("reconcileInterviewRow", () => {
     getInterviewReport.mockResolvedValue({ status: "READY", overallScore: 80, answers: [], skillReport: {} });
     flippedRows = [];
     expect(await reconcileInterviewRow({ ...ROW, status: "ready" })).toBe("ready");
-    expect(eqStatus).toHaveBeenCalledWith("status", "invited");
+    expect(inStatus).toHaveBeenCalledWith("status", ["invited", "terminated"]);
     expect(notifInsert).not.toHaveBeenCalled();
   });
 
