@@ -64,7 +64,6 @@ export default function DashboardClient({
   recruiterActivity: React.ReactNode;
 }) {
   const [modal, setModal] = useState<"none" | "report" | "personality" | "references" | "interview" | "generate" | "counselling" | "tour">("none");
-  const [interviewModalAlreadyInvited, setInterviewModalAlreadyInvited] = useState(false);
   const [reportUnlocked, setReportUnlocked] = useState(initialReportUnlocked);
   const [, setReport] = useState<ResumeMatchReportReady | null>(initialReport);
   const [interviewStatus, setInterviewStatus] = useState<InterviewStatus>(initialInterviewStatus);
@@ -145,14 +144,11 @@ export default function DashboardClient({
           referencesUnlocked={referencesUnlockedState}
           level={level}
           roleTitle={roleTitle}
+          leadId={leadId}
           onOpenReportPaywall={() => setModal("report")}
           onOpenPersonalityPaywall={() => setModal("personality")}
           onOpenReferencesPaywall={() => setModal("references")}
           onOpenInterviewStart={() => setModal("interview")}
-          onOpenInterviewCheck={() => {
-            setInterviewModalAlreadyInvited(true);
-            setModal("interview");
-          }}
         />
 
         {bundleEligible && <BundlePromoCard level={level} onOpenPaywall={() => setModal("report")} />}
@@ -236,14 +232,9 @@ export default function DashboardClient({
           roleTitle={roleTitle}
           level={level}
           userEmail={userEmail}
-          alreadyInvited={interviewModalAlreadyInvited}
-          onClose={() => {
-            setInterviewModalAlreadyInvited(false);
-            setModal("none");
-          }}
+          onClose={() => setModal("none")}
           onStarted={(status) => {
             setInterviewStatus(status);
-            setInterviewModalAlreadyInvited(false);
             setModal("none");
           }}
         />

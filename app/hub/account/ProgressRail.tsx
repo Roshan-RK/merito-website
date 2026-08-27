@@ -36,11 +36,11 @@ export default function ProgressRail({
   referencesUnlocked,
   level,
   roleTitle,
+  leadId,
   onOpenReportPaywall,
   onOpenPersonalityPaywall,
   onOpenReferencesPaywall,
   onOpenInterviewStart,
-  onOpenInterviewCheck,
 }: {
   reportUnlocked: boolean;
   interviewStatus: InterviewStatus;
@@ -51,11 +51,11 @@ export default function ProgressRail({
   referencesUnlocked: boolean;
   level: CandidateLevel;
   roleTitle: string;
+  leadId: string;
   onOpenReportPaywall: () => void;
   onOpenPersonalityPaywall: () => void;
   onOpenReferencesPaywall: () => void;
   onOpenInterviewStart: () => void;
-  onOpenInterviewCheck: () => void;
 }) {
   const interviewGenerating = isInterviewGenerating(interviewStatus, interviewInvitedAt, level);
   const referencesDone = referenceCheckStatus === "completed";
@@ -109,20 +109,16 @@ export default function ProgressRail({
       // pending on the vendor side; the row won't self-resolve without an
       // admin, so an animated "waiting" dot would be misleading.
       pulse: interviewStatus === "invited" || interviewStatus === "terminated",
-      // "stuck" must land here too -- a row that went stuck via launch-link
-      // (status stays "invited") otherwise has no href out of this pill at
-      // all, the same dead-end this feature was built to close. See
-      // docs/superpowers/specs/2026-08-19-interview-stuck-state-design.md.
+      // Any status that has a real interview row (invited/ready/terminated/
+      // stuck) links to the interview page -- that's where the "Start
+      // Interview" button (invited), report (ready), and resume card
+      // (terminated/stuck) all live. Only "not_started" opens the paywall.
+      // Filter by lead_id: interview/page.tsx reads ?lead=, not ?role=.
       href:
-        interviewStatus === "ready" || interviewStatus === "terminated" || interviewStatus === "stuck"
-          ? `/hub/account/interview?role=${encodeURIComponent(roleTitle)}`
-          : undefined,
-      onClick:
-        interviewStatus === "ready" || interviewStatus === "terminated" || interviewStatus === "stuck"
+        interviewStatus === "not_started"
           ? undefined
-          : interviewStatus === "invited"
-            ? onOpenInterviewCheck
-            : onOpenInterviewStart,
+          : `/hub/account/interview?lead=${encodeURIComponent(leadId)}`,
+      onClick: interviewStatus === "not_started" ? onOpenInterviewStart : undefined,
     },
   ];
 

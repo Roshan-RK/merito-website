@@ -50,7 +50,6 @@ export default function InterviewPaywallModal({
   roleTitle,
   level,
   userEmail,
-  alreadyInvited = false,
   onClose,
   onStarted,
 }: {
@@ -58,10 +57,6 @@ export default function InterviewPaywallModal({
   roleTitle: string;
   level: CandidateLevel;
   userEmail: string;
-  // True when the row was already "invited" and the candidate is just
-  // rechecking what's happening — skips straight to the confirmation view
-  // instead of the payment screen (no new invite is sent).
-  alreadyInvited?: boolean;
   onClose: () => void;
   onStarted: (status: InterviewStatus) => void;
 }) {
@@ -71,7 +66,7 @@ export default function InterviewPaywallModal({
   // confirmation instead of closing immediately, so the candidate doesn't
   // lose track of the fact that the next step is checking their email, not
   // sitting on this page waiting.
-  const [invitedStatus, setInvitedStatus] = useState<InterviewStatus | null>(alreadyInvited ? "invited" : null);
+  const [invitedStatus, setInvitedStatus] = useState<InterviewStatus | null>(null);
 
   const startInterview = async () => {
     const res = await fetch("/api/hub/start-ai-interview", {
@@ -200,7 +195,7 @@ export default function InterviewPaywallModal({
               You&apos;re all set
             </h2>
             <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 13.5, lineHeight: 1.6, margin: "0 0 20px" }}>
-              Your AI interview for {roleTitle} is ready. Come back to this page whenever you&apos;re ready — you&apos;ll be able to launch it right from your dashboard.
+              {`Your AI interview for ${roleTitle} is ready. Come back to this page whenever you're ready — you'll be able to launch it right from your dashboard.`}
             </p>
             <button
               onClick={handleDismiss}
@@ -216,7 +211,7 @@ export default function InterviewPaywallModal({
               Ready for a real AI interview?
             </h2>
             <p className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]" style={{ fontSize: 13.5, lineHeight: 1.6, margin: "0 0 20px" }}>
-              You&apos;ll be able to launch your AI interview for {roleTitle} right from your dashboard, whenever you&apos;re ready.
+              {`You'll be able to launch your AI interview for ${roleTitle} right from your dashboard, whenever you're ready.`}
             </p>
 
             <button
