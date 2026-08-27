@@ -108,6 +108,21 @@ export default async function CombinedReportPage({
     personalitySummary = `Highest in ${TRAIT_NAME[top1]} (${personality.scores[top1].pct}%) and ${TRAIT_NAME[top2]} (${personality.scores[top2].pct}%).`;
   }
 
+  // The interview page resolves by ?lead= (not ?role=), so look up the lead
+  // for the role this report is about -- without it a multi-role user gets
+  // routed to their newest lead's interview instead of this one.
+  const { data: reportLead } = await supabase
+    .from("fitment_leads")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("role_title", primaryRole)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const interviewHref = reportLead
+    ? `/hub/account/interview?lead=${encodeURIComponent(reportLead.id)}`
+    : "/hub/account/interview";
+
   const cards: {
     key: string;
     icon: ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
@@ -137,7 +152,7 @@ export default async function CombinedReportPage({
       icon: Mic,
       title: "Mock interview",
       included: Boolean(interview),
-      href: "/hub/account/interview",
+      href: interviewHref,
       summary: interview ? `Scored ${Math.round(interview.report.overallScore)}% on your mock interview for ${interview.roleTitle}, with skill-wise feedback.` : null,
     },
     {

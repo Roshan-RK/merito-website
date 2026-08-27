@@ -128,7 +128,11 @@ export default function PricingCardsClient({
     if (card.key === "interview") {
       if (interviewStatus !== "not_started") {
         return (
-          <Link href="/hub/account/interview" className={ctaButtonStyle} style={{ fontSize: 12.5 }}>
+          <Link
+            href={leadId ? `/hub/account/interview?lead=${encodeURIComponent(leadId)}` : "/hub/account/interview"}
+            className={ctaButtonStyle}
+            style={{ fontSize: 12.5 }}
+          >
             View on Overview →
           </Link>
         );
