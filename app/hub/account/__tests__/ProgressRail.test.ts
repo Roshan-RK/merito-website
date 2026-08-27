@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isInterviewGenerating } from "../ProgressRail";
+import { isInterviewGenerating } from "../interviewProgress";
 
 describe("isInterviewGenerating", () => {
   const invitedAt = "2026-08-10T10:00:00.000Z";

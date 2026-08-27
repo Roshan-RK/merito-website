@@ -13,7 +13,7 @@ import InterviewAppearedState from "./InterviewAppearedState";
 import InterviewTerminatedState from "./InterviewTerminatedState";
 import InterviewStuckState from "./InterviewStuckState";
 import { resolveInterviewViewState } from "./resolveInterviewViewState";
-import { isInterviewGenerating } from "../ProgressRail";
+import { isInterviewGenerating } from "../interviewProgress";
 import InterviewGeneratingState from "./InterviewGeneratingState";
 import ExportPreviewButton from "../ExportPreviewButton";
 
