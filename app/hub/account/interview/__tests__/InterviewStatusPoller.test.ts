@@ -1,12 +1,9 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 
-// The component pulls in useRouter at module load; this repo has no DOM test
-// renderer wired up (no @testing-library/react, vitest env is "node"), so we
-// test the extracted fetch/compare helper directly -- the same shape as every
-// other test in this folder. Mock mirrors lib/__tests__/adminAuth.test.ts.
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {} }) }));
-
-import { pollInterviewStatus } from "../InterviewStatusPoller";
+// pollInterviewStatus now lives in its own plain module (not the "use client"
+// component), so no next/navigation stub is needed -- we test the extracted
+// fetch/compare helper directly, the same shape as every other test here.
+import { pollInterviewStatus } from "../pollInterviewStatus";
 
 describe("pollInterviewStatus", () => {
   afterEach(() => {

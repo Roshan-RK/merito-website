@@ -13,18 +13,12 @@ vi.mock("@/lib/supabaseAuthServer", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser: getUserMock }, from: fromMock }),
 }));
 
-const updateEqMock = vi.fn().mockResolvedValue({ error: null });
-const updateMock = vi.fn().mockReturnValue({ eq: updateEqMock });
-const adminFromMock = vi.fn().mockReturnValue({ update: updateMock });
-vi.mock("@/lib/supabase", () => ({
-  getSupabaseServerClient: () => ({ from: adminFromMock }),
-}));
-
-const getInterviewReportMock = vi.fn();
-const generateInterviewReportMock = vi.fn();
-vi.mock("@/lib/intervuebox/interviewReports", () => ({
-  getInterviewReport: getInterviewReportMock,
-  generateInterviewReport: generateInterviewReportMock,
+// The READY-only self-heal the route used to hand-roll is now the shared
+// reconcileInterviewRow() (its own suite covers the vendor logic); the route's
+// job is just mapping its verdict + stuck_at onto a response.
+const reconcileInterviewRowMock = vi.fn();
+vi.mock("@/lib/intervuebox/reconcileInterviewRow", () => ({
+  reconcileInterviewRow: (...a: unknown[]) => reconcileInterviewRowMock(...a),
 }));
 
 async function importRoute() {
@@ -35,15 +29,19 @@ function requestFor(leadId: string) {
   return new Request(`http://localhost/api/hub/interview/status?lead=${encodeURIComponent(leadId)}`);
 }
 
+const PENDING_ROW = {
+  id: "row-1",
+  status: "invited",
+  role_title: "PM",
+  ib_agent_id: "IV-1",
+  ib_candidate_id: "USR-1",
+};
+
 describe("GET /api/hub/interview/status", () => {
   beforeEach(() => {
     getUserMock.mockReset();
     maybeSingleMock.mockReset();
-    updateEqMock.mockClear();
-    updateEqMock.mockResolvedValue({ error: null });
-    updateMock.mockClear();
-    getInterviewReportMock.mockReset();
-    generateInterviewReportMock.mockReset();
+    reconcileInterviewRowMock.mockReset();
   });
 
   it("returns 401 when there is no session", async () => {
@@ -65,138 +63,77 @@ describe("GET /api/hub/interview/status", () => {
     maybeSingleMock.mockResolvedValue({ data: null });
     const { GET } = await importRoute();
     const response = await GET(requestFor("lead-1"));
-    const body = await response.json();
-    expect(body).toEqual({ status: "not_started" });
-    expect(getInterviewReportMock).not.toHaveBeenCalled();
+    expect(await response.json()).toEqual({ status: "not_started" });
+    expect(reconcileInterviewRowMock).not.toHaveBeenCalled();
   });
 
-  it("returns ready straight from the row without re-checking IntervueBox", async () => {
+  it("returns ready straight from the row without reconciling against IntervueBox", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
     maybeSingleMock.mockResolvedValue({ data: { id: "row-1", status: "ready" } });
     const { GET } = await importRoute();
     const response = await GET(requestFor("lead-1"));
-    const body = await response.json();
-    expect(body).toEqual({ status: "ready" });
-    expect(getInterviewReportMock).not.toHaveBeenCalled();
+    expect(await response.json()).toEqual({ status: "ready" });
+    expect(reconcileInterviewRowMock).not.toHaveBeenCalled();
   });
 
-  it("still processing on IntervueBox's side -- stays invited and doesn't write", async () => {
-    getUserMock.mockResolvedValue({
-      data: { user: { id: "user-1" } },
-    });
-    maybeSingleMock.mockResolvedValue({
-      data: { id: "row-1", status: "invited", ib_agent_id: "IV-1", ib_candidate_id: "USR-1" },
-    });
-    getInterviewReportMock.mockResolvedValue({ status: "NOT_READY" });
-    const { GET } = await importRoute();
-    const response = await GET(requestFor("lead-1"));
-    const body = await response.json();
-    expect(body).toEqual({ status: "invited" });
-    expect(updateMock).not.toHaveBeenCalled();
-  });
-
-  it("self-heals: a missed webhook doesn't matter if IntervueBox already has the report ready", async () => {
+  it("reconciles to ready -- a missed webhook is caught on the poll", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    maybeSingleMock.mockResolvedValue({
-      data: { id: "row-1", status: "invited", ib_agent_id: "IV-1", ib_candidate_id: "USR-1" },
-    });
-    getInterviewReportMock.mockResolvedValue({
-      status: "READY",
-      overallScore: 82,
-      skillMetrics: {},
-      overallSummary: "Strong candidate.",
-      strengths: null,
-      areasOfImprovement: null,
-      shareableReportLink: null,
-      approxDurationMinutes: null,
-      flagForSuspiciousActivity: false,
-      integrityCheck: null,
-      videoReport: null,
-      feedbackToInterviewer: null,
-      roadmap: null,
-      criteriaEvaluationTable: [],
-      interviewTitle: null,
-      skillReport: {},
-      overallSkillScore: null,
-      answers: [],
-      knowledgeAnswers: [],
-    });
+    maybeSingleMock.mockResolvedValue({ data: { ...PENDING_ROW } });
+    reconcileInterviewRowMock.mockResolvedValue("ready");
     const { GET } = await importRoute();
     const response = await GET(requestFor("lead-1"));
-    const body = await response.json();
-    expect(body).toEqual({ status: "ready" });
-    expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ status: "ready" }));
-    expect(updateEqMock).toHaveBeenCalledWith("id", "row-1");
+    expect(await response.json()).toEqual({ status: "ready" });
+    expect(reconcileInterviewRowMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "row-1", user_id: "user-1", role_title: "PM" })
+    );
   });
 
-  it("returns stuck status when stuck_at is set and self-heal doesn't find a ready report", async () => {
+  it("reconciles to appeared -- candidate started but has not finished", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    maybeSingleMock.mockResolvedValue({
-      data: { id: "row-1", status: "invited", ib_agent_id: "IV-1", ib_candidate_id: "USR-1", stuck_at: "2026-08-19T10:00:00.000Z" },
-    });
-    getInterviewReportMock.mockResolvedValue({ status: "NOT_READY" });
+    maybeSingleMock.mockResolvedValue({ data: { ...PENDING_ROW } });
+    reconcileInterviewRowMock.mockResolvedValue("appeared");
     const { GET } = await importRoute();
     const response = await GET(requestFor("lead-1"));
-    const body = await response.json();
-    expect(body).toEqual({ status: "stuck" });
-    expect(updateMock).not.toHaveBeenCalled();
+    expect(await response.json()).toEqual({ status: "appeared" });
   });
 
-  it("self-heal still wins over stuck_at when the report actually arrived", async () => {
+  it("reconciles to terminated", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    maybeSingleMock.mockResolvedValue({
-      data: { id: "row-1", status: "invited", ib_agent_id: "IV-1", ib_candidate_id: "USR-1", stuck_at: "2026-08-19T10:00:00.000Z" },
-    });
-    getInterviewReportMock.mockResolvedValue({
-      status: "READY",
-      overallScore: 82,
-      skillMetrics: {},
-      overallSummary: "Strong candidate.",
-      strengths: null,
-      areasOfImprovement: null,
-      shareableReportLink: null,
-      approxDurationMinutes: null,
-      flagForSuspiciousActivity: false,
-      integrityCheck: null,
-      videoReport: null,
-      feedbackToInterviewer: null,
-      roadmap: null,
-      criteriaEvaluationTable: [],
-      interviewTitle: null,
-      skillReport: {},
-      overallSkillScore: null,
-      answers: [],
-      knowledgeAnswers: [],
-    });
+    maybeSingleMock.mockResolvedValue({ data: { ...PENDING_ROW, status: "terminated" } });
+    reconcileInterviewRowMock.mockResolvedValue("terminated");
     const { GET } = await importRoute();
     const response = await GET(requestFor("lead-1"));
-    const body = await response.json();
-    expect(body).toEqual({ status: "ready" });
-  });
-
-  it("returns terminated status without calling generateInterviewReport", async () => {
-    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    maybeSingleMock.mockResolvedValue({
-      data: { id: "row-1", status: "terminated", ib_agent_id: "IV-1", ib_candidate_id: "USR-1", report_generation_requested_at: null },
-    });
-    getInterviewReportMock.mockResolvedValue({ status: "NOT_READY" });
-
-    const { GET } = await importRoute();
-    const response = await GET(requestFor("lead-1"));
-
     expect(await response.json()).toEqual({ status: "terminated" });
-    expect(generateInterviewReportMock).not.toHaveBeenCalled();
   });
 
-  it("IntervueBox check itself fails -- doesn't blow up, just stays invited", async () => {
+  it("still processing -- stays invited", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    maybeSingleMock.mockResolvedValue({
-      data: { id: "row-1", status: "invited", ib_agent_id: "IV-1", ib_candidate_id: "USR-1" },
-    });
-    getInterviewReportMock.mockRejectedValue(new Error("boom"));
+    maybeSingleMock.mockResolvedValue({ data: { ...PENDING_ROW } });
+    reconcileInterviewRowMock.mockResolvedValue("invited");
     const { GET } = await importRoute();
     const response = await GET(requestFor("lead-1"));
-    const body = await response.json();
-    expect(body).toEqual({ status: "invited" });
+    expect(await response.json()).toEqual({ status: "invited" });
+  });
+
+  it("returns stuck when stuck_at is set and reconcile leaves it invited", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    maybeSingleMock.mockResolvedValue({
+      data: { ...PENDING_ROW, stuck_at: "2026-08-19T10:00:00.000Z" },
+    });
+    reconcileInterviewRowMock.mockResolvedValue("invited");
+    const { GET } = await importRoute();
+    const response = await GET(requestFor("lead-1"));
+    expect(await response.json()).toEqual({ status: "stuck" });
+  });
+
+  it("reconcile to ready still wins over stuck_at", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    maybeSingleMock.mockResolvedValue({
+      data: { ...PENDING_ROW, stuck_at: "2026-08-19T10:00:00.000Z" },
+    });
+    reconcileInterviewRowMock.mockResolvedValue("ready");
+    const { GET } = await importRoute();
+    const response = await GET(requestFor("lead-1"));
+    expect(await response.json()).toEqual({ status: "ready" });
   });
 });
