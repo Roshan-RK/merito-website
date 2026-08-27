@@ -12,6 +12,7 @@ import InterviewInProgressState from "./InterviewInProgressState";
 import InterviewAppearedState from "./InterviewAppearedState";
 import InterviewTerminatedState from "./InterviewTerminatedState";
 import InterviewStuckState from "./InterviewStuckState";
+import InterviewStatusPoller from "./InterviewStatusPoller";
 import { resolveInterviewViewState } from "./resolveInterviewViewState";
 import ExportPreviewButton from "../ExportPreviewButton";
 
@@ -107,6 +108,7 @@ export default async function InterviewReportPage({
       <main>
         <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
           <InterviewInProgressState roleTitle={interview.role_title} leadId={activeLead.id} />
+          <InterviewStatusPoller leadId={activeLead.id} currentStatus="invited" />
         </div>
       </main>
     );
@@ -117,6 +119,7 @@ export default async function InterviewReportPage({
       <main>
         <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
           <InterviewAppearedState roleTitle={interview.role_title} />
+          <InterviewStatusPoller leadId={activeLead.id} currentStatus="appeared" />
         </div>
       </main>
     );
