@@ -2,6 +2,7 @@ import { getSupabaseServerClient } from "@/lib/supabase";
 import { getReferenceCheckStatus, computeReferenceReport, listRefereeOverrideHistory, type ReferenceReport, type RefereeRow } from "@/lib/referenceChecks";
 import { getCandidateResumeDetails, getResumeMatchReport, scoreOutOfTen, type CandidateResumeDetails, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import { getInterviewReport, type InterviewReportReady } from "@/lib/intervuebox/interviewReports";
+import { buildReportRaw } from "@/lib/intervuebox/reportRaw";
 import type { Scores, Validity } from "@/lib/personality";
 import { logAdminAction, listActionsForTarget, type AdminActionRow } from "@/lib/adminAuditLog";
 import type { ReportType } from "@/app/hub/account/reportSections";
@@ -1054,26 +1055,7 @@ export async function resyncInterviewReport(interviewRowId: string, adminEmail: 
   const { error } = await supabase
     .from("fitment_interviews")
     .update({
-      report_raw: {
-        overallScore: report.overallScore,
-        skillMetrics: report.skillMetrics,
-        overallSummary: report.overallSummary,
-        strengths: report.strengths,
-        areasOfImprovement: report.areasOfImprovement,
-        shareableReportLink: report.shareableReportLink,
-        approxDurationMinutes: report.approxDurationMinutes,
-        flagForSuspiciousActivity: report.flagForSuspiciousActivity,
-        integrityCheck: report.integrityCheck,
-        videoReport: report.videoReport,
-        feedbackToInterviewer: report.feedbackToInterviewer,
-        roadmap: report.roadmap,
-        criteriaEvaluationTable: report.criteriaEvaluationTable,
-        interviewTitle: report.interviewTitle,
-        skillReport: report.skillReport,
-        overallSkillScore: report.overallSkillScore,
-        answers: report.answers,
-        knowledgeAnswers: report.knowledgeAnswers,
-      },
+      report_raw: buildReportRaw(report),
       updated_at: new Date().toISOString(),
     })
     .eq("id", interviewRowId);

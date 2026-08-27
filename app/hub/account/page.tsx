@@ -7,6 +7,7 @@ import type { InterviewStatus } from "./interviewProgress";
 import type { PersonalityStatus } from "./ProgressRail";
 import { getResumeMatchReport, scoreOutOfTen, type ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import { getInterviewReport } from "@/lib/intervuebox/interviewReports";
+import { buildReportRaw } from "@/lib/intervuebox/reportRaw";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { PRODUCT_PRICING, DEFAULT_LEVEL, formatPrice, type CandidateLevel } from "@/lib/razorpay/pricing";
 import { isProductUnlocked } from "@/lib/productUnlocks";
@@ -152,26 +153,7 @@ export default async function AccountPage({
             // clear it so the admin "Interview stuck" count doesn't keep
             // counting a row that no longer needs help.
             stuck_at: null,
-            report_raw: {
-              overallScore: interviewReport.overallScore,
-              skillMetrics: interviewReport.skillMetrics,
-              overallSummary: interviewReport.overallSummary,
-              strengths: interviewReport.strengths,
-              areasOfImprovement: interviewReport.areasOfImprovement,
-              shareableReportLink: interviewReport.shareableReportLink,
-              approxDurationMinutes: interviewReport.approxDurationMinutes,
-              flagForSuspiciousActivity: interviewReport.flagForSuspiciousActivity,
-              integrityCheck: interviewReport.integrityCheck,
-              videoReport: interviewReport.videoReport,
-              feedbackToInterviewer: interviewReport.feedbackToInterviewer,
-              roadmap: interviewReport.roadmap,
-              criteriaEvaluationTable: interviewReport.criteriaEvaluationTable,
-              interviewTitle: interviewReport.interviewTitle,
-              skillReport: interviewReport.skillReport,
-              overallSkillScore: interviewReport.overallSkillScore,
-              answers: interviewReport.answers,
-              knowledgeAnswers: interviewReport.knowledgeAnswers,
-            },
+            report_raw: buildReportRaw(interviewReport),
             updated_at: new Date().toISOString(),
           })
           .eq("id", interviewRow.id);
