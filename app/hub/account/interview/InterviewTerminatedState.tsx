@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { RotateCcw } from "lucide-react";
 import InterviewResumeWarning from "./InterviewResumeWarning";
+import { resumeInterview } from "./resumeInterview";
 
 // Renders for fitment_interviews.status === "terminated" -- the candidate's
 // session ended before it finished. No payment gate: resuming is a free
@@ -15,23 +16,13 @@ export default function InterviewTerminatedState({ roleTitle, leadId }: { roleTi
   async function handleResume() {
     setLoading(true);
     setError(null);
-    try {
-      const res = await fetch("/api/hub/interview/resume", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Couldn't resume this interview. Please try again.");
-        setLoading(false);
-        return;
-      }
-      window.location.href = data.url;
-    } catch {
-      setError("Couldn't resume this interview. Please try again.");
-      setLoading(false);
+    const result = await resumeInterview(leadId);
+    if (result.ok) {
+      window.location.href = result.url;
+      return;
     }
+    setError(result.error);
+    setLoading(false);
   }
 
   return (
