@@ -13,8 +13,6 @@ import InterviewAppearedState from "./InterviewAppearedState";
 import InterviewTerminatedState from "./InterviewTerminatedState";
 import InterviewStuckState from "./InterviewStuckState";
 import { resolveInterviewViewState } from "./resolveInterviewViewState";
-import { isInterviewGenerating } from "../interviewProgress";
-import InterviewGeneratingState from "./InterviewGeneratingState";
 import ExportPreviewButton from "../ExportPreviewButton";
 
 const EYEBROW = "font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40";
@@ -105,17 +103,10 @@ export default async function InterviewReportPage({
   }
 
   if (viewState === "invited") {
-    const level = (activeLead.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
-    const generating = isInterviewGenerating("invited", interview.invited_at, level);
-
     return (
       <main>
         <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
-          {generating ? (
-            <InterviewGeneratingState roleTitle={interview.role_title} />
-          ) : (
-            <InterviewInProgressState roleTitle={interview.role_title} leadId={activeLead.id} />
-          )}
+          <InterviewInProgressState roleTitle={interview.role_title} leadId={activeLead.id} />
         </div>
       </main>
     );

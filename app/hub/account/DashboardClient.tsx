@@ -33,7 +33,6 @@ export default function DashboardClient({
   initialReportUnlocked,
   initialReport,
   initialInterviewStatus,
-  interviewInvitedAt,
   referenceCheckStatus,
   personalityStatus,
   counsellingPriceLabel,
@@ -55,7 +54,6 @@ export default function DashboardClient({
   initialReportUnlocked: boolean;
   initialReport: ResumeMatchReportReady | null;
   initialInterviewStatus: InterviewStatus;
-  interviewInvitedAt: string | null;
   referenceCheckStatus: "none" | "in_progress" | "completed";
   personalityStatus: PersonalityStatus;
   counsellingPriceLabel: string;
@@ -137,12 +135,10 @@ export default function DashboardClient({
         <ProgressRail
           reportUnlocked={reportUnlocked}
           interviewStatus={interviewStatus}
-          interviewInvitedAt={interviewInvitedAt}
           referenceCheckStatus={referenceCheckStatus}
           personalityStatus={personalityStatus}
           personalityUnlocked={personalityUnlockedState}
           referencesUnlocked={referencesUnlockedState}
-          level={level}
           roleTitle={roleTitle}
           leadId={leadId}
           onOpenReportPaywall={() => setModal("report")}

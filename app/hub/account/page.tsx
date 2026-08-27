@@ -229,7 +229,6 @@ export default async function AccountPage({
       initialReportUnlocked={reportUnlocked}
       initialReport={report}
       initialInterviewStatus={interviewStatus}
-      interviewInvitedAt={interviewRow?.invited_at ?? null}
       referenceCheckStatus={referenceCheckStatus}
       personalityStatus={personalityStatus}
       counsellingPriceLabel={counsellingPriceLabel}

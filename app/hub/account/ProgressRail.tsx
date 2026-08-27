@@ -3,8 +3,7 @@
 import type { CSSProperties, ComponentType, ReactNode } from "react";
 import Link from "next/link";
 import { FileText, Brain, Users, Mic } from "lucide-react";
-import type { CandidateLevel } from "@/lib/razorpay/pricing";
-import { isInterviewGenerating, type InterviewStatus } from "./interviewProgress";
+import type { InterviewStatus } from "./interviewProgress";
 
 export type { InterviewStatus };
 export type PersonalityStatus = "not_started" | "ready";
@@ -29,12 +28,10 @@ type Pill = {
 export default function ProgressRail({
   reportUnlocked,
   interviewStatus,
-  interviewInvitedAt,
   referenceCheckStatus,
   personalityStatus,
   personalityUnlocked,
   referencesUnlocked,
-  level,
   roleTitle,
   leadId,
   onOpenReportPaywall,
@@ -44,12 +41,10 @@ export default function ProgressRail({
 }: {
   reportUnlocked: boolean;
   interviewStatus: InterviewStatus;
-  interviewInvitedAt: string | null;
   referenceCheckStatus: "none" | "in_progress" | "completed";
   personalityStatus: PersonalityStatus;
   personalityUnlocked: boolean;
   referencesUnlocked: boolean;
-  level: CandidateLevel;
   roleTitle: string;
   leadId: string;
   onOpenReportPaywall: () => void;
@@ -57,7 +52,6 @@ export default function ProgressRail({
   onOpenReferencesPaywall: () => void;
   onOpenInterviewStart: () => void;
 }) {
-  const interviewGenerating = isInterviewGenerating(interviewStatus, interviewInvitedAt, level);
   const referencesDone = referenceCheckStatus === "completed";
 
   const pills: Pill[] = [
@@ -101,9 +95,7 @@ export default function ProgressRail({
             : interviewStatus === "terminated"
               ? "Interrupted"
               : interviewStatus === "invited"
-                ? interviewGenerating
-                  ? "Generating"
-                  : "Invited"
+                ? "Invited"
                 : "Not started",
       // No pulse for "stuck" -- unlike invited/terminated, nothing is
       // pending on the vendor side; the row won't self-resolve without an
