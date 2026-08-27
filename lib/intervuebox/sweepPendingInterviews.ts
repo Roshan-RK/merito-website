@@ -30,15 +30,35 @@ export async function sweepPendingInterviews(): Promise<SweepResult> {
         try {
           const report = await getInterviewReport(row.ib_agent_id, row.ib_candidate_id);
           if (report.status === "READY") {
-            await supabase
+            // Conditional update, mirroring the terminated branch below: only
+            // the sweep pass that actually flips the row off "invited" gets
+            // rows back, so only that pass tells the candidate their report
+            // landed -- prevents a duplicate notification when the webhook and
+            // the cron backstop race on the same row.
+            const { data: flipped, error: flipError } = await supabase
               .from("fitment_interviews")
               .update({
                 status: "ready",
                 report_raw: buildReportRaw(report),
                 updated_at: new Date().toISOString(),
               })
-              .eq("id", row.id);
-            result.ready += 1;
+              .eq("id", row.id)
+              .eq("status", "invited")
+              .select("id");
+            if (flipError) {
+              console.error("Sweep: ready-flip update failed", { row, error: flipError });
+              result.errors += 1;
+              return;
+            }
+            if (flipped && flipped.length > 0) {
+              await supabase.from("hub_notifications").insert({
+                user_id: row.user_id,
+                message: `Your ${row.role_title} mock interview report is ready.`,
+                category: "interview",
+                created_by: "system",
+              });
+              result.ready += 1;
+            }
             return;
           }
 

@@ -24,7 +24,12 @@ export async function reconcileInterviewRow(
   try {
     const report = await getInterviewReport(row.ib_agent_id, row.ib_candidate_id);
     if (report.status === "READY") {
-      await supabase
+      // Conditional flip: only the caller that actually moves the row off
+      // "invited" gets rows back, so only it inserts the "report is ready"
+      // notification -- prevents a duplicate when a cron sweep tick and a
+      // concurrent page poll both see the report land (mirrors the sweep's
+      // READY branch and this file's own TERMINATED branch).
+      const { data: flipped } = await supabase
         .from("fitment_interviews")
         .update({
           status: "ready",
@@ -35,8 +40,10 @@ export async function reconcileInterviewRow(
           stuck_at: null,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", row.id);
-      if (row.status !== "ready") {
+        .eq("id", row.id)
+        .eq("status", "invited")
+        .select("id");
+      if (flipped && flipped.length > 0) {
         await supabase.from("hub_notifications").insert({
           user_id: row.user_id,
           message: `Your ${row.role_title} mock interview report is ready.`,

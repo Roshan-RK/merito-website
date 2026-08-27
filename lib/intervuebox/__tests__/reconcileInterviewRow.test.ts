@@ -50,12 +50,27 @@ describe("reconcileInterviewRow", () => {
     expect(await reconcileInterviewRow(ROW)).toBe("ready");
     expect(update).toHaveBeenCalledWith(expect.objectContaining({ status: "ready" }));
     expect(update).toHaveBeenCalledWith(expect.objectContaining({ report_raw: expect.objectContaining({ overallScore: 80 }) }));
+    // The flip is conditional on the row still being "invited" -- same
+    // race-safety shape as the terminated branch, so only the caller that
+    // actually moves the row notifies.
+    expect(eqStatus).toHaveBeenCalledWith("status", "invited");
+    expect(select).toHaveBeenCalledWith("id");
     expect(notifInsert).toHaveBeenCalledWith(expect.objectContaining({ user_id: "u1", category: "interview" }));
+    expect(notifInsert.mock.calls[0][0].message).toContain("ready");
   });
 
-  it("READY but row already ready -> no duplicate notification", async () => {
+  it("READY but the conditional flip matches nothing (row already ready) -> no duplicate notification", async () => {
     getInterviewReport.mockResolvedValue({ status: "READY", overallScore: 80, answers: [], skillReport: {} });
+    flippedRows = [];
     expect(await reconcileInterviewRow({ ...ROW, status: "ready" })).toBe("ready");
+    expect(eqStatus).toHaveBeenCalledWith("status", "invited");
+    expect(notifInsert).not.toHaveBeenCalled();
+  });
+
+  it("READY but lost the flip race to a concurrent pass -> no duplicate notification", async () => {
+    getInterviewReport.mockResolvedValue({ status: "READY", overallScore: 80, answers: [], skillReport: {} });
+    flippedRows = [];
+    expect(await reconcileInterviewRow(ROW)).toBe("ready");
     expect(notifInsert).not.toHaveBeenCalled();
   });
 

@@ -9,7 +9,10 @@ vi.mock("../interviewReports", () => ({
 
 const selectEqMock = vi.fn();
 const selectMock = vi.fn().mockReturnValue({ eq: selectEqMock });
-const readyUpdateEq2Mock = vi.fn().mockResolvedValue({ error: null });
+// READY branch is now the same conditional shape as TERMINATED:
+//   update({status:"ready",...}).eq("id",...).eq("status","invited").select("id")
+const readySelectMock = vi.fn().mockResolvedValue({ data: [{ id: "row-1" }], error: null });
+const readyUpdateEq2Mock = vi.fn().mockReturnValue({ select: readySelectMock });
 const readyUpdateEq1Mock = vi.fn().mockReturnValue({ eq: readyUpdateEq2Mock });
 const ibStatusUpdateEqMock = vi.fn().mockResolvedValue({ error: null });
 const terminatedSelectMock = vi.fn().mockResolvedValue({ data: [{ id: "row-1" }] });
@@ -34,6 +37,36 @@ vi.mock("@/lib/supabase", () => ({
   getSupabaseServerClient: () => ({ from: fromMock }),
 }));
 
+const READY_REPORT = {
+  status: "READY",
+  overallScore: 8,
+  skillMetrics: {},
+  overallSummary: "s",
+  strengths: null,
+  areasOfImprovement: null,
+  shareableReportLink: "https://x",
+  approxDurationMinutes: 4,
+  flagForSuspiciousActivity: false,
+  integrityCheck: null,
+  videoReport: null,
+  feedbackToInterviewer: null,
+  roadmap: null,
+  criteriaEvaluationTable: [],
+  interviewTitle: null,
+  skillReport: {},
+  overallSkillScore: null,
+  answers: [],
+  knowledgeAnswers: [],
+};
+
+const INVITED_ROW = {
+  id: "row-1",
+  user_id: "user-1",
+  role_title: "Backend Engineer",
+  ib_agent_id: "INT_1",
+  ib_candidate_id: "USR_1",
+};
+
 async function importSweep() {
   return await import("../sweepPendingInterviews");
 }
@@ -46,6 +79,8 @@ describe("sweepPendingInterviews", () => {
     updateMock.mockClear();
     readyUpdateEq1Mock.mockClear();
     readyUpdateEq2Mock.mockClear();
+    readySelectMock.mockClear();
+    readySelectMock.mockResolvedValue({ data: [{ id: "row-1" }], error: null });
     ibStatusUpdateEqMock.mockClear();
     terminatedEq1Mock.mockClear();
     terminatedEq2Mock.mockClear();
@@ -54,32 +89,9 @@ describe("sweepPendingInterviews", () => {
     insertMock.mockClear();
   });
 
-  it("flips a READY row to ready and never calls getInterviewCandidateStatus for it", async () => {
-    selectEqMock.mockResolvedValue({
-      data: [{ id: "row-1", user_id: "user-1", role_title: "Backend Engineer", ib_agent_id: "INT_1", ib_candidate_id: "USR_1" }],
-      error: null,
-    });
-    getInterviewReportMock.mockResolvedValue({
-      status: "READY",
-      overallScore: 8,
-      skillMetrics: {},
-      overallSummary: "s",
-      strengths: null,
-      areasOfImprovement: null,
-      shareableReportLink: "https://x",
-      approxDurationMinutes: 4,
-      flagForSuspiciousActivity: false,
-      integrityCheck: null,
-      videoReport: null,
-      feedbackToInterviewer: null,
-      roadmap: null,
-      criteriaEvaluationTable: [],
-      interviewTitle: null,
-      skillReport: {},
-      overallSkillScore: null,
-      answers: [],
-      knowledgeAnswers: [],
-    });
+  it("flips a READY row to ready, notifies the candidate, and never calls getInterviewCandidateStatus for it", async () => {
+    selectEqMock.mockResolvedValue({ data: [INVITED_ROW], error: null });
+    getInterviewReportMock.mockResolvedValue(READY_REPORT);
 
     const { sweepPendingInterviews } = await importSweep();
     const result = await sweepPendingInterviews();
@@ -87,13 +99,42 @@ describe("sweepPendingInterviews", () => {
     expect(result).toEqual({ ready: 1, appeared: 0, terminated: 0, errors: 0 });
     expect(getInterviewCandidateStatusMock).not.toHaveBeenCalled();
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ status: "ready" }));
+    // Conditional flip -- same race-safety shape as the terminated branch.
+    expect(readyUpdateEq1Mock).toHaveBeenCalledWith("id", "row-1");
+    expect(readyUpdateEq2Mock).toHaveBeenCalledWith("status", "invited");
+    expect(readySelectMock).toHaveBeenCalledWith("id");
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: "user-1", category: "interview", created_by: "system" })
+    );
+    expect(insertMock.mock.calls[0][0].message).toContain("ready");
+  });
+
+  it("does not insert a notification when the READY flip loses the race (row already ready)", async () => {
+    selectEqMock.mockResolvedValue({ data: [INVITED_ROW], error: null });
+    getInterviewReportMock.mockResolvedValue(READY_REPORT);
+    readySelectMock.mockResolvedValue({ data: [] });
+
+    const { sweepPendingInterviews } = await importSweep();
+    const result = await sweepPendingInterviews();
+
+    expect(result).toEqual({ ready: 0, appeared: 0, terminated: 0, errors: 0 });
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it("counts a genuine DB error on the ready-flip update as an error, not a lost race", async () => {
+    selectEqMock.mockResolvedValue({ data: [INVITED_ROW], error: null });
+    getInterviewReportMock.mockResolvedValue(READY_REPORT);
+    readySelectMock.mockResolvedValue({ data: null, error: { message: "connection reset" } });
+
+    const { sweepPendingInterviews } = await importSweep();
+    const result = await sweepPendingInterviews();
+
+    expect(result).toEqual({ ready: 0, appeared: 0, terminated: 0, errors: 1 });
+    expect(insertMock).not.toHaveBeenCalled();
   });
 
   it("writes ib_interview_status without flipping status when the candidate has APPEARED", async () => {
-    selectEqMock.mockResolvedValue({
-      data: [{ id: "row-1", user_id: "user-1", role_title: "Backend Engineer", ib_agent_id: "INT_1", ib_candidate_id: "USR_1" }],
-      error: null,
-    });
+    selectEqMock.mockResolvedValue({ data: [INVITED_ROW], error: null });
     getInterviewReportMock.mockResolvedValue({ status: "NOT_READY" });
     getInterviewCandidateStatusMock.mockResolvedValue("APPEARED");
 
@@ -106,10 +147,7 @@ describe("sweepPendingInterviews", () => {
   });
 
   it("flips status to terminated and inserts a notification when the candidate has TERMINATED", async () => {
-    selectEqMock.mockResolvedValue({
-      data: [{ id: "row-1", user_id: "user-1", role_title: "Backend Engineer", ib_agent_id: "INT_1", ib_candidate_id: "USR_1" }],
-      error: null,
-    });
+    selectEqMock.mockResolvedValue({ data: [INVITED_ROW], error: null });
     getInterviewReportMock.mockResolvedValue({ status: "NOT_READY" });
     getInterviewCandidateStatusMock.mockResolvedValue("TERMINATED");
 
@@ -128,10 +166,7 @@ describe("sweepPendingInterviews", () => {
   });
 
   it("does not insert a notification when the conditional terminated update loses the race", async () => {
-    selectEqMock.mockResolvedValue({
-      data: [{ id: "row-1", user_id: "user-1", role_title: "Backend Engineer", ib_agent_id: "INT_1", ib_candidate_id: "USR_1" }],
-      error: null,
-    });
+    selectEqMock.mockResolvedValue({ data: [INVITED_ROW], error: null });
     getInterviewReportMock.mockResolvedValue({ status: "NOT_READY" });
     getInterviewCandidateStatusMock.mockResolvedValue("TERMINATED");
     terminatedSelectMock.mockResolvedValue({ data: [] });
@@ -144,10 +179,7 @@ describe("sweepPendingInterviews", () => {
   });
 
   it("counts a genuine DB error on the terminated-flip update as an error, not a lost race", async () => {
-    selectEqMock.mockResolvedValue({
-      data: [{ id: "row-1", user_id: "user-1", role_title: "Backend Engineer", ib_agent_id: "INT_1", ib_candidate_id: "USR_1" }],
-      error: null,
-    });
+    selectEqMock.mockResolvedValue({ data: [INVITED_ROW], error: null });
     getInterviewReportMock.mockResolvedValue({ status: "NOT_READY" });
     getInterviewCandidateStatusMock.mockResolvedValue("TERMINATED");
     terminatedSelectMock.mockResolvedValue({ data: null, error: { message: "connection reset" } });
