@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
+import type { RefObject } from "react";
 
 // Closes any open dropdown when a click lands outside every registered
 // trigger/panel pair, or when Escape is pressed -- shared by the header
 // menus (TopBar) and the RoleSwitcher instead of duplicating the listener.
-export function useDismiss(open: boolean, onDismiss: () => void, refs: React.RefObject<HTMLElement | null>[]) {
+export function useDismiss(open: boolean, onDismiss: () => void, refs: RefObject<HTMLElement | null>[]) {
   useEffect(() => {
     if (!open) return;
     const handlePointer = (e: MouseEvent) => {

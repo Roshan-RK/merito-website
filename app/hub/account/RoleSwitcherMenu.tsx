@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Plus } from "lucide-react";
 import { resolveSwitcherState, type SwitcherLead } from "./roleSwitcher";
 import { useDismiss } from "./useDismiss";
 
@@ -33,15 +33,49 @@ export default function RoleSwitcherMenu({
   useDismiss(open, () => setOpen(false), [triggerRef, panelRef]);
 
   if (!showDropdown) {
+    // Lead-less account: nothing to show (the Overview page owns that flow).
     if (!activeLead) return null;
+    // Exactly one role: no role to switch *to*, but ChangeRoleModal is only
+    // reachable through onChangeRole here -- so offer a compact "+ Check a new
+    // role" affordance. Plus icon (not a chevron) so it reads as "add a role".
     return (
-      <span
-        data-testid="role-label"
-        className="hidden sm:flex items-center font-[family-name:var(--font-poppins)] font-medium"
-        style={{ borderRadius: 50, padding: "6px 12px", fontSize: 14, background: "rgba(39,37,45,0.6)", border: "1px solid rgb(49,47,55)", color: "rgb(236,235,233)" }}
-      >
-        {activeLead.role_title}
-      </span>
+      <div className="relative">
+        <button
+          ref={triggerRef}
+          onClick={() => setOpen((v) => !v)}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls="role-newcheck-menu"
+          className="hidden sm:flex items-center transition-colors font-[family-name:var(--font-poppins)] font-medium"
+          style={{ borderRadius: 50, padding: "6px 12px", fontSize: 14, background: "rgba(39,37,45,0.6)", border: "1px solid rgb(49,47,55)", color: "rgb(236,235,233)", cursor: "pointer", gap: 8 }}
+        >
+          <span data-testid="role-label">{activeLead.role_title}</span>
+          <Plus size={14} strokeWidth={2} style={{ color: "rgb(156,153,163)" }} />
+        </button>
+
+        {open && (
+          <div
+            ref={panelRef}
+            id="role-newcheck-menu"
+            role="menu"
+            aria-label="Check a new role"
+            className="absolute right-0 bg-[#141416] border border-white/[0.1]"
+            style={{ top: 46, width: 300, borderRadius: 14, padding: 8, boxShadow: "0 24px 48px rgba(0,0,0,0.5)" }}
+          >
+            <button
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onChangeRole();
+              }}
+              className="text-left flex items-center hover:bg-white/[0.06] transition-colors font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24]"
+              style={{ width: "100%", background: "transparent", border: "none", cursor: "pointer", padding: "8px 10px", borderRadius: 8, fontSize: 12.5 }}
+            >
+              + Check a new role
+            </button>
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -58,6 +92,7 @@ export default function RoleSwitcherMenu({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-controls="role-switcher-menu"
         className="hidden sm:flex items-center transition-colors font-[family-name:var(--font-poppins)] font-medium"
         style={{ borderRadius: 50, padding: "6px 12px", fontSize: 14, background: "rgba(39,37,45,0.6)", border: "1px solid rgb(49,47,55)", color: "rgb(236,235,233)", cursor: "pointer", gap: 8 }}
       >
@@ -68,6 +103,7 @@ export default function RoleSwitcherMenu({
       {open && (
         <div
           ref={panelRef}
+          id="role-switcher-menu"
           role="menu"
           aria-label="Switch role"
           className="absolute right-0 bg-[#141416] border border-white/[0.1]"
@@ -105,7 +141,7 @@ export default function RoleSwitcherMenu({
               </button>
             );
           })}
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", margin: "6px 4px" }} />
+          <div role="separator" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", margin: "6px 4px" }} />
           <button
             role="menuitem"
             onClick={() => {
