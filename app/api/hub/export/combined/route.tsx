@@ -43,7 +43,7 @@ export async function GET(request: Request) {
   }
 
   if (include.has("fitment") && current) {
-    const unlocked = await isReportUnlocked(user.id, current.role_title);
+    const unlocked = await isReportUnlocked(user.id, current.id, current.role_title);
     if (unlocked && current.resume_match_status === "READY" && current.resume_match_raw) {
       anyReady = true;
     }

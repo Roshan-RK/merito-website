@@ -59,7 +59,7 @@ export default async function AccountPage({
   const currentIndex = leads.indexOf(current);
   const prevForSameRole = leads.find((l, i) => i > currentIndex && l.role_title === current.role_title);
 
-  const reportUnlocked = await isReportUnlocked(user.id, current.role_title);
+  const reportUnlocked = await isReportUnlocked(user.id, current.id, current.role_title);
 
   let score = current.score;
   let verdict = current.verdict;

@@ -26,7 +26,7 @@ export async function completeReportUnlock(
   product: "report" | "bundle" = "report"
 ): Promise<CompleteReportUnlockResult> {
   try {
-    await unlockReport(userId, lead.role_title);
+    await unlockReport(userId, lead.id, lead.role_title);
     if (product === "bundle") {
       await unlockProduct(userId, "personality");
       await unlockProduct(userId, "references");

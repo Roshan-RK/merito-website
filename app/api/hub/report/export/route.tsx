@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     return Response.json({ error: "No fitment report found." }, { status: 404 });
   }
 
-  const unlocked = await isReportUnlocked(user.id, current.role_title);
+  const unlocked = await isReportUnlocked(user.id, current.id, current.role_title);
   if (!unlocked) {
     return Response.json({ error: "Report not unlocked." }, { status: 403 });
   }

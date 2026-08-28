@@ -70,7 +70,7 @@ export default async function ReportPrintPage({
     ? leads.find(l => l.id === leadIdParam) || leads[0]
     : leads[0];
 
-  const unlocked = await isReportUnlocked(user.id, current.role_title);
+  const unlocked = await isReportUnlocked(user.id, current.id, current.role_title);
   if (!unlocked || current.resume_match_status !== "READY" || !current.resume_match_raw) {
     redirect("/hub/account/report");
   }

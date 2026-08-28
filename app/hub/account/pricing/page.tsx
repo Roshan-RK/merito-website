@@ -7,36 +7,36 @@ import type { InterviewStatus } from "@/app/hub/account/ProgressRail";
 import { buildPricingCards, buildBundleSummary } from "./pricingCatalog";
 import PricingCardsClient from "./PricingCardsClient";
 import { leadIdOrRoleTitleFilter } from "@/lib/postgrestIdentityFilter";
+import { resolveActiveLead } from "@/lib/activeLead";
 
 export default async function PricingPage({
   searchParams,
 }: {
   searchParams: Promise<{ lead?: string }>;
 }) {
-  await searchParams;
+  const { lead: requestedLeadId } = await searchParams;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Note: ?lead= param is accepted for URL consistency but not used
-  // (pricing tiers are candidate-wide based on latest lead's level)
-
   if (!user) {
     redirect("/hub/login");
   }
 
-  // Same level-resolution pattern as app/hub/account/page.tsx: latest lead's
-  // candidate_level, falling back to DEFAULT_LEVEL when there isn't one yet
-  // (this page is a pure reference page, so unlike the dashboard it still
-  // renders -- at the default tier -- rather than redirecting away).
-  const { data: lead } = await supabase
+  // Honour ?lead= (same resolution as app/hub/account/page.tsx) so arriving
+  // from the role switcher prices and unlock-gates the role being viewed, not
+  // just the latest one. report_unlocks is per-lead, so the checkout leadId
+  // and reportUnlocked below must be for the active lead. Falls back to the
+  // latest lead; when there's no lead at all this page still renders at the
+  // default tier rather than redirecting.
+  const { data: leads } = await supabase
     .from("fitment_leads")
     .select("id, role_title, candidate_level")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: false });
+
+  const lead = leads && leads.length > 0 ? resolveActiveLead(leads, requestedLeadId) : null;
 
   const level = (lead?.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
 
@@ -67,7 +67,7 @@ export default async function PricingPage({
   }
 
   const [reportUnlocked, personalityUnlocked, referencesUnlocked] = await Promise.all([
-    isReportUnlocked(user.id, lead.role_title),
+    isReportUnlocked(user.id, lead.id, lead.role_title),
     isProductUnlocked(user.id, "personality"),
     isProductUnlocked(user.id, "references"),
   ]);

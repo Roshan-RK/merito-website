@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const unlockReportMock = vi.fn();
 vi.mock("@/lib/reportUnlocks", () => ({
@@ -32,7 +32,10 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 describe("finalizeRazorpayOrder", () => {
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     unlockReportMock.mockReset();
     unlockReportMock.mockResolvedValue(undefined);
     unlockProductMock.mockReset();
@@ -60,6 +63,10 @@ describe("finalizeRazorpayOrder", () => {
     });
     txnSelectMock.mockReturnValue({ eq: txnEqMock });
     txnEqMock.mockReturnValue({ maybeSingle: txnMaybeSingleMock });
+  });
+
+  afterEach(() => {
+    errorSpy.mockRestore();
   });
 
   it("rejects with unknown_order when no razorpay_transactions row matches", async () => {
@@ -109,10 +116,47 @@ describe("finalizeRazorpayOrder", () => {
     const result = await finalizeRazorpayOrder("order_1", "pay_1");
 
     expect(result).toEqual({ ok: true, product: "bundle", userId: "user-1", leadId: "lead-1" });
-    expect(unlockReportMock).toHaveBeenCalledWith("user-1", "Senior Product Manager");
+    expect(unlockReportMock).toHaveBeenCalledWith("user-1", "lead-1", "Senior Product Manager");
     expect(unlockProductMock).toHaveBeenCalledWith("user-1", "personality");
     expect(unlockProductMock).toHaveBeenCalledWith("user-1", "references");
     expect(updateMock).toHaveBeenCalledWith({ status: "success", payment_id: "pay_1" });
+  });
+
+  it("skips the report unlock when a report order has no lead_id", async () => {
+    txnMaybeSingleMock.mockResolvedValue({
+      data: { user_id: "user-1", product: "report", lead_id: null, status: "initiated" },
+      error: null,
+    });
+    const { finalizeRazorpayOrder } = await import("../finalize");
+
+    const result = await finalizeRazorpayOrder("order_1", "pay_1");
+
+    expect(result).toEqual({ ok: true, product: "report", userId: "user-1", leadId: null });
+    expect(unlockReportMock).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      "finalize: report order resolved no lead for report unlock",
+      { orderId: "order_1", leadId: null, roleTitle: null },
+    );
+    expect(updateMock).toHaveBeenCalledWith({ status: "success", payment_id: "pay_1" });
+  });
+
+  it("skips the report unlock for a bundle order with no lead_id but still applies personality and references", async () => {
+    txnMaybeSingleMock.mockResolvedValue({
+      data: { user_id: "user-1", product: "bundle", lead_id: null, status: "initiated" },
+      error: null,
+    });
+    const { finalizeRazorpayOrder } = await import("../finalize");
+
+    const result = await finalizeRazorpayOrder("order_1", "pay_1");
+
+    expect(result).toEqual({ ok: true, product: "bundle", userId: "user-1", leadId: null });
+    expect(unlockReportMock).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      "finalize: bundle order resolved no lead for report unlock",
+      { orderId: "order_1", leadId: null, roleTitle: null },
+    );
+    expect(unlockProductMock).toHaveBeenCalledWith("user-1", "personality");
+    expect(unlockProductMock).toHaveBeenCalledWith("user-1", "references");
   });
 
   it("marks an interview transaction success (the credit becomes available to consume later)", async () => {
@@ -148,7 +192,7 @@ describe("finalizeRazorpayOrder", () => {
     const result = await finalizeRazorpayOrder("order_1", "pay_1");
 
     expect(result).toEqual({ ok: true, product: "report", userId: "user-1", leadId: "lead-1" });
-    expect(unlockReportMock).toHaveBeenCalledWith("user-1", "Senior Product Manager");
+    expect(unlockReportMock).toHaveBeenCalledWith("user-1", "lead-1", "Senior Product Manager");
     expect(updateMock).toHaveBeenCalledWith({ status: "success", payment_id: "pay_1" });
     expect(callOrder).toEqual(["unlock", "markSuccess"]);
   });
@@ -265,7 +309,8 @@ describe("markRazorpayPaymentFailed", () => {
 });
 
 describe("markRazorpayRefunded", () => {
-  const deleteEq2Mock = vi.fn();
+  const deleteIsMock = vi.fn();
+  const deleteEq2Mock = vi.fn().mockReturnValue({ is: deleteIsMock });
   const deleteEq1Mock = vi.fn().mockReturnValue({ eq: deleteEq2Mock });
   const deleteMock = vi.fn().mockReturnValue({ eq: deleteEq1Mock });
   const counsellingMaybeSingleMock = vi.fn();
@@ -281,8 +326,9 @@ describe("markRazorpayRefunded", () => {
     updateMock.mockReturnValue({ eq: updateEqMock });
     deleteMock.mockClear();
     deleteEq1Mock.mockClear();
-    deleteEq2Mock.mockReset();
-    deleteEq2Mock.mockResolvedValue({ error: null });
+    deleteEq2Mock.mockClear();
+    deleteIsMock.mockReset();
+    deleteIsMock.mockResolvedValue({ error: null });
     revokeProductMock.mockReset();
     revokeProductMock.mockResolvedValue(undefined);
     nextCounsellingStateMock.mockReset();
@@ -327,7 +373,9 @@ describe("markRazorpayRefunded", () => {
 
     expect(result).toEqual({ ok: true, alreadyProcessed: false });
     expect(deleteEq1Mock).toHaveBeenCalledWith("user_id", "user-1");
+    expect(deleteEq2Mock).toHaveBeenCalledWith("lead_id", "lead-1");
     expect(deleteEq2Mock).toHaveBeenCalledWith("role_title", "Senior Product Manager");
+    expect(deleteIsMock).toHaveBeenCalledWith("lead_id", null);
     expect(updateMock).toHaveBeenCalledWith({ status: "refunded" });
   });
 
@@ -408,7 +456,9 @@ describe("markRazorpayRefunded", () => {
     await markRazorpayRefunded("order_1");
 
     expect(deleteEq1Mock).toHaveBeenCalledWith("user_id", "user-1");
+    expect(deleteEq2Mock).toHaveBeenCalledWith("lead_id", "lead-1");
     expect(deleteEq2Mock).toHaveBeenCalledWith("role_title", "Senior Product Manager");
+    expect(deleteIsMock).toHaveBeenCalledWith("lead_id", null);
     expect(revokeProductMock).toHaveBeenCalledWith("user-1", "personality");
     expect(revokeProductMock).toHaveBeenCalledWith("user-1", "references");
   });

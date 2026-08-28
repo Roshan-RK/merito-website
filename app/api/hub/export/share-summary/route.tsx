@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   const currentLead = leads?.[0];
 
   if (include.has("fitment") && currentLead) {
-    const unlocked = await isReportUnlocked(user.id, currentLead.role_title);
+    const unlocked = await isReportUnlocked(user.id, currentLead.id, currentLead.role_title);
     if (unlocked && currentLead.resume_match_status === "READY") {
       anyReady = true;
     }

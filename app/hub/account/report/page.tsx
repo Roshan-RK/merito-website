@@ -42,7 +42,7 @@ export default async function FullReportPage({
     ? leads.find(l => l.id === leadIdParam) || leads[0]
     : leads[0];
   const level = (current.candidate_level as CandidateLevel | null) ?? DEFAULT_LEVEL;
-  const unlocked = await isReportUnlocked(user.id, current.role_title);
+  const unlocked = await isReportUnlocked(user.id, current.id, current.role_title);
 
   if (!unlocked) {
     const [personalityUnlocked, referencesUnlocked] = await Promise.all([

@@ -67,8 +67,9 @@ export async function POST(request: Request) {
   }
 
   // unlockReport was already called by finalizeRazorpayOrder (idempotent
-  // upsert) — reusing completeReportUnlock here is just the simplest way to
-  // reuse its "fetch + cache the report" logic, not a required second unlock.
+  // insert — a duplicate-key error is swallowed) — reusing completeReportUnlock
+  // here is just the simplest way to reuse its "fetch + cache the report"
+  // logic, not a required second unlock.
   const reportResult = await completeReportUnlock(user.id, lead);
 
   if (reportResult.status === "error") {
