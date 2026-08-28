@@ -7,16 +7,14 @@ export type Application = {
   createdAt: string;
 };
 
-// There's no per-application deep-link yet -- every report/interview/etc.
-// page always reflects `leads[0]` (the latest lead), regardless of which
-// row a candidate looks at here. Rows are display-only until a real
-// ?lead= selector exists (tracked as the multi-role-switcher project), so
-// this card is a status list, not a switcher.
+// Each row links to that role's Overview via `?lead=<id>` -- the hub-wide
+// active-role selector that the TopBar switcher also drives. The row whose
+// id matches `currentLeadId` is highlighted and marked "Current".
 export default function ApplicationsCard({ applications, currentLeadId }: { applications: Application[]; currentLeadId: string }) {
   if (applications.length === 0) return null;
 
   return (
-    <section id="applications" style={{ scrollMarginTop: 82 }}>
+    <section id="applications" style={{ scrollMarginTop: 82 }} data-testid="applications-card">
       <div className="flex items-center justify-between" style={{ margin: "0 0 10px" }}>
         <p className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40" style={{ fontSize: 11, letterSpacing: "0.08em", margin: 0 }}>
           Your applications
@@ -37,6 +35,7 @@ export default function ApplicationsCard({ applications, currentLeadId }: { appl
               key={app.id}
               href={`?lead=${app.id}`}
               className="block"
+              data-testid={`application-row-${app.id}`}
             >
               <div
                 className={isCurrent ? "bg-[#ed1a24]/[0.06]" : ""}
@@ -68,6 +67,7 @@ export default function ApplicationsCard({ applications, currentLeadId }: { appl
                 <div
                   className="flex items-center justify-center font-[family-name:var(--font-poppins)] font-bold text-[#ed1a24]"
                   style={{ width: 40, height: 40, borderRadius: "50%", border: "2px solid #ed1a24", fontSize: 12.5, flexShrink: 0 }}
+                  data-testid={`interview-score-${app.id}`}
                 >
                   {app.score.toFixed(1)}
                 </div>
@@ -77,7 +77,7 @@ export default function ApplicationsCard({ applications, currentLeadId }: { appl
         })}
       </div>
       <p className="font-[family-name:var(--font-poppins)] text-white/35" style={{ fontSize: 11.5, margin: "8px 2px 0", lineHeight: 1.5 }}>
-        Your dashboard shows detail for your most recent application only. Older applications are listed for reference.
+        Select any application to load its fitment score and report on this dashboard. Your personality test and reference checks are shared across every application.
       </p>
     </section>
   );
