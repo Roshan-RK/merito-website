@@ -81,7 +81,21 @@ describe("reportUnlocks", () => {
       maybeSingleMock.mockResolvedValueOnce({ data: null, error: { message: "db error" } });
 
       const { isReportUnlocked } = await import("../reportUnlocks");
-      await expect(isReportUnlocked("user-123", "lead-1", "Senior Product Manager")).rejects.toThrow();
+      await expect(isReportUnlocked("user-123", "lead-1", "Senior Product Manager")).rejects.toThrow(
+        "Failed to check report unlock status: db error"
+      );
+    });
+
+    it("throws when the legacy fallback query errors", async () => {
+      maybeSingleMock
+        .mockResolvedValueOnce({ data: null, error: null })
+        .mockResolvedValueOnce({ data: null, error: { message: "db error" } });
+
+      const { isReportUnlocked } = await import("../reportUnlocks");
+      await expect(isReportUnlocked("user-123", "lead-1", "Senior Product Manager")).rejects.toThrow(
+        "Failed to check report unlock status: db error"
+      );
+      expect(maybeSingleMock).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -102,7 +116,9 @@ describe("reportUnlocks", () => {
       upsertMock.mockResolvedValue({ error: { message: "db error" } });
       const { unlockReport } = await import("../reportUnlocks");
 
-      await expect(unlockReport("user-123", "lead-1", "Senior Product Manager")).rejects.toThrow();
+      await expect(unlockReport("user-123", "lead-1", "Senior Product Manager")).rejects.toThrow(
+        "Failed to unlock report: db error"
+      );
     });
   });
 });
