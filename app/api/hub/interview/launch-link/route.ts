@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { reinviteInterviewCandidates } from "@/lib/intervuebox/invitations";
-import { markInterviewStuck } from "@/lib/interviewStuck";
+import { recordLaunchFailure } from "@/lib/interviewStuck";
 
 export const runtime = "nodejs";
 
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   const admin = getSupabaseServerClient();
   const { data: row } = await admin
     .from("fitment_interviews")
-    .select("id, status, ib_agent_id, ib_candidate_id, magic_link, magic_link_expires_at, has_resumed")
+    .select("id, status, ib_agent_id, ib_candidate_id, magic_link, magic_link_expires_at, has_resumed, launch_fail_count")
     .eq("user_id", user.id)
     .eq("lead_id", leadId)
     .order("updated_at", { ascending: false })
@@ -74,13 +74,11 @@ export async function POST(request: Request) {
     );
   } catch (err) {
     console.error("Hub launch-link reinvite request failed", { leadId, error: err });
-    // A row that's already used its one resume and still fails has no
-    // self-service path left -- mark it stuck so the dashboard shows the
-    // dedicated card instead of the same "Start Interview" button forever.
-    // A first-ever invite failing here is a normal transient error, not stuck.
-    if (row.has_resumed) {
-      await markInterviewStuck(admin, row.id);
-    }
+    // Count the failure. A resumed row (no self-service path left) escalates
+    // to stuck immediately; a first-timer escalates on the 2nd consecutive
+    // failure, so a permanently-broken vendor job still gets an ops signal
+    // instead of the candidate looping on this 502 forever.
+    await recordLaunchFailure(admin, row);
     return Response.json({ error: "IntervueBox rejected the reinvite request." }, { status: 502 });
   }
   const { magicLinks, errors } = reinviteResult;
@@ -90,15 +88,13 @@ export async function POST(request: Request) {
     // pattern in app/api/hub/interview/resume/route.ts) instead of masking
     // a real vendor-side rejection behind a generic retry message.
     const message = errors?.[0]?.error ?? "Couldn't get a fresh interview link. Please try again.";
-    if (row.has_resumed) {
-      await markInterviewStuck(admin, row.id);
-    }
+    await recordLaunchFailure(admin, row);
     return Response.json({ error: message }, { status: 502 });
   }
 
   const { error: cacheError } = await admin
     .from("fitment_interviews")
-    .update({ magic_link: fresh.magicLink, magic_link_expires_at: fresh.expiresAt })
+    .update({ magic_link: fresh.magicLink, magic_link_expires_at: fresh.expiresAt, launch_fail_count: 0 })
     .eq("id", row.id);
   if (cacheError) {
     // The candidate already has a valid vendor link -- don't fail the

@@ -265,6 +265,7 @@ export type Database = {
       fitment_interviews: {
         Row: {
           has_resumed: boolean
+          launch_fail_count: number
           ib_agent_id: string
           ib_candidate_id: string
           ib_interview_status: string | null
@@ -284,6 +285,7 @@ export type Database = {
         }
         Insert: {
           has_resumed?: boolean
+          launch_fail_count?: number
           ib_agent_id: string
           ib_candidate_id: string
           ib_interview_status?: string | null
@@ -303,6 +305,7 @@ export type Database = {
         }
         Update: {
           has_resumed?: boolean
+          launch_fail_count?: number
           ib_agent_id?: string
           ib_candidate_id?: string
           ib_interview_status?: string | null

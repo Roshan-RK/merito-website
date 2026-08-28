@@ -58,9 +58,9 @@ describe("POST /api/hub/interview/resume", () => {
     expect(response.status).toBe(400);
   });
 
-  it("on success, updates the row and returns the fresh magic link", async () => {
+  it("on success, updates the row (clearing the fail counter) and returns the fresh magic link", async () => {
     maybeSingleMock.mockResolvedValue({
-      data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1" },
+      data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", has_resumed: false, launch_fail_count: 1 },
     });
     reinviteInterviewCandidatesMock.mockResolvedValue({
       invited: 1,
@@ -80,12 +80,13 @@ describe("POST /api/hub/interview/resume", () => {
       magic_link_expires_at: "2026-08-20T10:00:00.000Z",
       ib_interview_status: null,
       has_resumed: true,
+      launch_fail_count: 0,
     });
   });
 
-  it("on vendor failure, surfaces the vendor's real error message and leaves the row unchanged", async () => {
+  it("bumps launch_fail_count to 1 without escalating when a first-timer's reinvite returns no magicLinks", async () => {
     maybeSingleMock.mockResolvedValue({
-      data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1" },
+      data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", has_resumed: false, launch_fail_count: 0 },
     });
     reinviteInterviewCandidatesMock.mockResolvedValue({
       invited: 0,
@@ -100,12 +101,13 @@ describe("POST /api/hub/interview/resume", () => {
     expect(await response.json()).toEqual({
       error: "Cannot resume an interview in status EVALUATED. Use mode=REINVITE to start a new attempt.",
     });
-    expect(updateMock).not.toHaveBeenCalled();
+    expect(updateMock).toHaveBeenCalledWith({ launch_fail_count: 1 });
+    expect(updateMock).not.toHaveBeenCalledWith({ stuck_at: expect.any(String) });
   });
 
-  it("returns a 502 JSON error (not a crash) when the vendor reinvite call throws, and doesn't update the row", async () => {
+  it("bumps launch_fail_count to 1 without escalating when a first-timer's vendor call throws", async () => {
     maybeSingleMock.mockResolvedValue({
-      data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1" },
+      data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", has_resumed: false, launch_fail_count: 0 },
     });
     reinviteInterviewCandidatesMock.mockRejectedValue(new Error("IntervueBox 500"));
 
@@ -114,12 +116,27 @@ describe("POST /api/hub/interview/resume", () => {
 
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "IntervueBox rejected the reinvite request." });
-    expect(updateMock).not.toHaveBeenCalled();
+    expect(updateMock).toHaveBeenCalledWith({ launch_fail_count: 1 });
+    expect(updateMock).not.toHaveBeenCalledWith({ stuck_at: expect.any(String) });
+  });
+
+  it("escalates a first-timer to stuck on the 2nd consecutive vendor failure", async () => {
+    maybeSingleMock.mockResolvedValue({
+      data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", has_resumed: false, launch_fail_count: 1 },
+    });
+    reinviteInterviewCandidatesMock.mockRejectedValue(new Error("IntervueBox 500"));
+
+    const { POST } = await importRoute();
+    const response = await POST(makeRequest({ leadId: "lead-1" }));
+
+    expect(response.status).toBe(502);
+    expect(updateMock).toHaveBeenCalledWith({ launch_fail_count: 2 });
+    expect(updateMock).toHaveBeenCalledWith({ stuck_at: expect.any(String) });
   });
 
   it("sets stuck_at when a resumed row's reinvite call throws", async () => {
     maybeSingleMock.mockResolvedValue({
-      data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", has_resumed: true },
+      data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", has_resumed: true, launch_fail_count: 0 },
     });
     reinviteInterviewCandidatesMock.mockRejectedValue(new Error("IntervueBox 500"));
 
@@ -132,7 +149,7 @@ describe("POST /api/hub/interview/resume", () => {
 
   it("sets stuck_at when a row that's already been resumed once fails again", async () => {
     maybeSingleMock.mockResolvedValue({
-      data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", has_resumed: true },
+      data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", has_resumed: true, launch_fail_count: 0 },
     });
     reinviteInterviewCandidatesMock.mockResolvedValue({
       invited: 0,
@@ -145,22 +162,5 @@ describe("POST /api/hub/interview/resume", () => {
 
     expect(response.status).toBe(502);
     expect(updateMock).toHaveBeenCalledWith({ stuck_at: expect.any(String) });
-  });
-
-  it("does not set stuck_at when a row on its first resume attempt fails", async () => {
-    maybeSingleMock.mockResolvedValue({
-      data: { id: "row-1", status: "terminated", ib_agent_id: "INT_1", ib_candidate_id: "USR_1", has_resumed: false },
-    });
-    reinviteInterviewCandidatesMock.mockResolvedValue({
-      invited: 0,
-      failed: 1,
-      errors: [{ candidateId: "USR_1", error: "Some vendor error" }],
-    });
-
-    const { POST } = await importRoute();
-    const response = await POST(makeRequest({ leadId: "lead-1" }));
-
-    expect(response.status).toBe(502);
-    expect(updateMock).not.toHaveBeenCalled();
   });
 });

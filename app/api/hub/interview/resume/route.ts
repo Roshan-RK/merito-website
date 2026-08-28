@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { reinviteInterviewCandidates } from "@/lib/intervuebox/invitations";
-import { markInterviewStuck } from "@/lib/interviewStuck";
+import { recordLaunchFailure } from "@/lib/interviewStuck";
 
 export const runtime = "nodejs";
 
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   const admin = getSupabaseServerClient();
   const { data: row } = await admin
     .from("fitment_interviews")
-    .select("id, status, ib_agent_id, ib_candidate_id, has_resumed")
+    .select("id, status, ib_agent_id, ib_candidate_id, has_resumed, launch_fail_count")
     .eq("user_id", user.id)
     .eq("lead_id", leadId)
     .maybeSingle();
@@ -49,12 +49,11 @@ export async function POST(request: Request) {
     // "Cannot resume an interview in status EVALUATED"). Both are real and
     // must return clean JSON instead of crashing the route.
     console.error("Hub resume reinvite request failed", { leadId, error: err });
-    // A row that's already used its one resume and still fails has no
-    // self-service path left -- mark it stuck instead of leaving it to
-    // silently fall back to the plain "Start Interview" card.
-    if (row.has_resumed) {
-      await markInterviewStuck(admin, row.id);
-    }
+    // Count the failure. A resumed row (no self-service path left) escalates
+    // to stuck immediately; a first-timer escalates on the 2nd consecutive
+    // failure instead of silently falling back to the plain "Start Interview"
+    // card forever.
+    await recordLaunchFailure(admin, row);
     return Response.json({ error: "IntervueBox rejected the reinvite request." }, { status: 502 });
   }
 
@@ -66,9 +65,7 @@ export async function POST(request: Request) {
     // in status EVALUATED...") instead of a generic message -- matches this
     // codebase's existing pattern of surfacing real vendor/pipeline errors.
     const message = errors?.[0]?.error ?? "Couldn't resume this interview. Please try again.";
-    if (row.has_resumed) {
-      await markInterviewStuck(admin, row.id);
-    }
+    await recordLaunchFailure(admin, row);
     return Response.json({ error: message }, { status: 502 });
   }
 
@@ -86,6 +83,7 @@ export async function POST(request: Request) {
       magic_link_expires_at: fresh.expiresAt,
       ib_interview_status: null,
       has_resumed: true,
+      launch_fail_count: 0,
     })
     .eq("id", row.id);
   if (resetError) {
