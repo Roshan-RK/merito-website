@@ -46,10 +46,10 @@ export default function RoleSwitcherMenu({
           aria-haspopup="menu"
           aria-expanded={open}
           aria-controls="role-newcheck-menu"
-          className="hidden sm:flex items-center transition-colors font-[family-name:var(--font-poppins)] font-medium"
+          className="flex items-center transition-colors font-[family-name:var(--font-poppins)] font-medium"
           style={{ borderRadius: 50, padding: "6px 12px", fontSize: 14, background: "rgba(39,37,45,0.6)", border: "1px solid rgb(49,47,55)", color: "rgb(236,235,233)", cursor: "pointer", gap: 8 }}
         >
-          <span data-testid="role-label">{activeLead.role_title}</span>
+          <span data-testid="role-label" className="block truncate max-w-[140px] sm:max-w-none">{activeLead.role_title}</span>
           <Plus size={14} strokeWidth={2} style={{ color: "rgb(156,153,163)" }} />
         </button>
 
@@ -60,7 +60,7 @@ export default function RoleSwitcherMenu({
             role="menu"
             aria-label="Check a new role"
             className="absolute right-0 bg-[#141416] border border-white/[0.1]"
-            style={{ top: 46, width: 300, borderRadius: 14, padding: 8, boxShadow: "0 24px 48px rgba(0,0,0,0.5)" }}
+            style={{ top: 46, width: 300, maxWidth: "calc(100vw - 24px)", borderRadius: 14, padding: 8, boxShadow: "0 24px 48px rgba(0,0,0,0.5)" }}
           >
             <button
               role="menuitem"
@@ -93,10 +93,10 @@ export default function RoleSwitcherMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls="role-switcher-menu"
-        className="hidden sm:flex items-center transition-colors font-[family-name:var(--font-poppins)] font-medium"
+        className="flex items-center transition-colors font-[family-name:var(--font-poppins)] font-medium"
         style={{ borderRadius: 50, padding: "6px 12px", fontSize: 14, background: "rgba(39,37,45,0.6)", border: "1px solid rgb(49,47,55)", color: "rgb(236,235,233)", cursor: "pointer", gap: 8 }}
       >
-        <span data-testid="role-label">{activeLead?.role_title ?? ""}</span>
+        <span data-testid="role-label" className="block truncate max-w-[140px] sm:max-w-none">{activeLead?.role_title ?? ""}</span>
         <ChevronDown size={14} strokeWidth={2} style={{ color: "rgb(156,153,163)" }} />
       </button>
 
@@ -107,7 +107,7 @@ export default function RoleSwitcherMenu({
           role="menu"
           aria-label="Switch role"
           className="absolute right-0 bg-[#141416] border border-white/[0.1]"
-          style={{ top: 46, width: 300, borderRadius: 14, padding: 8, boxShadow: "0 24px 48px rgba(0,0,0,0.5)" }}
+          style={{ top: 46, width: 300, maxWidth: "calc(100vw - 24px)", borderRadius: 14, padding: 8, boxShadow: "0 24px 48px rgba(0,0,0,0.5)" }}
         >
           <p
             className="font-[family-name:var(--font-poppins)] font-bold uppercase text-white/40"
