@@ -21,7 +21,7 @@ export type FinalizeResult =
 // not here — Razorpay's two channels carry different payloads, so each has
 // its own verify function in lib/razorpay/client.ts. This function only
 // applies the *effect* of an already-authenticated payment, and does so
-// idempotently: unlockReport is upsert-based, so calling it again on a
+// idempotently: unlockReport inserts and swallows a duplicate-key error, so calling it again on a
 // webhook retry after a client-side verify already succeeded (or vice
 // versa) is safe.
 export async function finalizeRazorpayOrder(orderId: string, paymentId: string): Promise<FinalizeResult> {
@@ -47,7 +47,14 @@ export async function finalizeRazorpayOrder(orderId: string, paymentId: string):
       if (txn.lead_id && roleTitle) {
         await unlockReport(txn.user_id, txn.lead_id as string, roleTitle);
       } else {
-        console.warn("finalize: report order has no lead_id, skipping report unlock", { orderId });
+        // Paid, but no lead to attach the unlock to -- log at error so it
+        // surfaces: the txn is about to be marked success, so no retry repairs
+        // this. leadId distinguishes "null" from "set but the lead row is gone".
+        console.error("finalize: report order resolved no lead for report unlock", {
+          orderId,
+          leadId: txn.lead_id,
+          roleTitle,
+        });
       }
     } else if (product === "counselling") {
       const { error: insertError } = await supabase
@@ -65,7 +72,12 @@ export async function finalizeRazorpayOrder(orderId: string, paymentId: string):
       if (txn.lead_id && roleTitle) {
         await unlockReport(txn.user_id, txn.lead_id as string, roleTitle);
       } else {
-        console.warn("finalize: bundle order has no lead_id, skipping report unlock (personality/references still applied)", { orderId });
+        // personality/references below still apply; only the report unlock is skipped.
+        console.error("finalize: bundle order resolved no lead for report unlock", {
+          orderId,
+          leadId: txn.lead_id,
+          roleTitle,
+        });
       }
       await unlockProduct(txn.user_id, "personality");
       await unlockProduct(txn.user_id, "references");

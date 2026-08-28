@@ -32,10 +32,10 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 describe("finalizeRazorpayOrder", () => {
-  let warnSpy: ReturnType<typeof vi.spyOn>;
+  let errorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     unlockReportMock.mockReset();
     unlockReportMock.mockResolvedValue(undefined);
     unlockProductMock.mockReset();
@@ -66,7 +66,7 @@ describe("finalizeRazorpayOrder", () => {
   });
 
   afterEach(() => {
-    warnSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 
   it("rejects with unknown_order when no razorpay_transactions row matches", async () => {
@@ -133,9 +133,9 @@ describe("finalizeRazorpayOrder", () => {
 
     expect(result).toEqual({ ok: true, product: "report", userId: "user-1", leadId: null });
     expect(unlockReportMock).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith(
-      "finalize: report order has no lead_id, skipping report unlock",
-      { orderId: "order_1" },
+    expect(errorSpy).toHaveBeenCalledWith(
+      "finalize: report order resolved no lead for report unlock",
+      { orderId: "order_1", leadId: null, roleTitle: null },
     );
     expect(updateMock).toHaveBeenCalledWith({ status: "success", payment_id: "pay_1" });
   });
@@ -151,9 +151,9 @@ describe("finalizeRazorpayOrder", () => {
 
     expect(result).toEqual({ ok: true, product: "bundle", userId: "user-1", leadId: null });
     expect(unlockReportMock).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith(
-      "finalize: bundle order has no lead_id, skipping report unlock (personality/references still applied)",
-      { orderId: "order_1" },
+    expect(errorSpy).toHaveBeenCalledWith(
+      "finalize: bundle order resolved no lead for report unlock",
+      { orderId: "order_1", leadId: null, roleTitle: null },
     );
     expect(unlockProductMock).toHaveBeenCalledWith("user-1", "personality");
     expect(unlockProductMock).toHaveBeenCalledWith("user-1", "references");
