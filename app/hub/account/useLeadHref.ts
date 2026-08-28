@@ -4,7 +4,10 @@ import { useSearchParams } from "next/navigation";
 export function appendLeadParam(path: string, lead: string | null): string {
   if (!lead) return path;
   if (/[?&]lead=/.test(path)) return path;
-  return `${path}${path.includes("?") ? "&" : "?"}lead=${encodeURIComponent(lead)}`;
+  const hash = path.indexOf("#");
+  const base = hash === -1 ? path : path.slice(0, hash);
+  const frag = hash === -1 ? "" : path.slice(hash);
+  return `${base}${base.includes("?") ? "&" : "?"}lead=${encodeURIComponent(lead)}${frag}`;
 }
 
 // Returns a builder that stamps the currently-active ?lead= onto an internal

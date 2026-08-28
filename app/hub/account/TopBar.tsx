@@ -8,6 +8,7 @@ import { Search, Bell, HelpCircle, Briefcase, Receipt, FileText, Brain, Mic, Use
 import type { ComponentType } from "react";
 import SignOutButton from "./SignOutButton";
 import RoleSwitcherMenu from "./RoleSwitcherMenu";
+import { useLeadHref } from "./useLeadHref";
 import { useDismiss } from "./useDismiss";
 import { formatRelativeTime } from "@/lib/formatRelativeTime";
 import type { HubNotification, HubNotificationCategory } from "@/lib/hubNotifications";
@@ -47,6 +48,7 @@ export default function TopBar({
 }) {
   const searchParams = useSearchParams();
   const leadIdParam = searchParams.get("lead");
+  const leadHref = useLeadHref();
 
   const activeLead = leadIdParam
     ? leads.find((l) => l.id === leadIdParam) || leads[0]
@@ -126,7 +128,7 @@ export default function TopBar({
       style={{ height: 64, padding: "0 28px", zIndex: 30, gap: 16, background: "rgba(20,18,22,0.85)", borderBottom: "1px solid rgb(49,47,55)" }}
     >
       <div className="flex items-center shrink-0" style={{ gap: 8 }}>
-        <Link href="/hub/account" className="flex items-center" style={{ gap: 8 }}>
+        <Link href={leadHref("/hub/account")} className="flex items-center" style={{ gap: 8 }}>
           <Image src="/logo-white.png" alt="Merito" width={128} height={36} style={{ height: 30, width: "auto" }} />
           <span
             className="bg-[#ed1a24] text-white font-[family-name:var(--font-poppins)] font-bold"
@@ -334,7 +336,7 @@ export default function TopBar({
                 )}
               </div>
               <Link
-                href="/hub/account#applications"
+                href={leadHref("/hub/account#applications")}
                 onClick={close}
                 className="flex items-center text-white/75 hover:text-white hover:bg-white/[0.06] transition-colors font-[family-name:var(--font-poppins)] font-semibold"
                 style={{ gap: 10, fontSize: 12.5, padding: "9px 10px", borderRadius: 8 }}

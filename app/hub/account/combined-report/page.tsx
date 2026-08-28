@@ -136,7 +136,7 @@ export default async function CombinedReportPage({
       icon: FileText,
       title: "Fitment report",
       included: Boolean(fitment),
-      href: "/hub/account/report",
+      href: reportLead ? `/hub/account/report?lead=${encodeURIComponent(reportLead.id)}` : "/hub/account/report",
       summary: fitment ? `${Math.round(fitment.report.overallScore)}% fitment for ${fitment.roleTitle}. ${fitment.report.summary}` : null,
     },
     {

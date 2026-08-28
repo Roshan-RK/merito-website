@@ -6,4 +6,5 @@ describe("appendLeadParam", () => {
   it("lead, no existing query -> ?lead=", () => expect(appendLeadParam("/hub/account/report", "x")).toBe("/hub/account/report?lead=x"));
   it("lead, existing query -> &lead=", () => expect(appendLeadParam("/hub/account/report?tab=cv", "x")).toBe("/hub/account/report?tab=cv&lead=x"));
   it("path already has lead= -> not doubled", () => expect(appendLeadParam("/hub/account/report?lead=old", "x")).toBe("/hub/account/report?lead=old"));
+  it("lead + hash -> param before #", () => expect(appendLeadParam("/hub/account#applications", "x")).toBe("/hub/account?lead=x#applications"));
 });

@@ -74,7 +74,7 @@ export default function PricingCardsClient({
   function ctaFor(card: PricingCard) {
     if (!purchasable) {
       return (
-        <Link href="/hub/account" className={ctaButtonStyle} style={{ fontSize: 12.5 }}>
+        <Link href={leadId ? `/hub/account?lead=${encodeURIComponent(leadId)}` : "/hub/account"} className={ctaButtonStyle} style={{ fontSize: 12.5 }}>
           Get this on Overview →
         </Link>
       );
@@ -83,7 +83,7 @@ export default function PricingCardsClient({
     if (card.key === "report") {
       if (reportUnlocked) {
         return (
-          <Link href="/hub/account/report" className={ctaButtonStyle} style={{ fontSize: 12.5 }}>
+          <Link href={leadId ? `/hub/account/report?lead=${encodeURIComponent(leadId)}` : "/hub/account/report"} className={ctaButtonStyle} style={{ fontSize: 12.5 }}>
             View report →
           </Link>
         );
@@ -279,7 +279,7 @@ export default function PricingCardsClient({
                   </button>
                 ) : (
                   <Link
-                    href="/hub/account"
+                    href={leadId ? `/hub/account?lead=${encodeURIComponent(leadId)}` : "/hub/account"}
                     className="text-center font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors"
                     style={{ borderRadius: 8, padding: "11px 16px", fontSize: 13.5 }}
                   >
