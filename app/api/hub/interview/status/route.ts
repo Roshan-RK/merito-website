@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 
   const { data } = await supabase
     .from("fitment_interviews")
-    .select("id, status, role_title, ib_agent_id, ib_candidate_id, stuck_at")
+    .select("id, status, role_title, ib_agent_id, ib_candidate_id, ib_interview_status, stuck_at")
     .eq("user_id", user.id)
     .eq("lead_id", leadId)
     .order("updated_at", { ascending: false })
@@ -57,6 +57,7 @@ export async function GET(request: Request) {
     ib_agent_id: data.ib_agent_id,
     ib_candidate_id: data.ib_candidate_id,
     status: data.status,
+    ib_interview_status: data.ib_interview_status,
   });
 
   if (reconciled === "ready") return Response.json({ status: "ready" });

@@ -35,6 +35,7 @@ const PENDING_ROW = {
   role_title: "PM",
   ib_agent_id: "IV-1",
   ib_candidate_id: "USR-1",
+  ib_interview_status: null,
 };
 
 describe("GET /api/hub/interview/status", () => {
@@ -88,13 +89,16 @@ describe("GET /api/hub/interview/status", () => {
     );
   });
 
-  it("reconciles to appeared -- candidate started but has not finished", async () => {
+  it("reconciles to appeared -- candidate started but has not finished, ib_interview_status passed through", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    maybeSingleMock.mockResolvedValue({ data: { ...PENDING_ROW } });
+    maybeSingleMock.mockResolvedValue({ data: { ...PENDING_ROW, ib_interview_status: "APPEARED" } });
     reconcileInterviewRowMock.mockResolvedValue("appeared");
     const { GET } = await importRoute();
     const response = await GET(requestFor("lead-1"));
     expect(await response.json()).toEqual({ status: "appeared" });
+    expect(reconcileInterviewRowMock).toHaveBeenCalledWith(
+      expect.objectContaining({ ib_interview_status: "APPEARED" })
+    );
   });
 
   it("reconciles to terminated", async () => {

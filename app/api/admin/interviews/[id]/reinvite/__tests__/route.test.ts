@@ -58,7 +58,7 @@ describe("POST /api/admin/interviews/[id]/reinvite", () => {
     const response = await POST(makeRequest(), { params: Promise.resolve({ id: "row-1" }) });
 
     expect(response.status).toBe(200);
-    expect(updateMock).toHaveBeenCalledWith({ stuck_at: null });
+    expect(updateMock).toHaveBeenCalledWith({ stuck_at: null, launch_fail_count: 0 });
     expect(logAdminActionMock).toHaveBeenCalledWith(
       expect.objectContaining({ action: "interview.reinvite", targetType: "interview", targetId: "row-1" })
     );
@@ -103,6 +103,7 @@ describe("POST /api/admin/interviews/[id]/reinvite", () => {
       magic_link: "https://fresh",
       magic_link_expires_at: "2026-08-20T10:00:00.000Z",
       has_resumed: false,
+      launch_fail_count: 0,
     });
   });
 
@@ -117,7 +118,7 @@ describe("POST /api/admin/interviews/[id]/reinvite", () => {
     const response = await POST(makeRequest(), { params: Promise.resolve({ id: "row-1" }) });
 
     expect(response.status).toBe(200);
-    expect(updateMock).toHaveBeenCalledWith({ stuck_at: null });
+    expect(updateMock).toHaveBeenCalledWith({ stuck_at: null, launch_fail_count: 0 });
   });
 
   it("returns 404 when the row doesn't exist", async () => {

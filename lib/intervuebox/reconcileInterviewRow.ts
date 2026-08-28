@@ -9,6 +9,10 @@ type Row = {
   ib_agent_id: string;
   ib_candidate_id: string;
   status: string;
+  // "appeared" is not a DB status -- it's derived from ib_interview_status.
+  // Needed in the fallbacks so a transient vendor failure on an APPEARED row
+  // doesn't collapse to "invited" and trip the poller's refresh loop.
+  ib_interview_status: string | null;
 };
 
 // One-row version of sweepPendingInterviews()'s per-row vendor check, so the
@@ -91,9 +95,17 @@ export async function reconcileInterviewRow(
     if (candidateStatus) {
       await supabase.from("fitment_interviews").update({ ib_interview_status: candidateStatus }).eq("id", row.id);
     }
-    return row.status === "terminated" ? "terminated" : "invited";
+    return row.status === "terminated"
+      ? "terminated"
+      : (candidateStatus ?? row.ib_interview_status) === "APPEARED"
+        ? "appeared"
+        : "invited";
   } catch (err) {
     console.error("reconcileInterviewRow failed, leaving row as-is", { rowId: row.id, error: err });
-    return row.status === "terminated" ? "terminated" : "invited";
+    return row.status === "terminated"
+      ? "terminated"
+      : row.ib_interview_status === "APPEARED"
+        ? "appeared"
+        : "invited";
   }
 }

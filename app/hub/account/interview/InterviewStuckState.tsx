@@ -29,8 +29,8 @@ export default function InterviewStuckState({ roleTitle }: { roleTitle: string }
       >
         <AlertOctagon size={15} strokeWidth={2} style={{ color: "#E8798F", marginTop: 1 }} className="shrink-0" />
         <p className="font-[family-name:var(--font-poppins)]" style={{ color: "#E8798F", fontSize: 13, lineHeight: 1.65, margin: 0 }}>
-          Your session for {roleTitle} was interrupted a second time, and we weren&apos;t able to reconnect it automatically. Nothing is
-          lost — use the Help button above and we&apos;ll get this sorted out for you.
+          We hit repeated trouble getting your {roleTitle} interview going, and weren&apos;t able to sort it out automatically. Nothing is
+          lost — use the Help button above and we&apos;ll get this fixed for you.
         </p>
       </div>
     </div>

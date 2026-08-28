@@ -34,7 +34,7 @@ vi.mock("../interviewReports", () => ({
 
 import { reconcileInterviewRow } from "../reconcileInterviewRow";
 
-const ROW = { id: "r1", user_id: "u1", role_title: "PM", ib_agent_id: "IV-1", ib_candidate_id: "C-1", status: "invited" };
+const ROW = { id: "r1", user_id: "u1", role_title: "PM", ib_agent_id: "IV-1", ib_candidate_id: "C-1", status: "invited", ib_interview_status: null };
 
 describe("reconcileInterviewRow", () => {
   beforeEach(() => {
@@ -122,5 +122,16 @@ describe("reconcileInterviewRow", () => {
     getInterviewReport.mockRejectedValue(new Error("vendor 500"));
     expect(await reconcileInterviewRow(ROW)).toBe("invited");
     expect(await reconcileInterviewRow({ ...ROW, status: "terminated" })).toBe("terminated");
+  });
+
+  it("vendor throws on an APPEARED row -> stays 'appeared', not 'invited' (no poller refresh loop)", async () => {
+    getInterviewReport.mockRejectedValue(new Error("vendor 500"));
+    expect(await reconcileInterviewRow({ ...ROW, ib_interview_status: "APPEARED" })).toBe("appeared");
+  });
+
+  it("not ready + null candidate status on an APPEARED row -> stays 'appeared'", async () => {
+    getInterviewReport.mockResolvedValue({ status: "NOT_READY" });
+    getInterviewCandidateStatus.mockResolvedValue(null);
+    expect(await reconcileInterviewRow({ ...ROW, ib_interview_status: "APPEARED" })).toBe("appeared");
   });
 });

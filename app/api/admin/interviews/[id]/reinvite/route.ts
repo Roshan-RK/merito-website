@@ -38,14 +38,17 @@ export async function POST(_request: Request, { params }: RouteContext) {
     // has genuinely never been resumed -- without it, launch-link's cached-
     // link check (which distrusts any cache once has_resumed is true) would
     // ignore the link just cached here and immediately re-call the vendor.
+    // launch_fail_count: 0 restores the "one free transient failure" grace,
+    // same as this unstick resets has_resumed -- otherwise a row unstuck at
+    // count 2+ re-escalates to stuck on its very next failed launch.
     const fresh = magicLinks?.[0];
     const shouldRelink = Boolean(fresh) && row.status !== "ready";
     const { error: updateError } = await supabase
       .from("fitment_interviews")
       .update(
         shouldRelink
-          ? { stuck_at: null, status: "invited", magic_link: fresh!.magicLink, magic_link_expires_at: fresh!.expiresAt, has_resumed: false }
-          : { stuck_at: null }
+          ? { stuck_at: null, status: "invited", magic_link: fresh!.magicLink, magic_link_expires_at: fresh!.expiresAt, has_resumed: false, launch_fail_count: 0 }
+          : { stuck_at: null, launch_fail_count: 0 }
       )
       .eq("id", row.id);
     if (updateError) {
