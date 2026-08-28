@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const unlockReportMock = vi.fn();
 vi.mock("@/lib/reportUnlocks", () => ({
@@ -32,7 +32,10 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 describe("finalizeRazorpayOrder", () => {
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     unlockReportMock.mockReset();
     unlockReportMock.mockResolvedValue(undefined);
     unlockProductMock.mockReset();
@@ -60,6 +63,10 @@ describe("finalizeRazorpayOrder", () => {
     });
     txnSelectMock.mockReturnValue({ eq: txnEqMock });
     txnEqMock.mockReturnValue({ maybeSingle: txnMaybeSingleMock });
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
   });
 
   it("rejects with unknown_order when no razorpay_transactions row matches", async () => {
@@ -126,6 +133,10 @@ describe("finalizeRazorpayOrder", () => {
 
     expect(result).toEqual({ ok: true, product: "report", userId: "user-1", leadId: null });
     expect(unlockReportMock).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(
+      "finalize: report order has no lead_id, skipping report unlock",
+      { orderId: "order_1" },
+    );
     expect(updateMock).toHaveBeenCalledWith({ status: "success", payment_id: "pay_1" });
   });
 
@@ -140,6 +151,10 @@ describe("finalizeRazorpayOrder", () => {
 
     expect(result).toEqual({ ok: true, product: "bundle", userId: "user-1", leadId: null });
     expect(unlockReportMock).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(
+      "finalize: bundle order has no lead_id, skipping report unlock (personality/references still applied)",
+      { orderId: "order_1" },
+    );
     expect(unlockProductMock).toHaveBeenCalledWith("user-1", "personality");
     expect(unlockProductMock).toHaveBeenCalledWith("user-1", "references");
   });
