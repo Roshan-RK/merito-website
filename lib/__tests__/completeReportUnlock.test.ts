@@ -64,7 +64,7 @@ describe("completeReportUnlock", () => {
       resume_match_raw: storedRaw,
     });
 
-    expect(unlockReportMock).toHaveBeenCalledWith("user-1", "Senior Product Manager");
+    expect(unlockReportMock).toHaveBeenCalledWith("user-1", "lead-1", "Senior Product Manager");
     expect(getResumeMatchReportMock).not.toHaveBeenCalled();
     expect(result).toEqual({ status: "unlocked", report: storedRaw });
   });

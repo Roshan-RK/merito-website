@@ -67,7 +67,7 @@ export default async function PricingPage({
   }
 
   const [reportUnlocked, personalityUnlocked, referencesUnlocked] = await Promise.all([
-    isReportUnlocked(user.id, lead.role_title),
+    isReportUnlocked(user.id, lead.id, lead.role_title),
     isProductUnlocked(user.id, "personality"),
     isProductUnlocked(user.id, "references"),
   ]);

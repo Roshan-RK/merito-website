@@ -50,7 +50,7 @@ export default async function ShareSummaryPage({
 
   let fitmentDone = false;
   if (include.has("fitment") && currentLead) {
-    const unlocked = await isReportUnlocked(user.id, currentLead.role_title);
+    const unlocked = await isReportUnlocked(user.id, currentLead.id, currentLead.role_title);
     fitmentDone = unlocked && currentLead.resume_match_status === "READY";
   }
 

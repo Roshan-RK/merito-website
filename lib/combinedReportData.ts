@@ -50,7 +50,7 @@ export async function loadCombinedReportData({
 
   let fitment: CombinedReportData["fitment"] = null;
   if (include.has("fitment") && currentLead) {
-    const unlocked = await isReportUnlocked(userId, currentLead.role_title);
+    const unlocked = await isReportUnlocked(userId, currentLead.id, currentLead.role_title);
     if (unlocked && currentLead.resume_match_status === "READY" && currentLead.resume_match_raw) {
       fitment = {
         roleTitle: currentLead.role_title,
