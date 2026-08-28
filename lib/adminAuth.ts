@@ -8,11 +8,24 @@ export class ReauthRequiredError extends Error {
   }
 }
 
-export async function requireAdmin() {
-  const adminEmail = process.env.ADMIN_EMAIL;
-  if (!adminEmail) {
+/** Parse ADMIN_EMAIL (comma-separated list of one or more emails) into a normalized allowlist. */
+function getAdminEmails(): string[] {
+  const raw = process.env.ADMIN_EMAIL;
+  if (!raw) {
     throw new Error("Admin area is not configured (ADMIN_EMAIL missing).");
   }
+  const emails = raw
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  if (emails.length === 0) {
+    throw new Error("Admin area is not configured (ADMIN_EMAIL missing).");
+  }
+  return emails;
+}
+
+export async function requireAdmin() {
+  const adminEmails = getAdminEmails();
 
   const supabase = await createSupabaseServerClient();
   const {
@@ -23,7 +36,7 @@ export async function requireAdmin() {
     redirect("/hub/login?next=/admin");
   }
 
-  if (user.email !== adminEmail) {
+  if (!user.email || !adminEmails.includes(user.email.toLowerCase())) {
     notFound();
   }
 

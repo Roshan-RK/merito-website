@@ -67,6 +67,38 @@ describe("requireAdmin", () => {
     expect(notFoundMock).not.toHaveBeenCalled();
   });
 
+  it("matches ADMIN_EMAIL case-insensitively", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "u1", email: "Roshan@Merito.in" } } });
+
+    const { requireAdmin } = await importAdminAuth();
+    const user = await requireAdmin();
+
+    expect(user).toEqual({ id: "u1", email: "Roshan@Merito.in" });
+    expect(notFoundMock).not.toHaveBeenCalled();
+  });
+
+  it("allows any email in a comma-separated ADMIN_EMAIL list", async () => {
+    process.env.ADMIN_EMAIL = "roshan@merito.in, shikha@merito.in";
+    getUserMock.mockResolvedValue({ data: { user: { id: "u2", email: "shikha@merito.in" } } });
+
+    const { requireAdmin } = await importAdminAuth();
+    const user = await requireAdmin();
+
+    expect(user).toEqual({ id: "u2", email: "shikha@merito.in" });
+    expect(redirectMock).not.toHaveBeenCalled();
+    expect(notFoundMock).not.toHaveBeenCalled();
+  });
+
+  it("404s for an email not in the comma-separated ADMIN_EMAIL list", async () => {
+    process.env.ADMIN_EMAIL = "roshan@merito.in,shikha@merito.in";
+    getUserMock.mockResolvedValue({ data: { user: { id: "u3", email: "someone@merito.in" } } });
+
+    const { requireAdmin } = await importAdminAuth();
+    await expect(requireAdmin()).rejects.toThrow("NEXT_NOT_FOUND");
+
+    expect(notFoundMock).toHaveBeenCalled();
+  });
+
   it("throws when ADMIN_EMAIL is not configured", async () => {
     delete process.env.ADMIN_EMAIL;
     getUserMock.mockResolvedValue({ data: { user: { id: "u1", email: "roshan@merito.in" } } });
