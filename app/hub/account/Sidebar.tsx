@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLeadHref } from "./useLeadHref";
 import {
   LayoutDashboard,
   FileText,
@@ -52,6 +53,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const leadHref = useLeadHref();
 
   return (
     <nav
@@ -78,7 +80,7 @@ export default function Sidebar() {
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={leadHref(item.href)}
                   data-tour={item.tourId}
                   aria-current={isActive ? "page" : undefined}
                   className={
