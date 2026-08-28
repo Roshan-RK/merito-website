@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Briefcase } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabaseAuthServer";
 import { buildApplicationRows, type FitmentLeadRow } from "./applicationHistory";
@@ -15,9 +16,8 @@ export default async function ApplicationsPage() {
     redirect("/hub/login");
   }
 
-  // Every fitment_leads row for this user -- this app has no multi-role
-  // switcher yet (tracked separately), so this is a read-only history list,
-  // same caveat as ApplicationsCard on the Overview panel.
+  // Every fitment_leads row for this user; each row links to that role's
+  // Overview via ?lead= (the active-role source of truth).
   const { data: leads } = await supabase
     .from("fitment_leads")
     .select("id, role_title, score, resume_match_status, created_at")
@@ -71,34 +71,45 @@ export default async function ApplicationsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.id} className="border-b border-white/[0.06] hover:bg-white/[0.03] transition-colors">
-                      <td
-                        className="font-[family-name:var(--font-poppins)] font-medium text-white"
-                        style={{ fontSize: 13.5, padding: "14px 20px" }}
-                      >
-                        {row.roleTitle}
-                      </td>
-                      <td className="font-mono font-semibold text-white" style={{ fontSize: 13.5, padding: "14px 20px" }}>
-                        {row.scoreLabel}
-                      </td>
-                      <td className="font-mono text-white/40" style={{ fontSize: 12, padding: "14px 20px" }}>
-                        {row.dateLabel}
-                      </td>
-                      <td style={{ padding: "14px 20px" }}>
-                        <span
-                          className={
-                            row.statusLabel === "Report ready"
-                              ? "inline-flex font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24] bg-[#ed1a24]/[0.12]"
-                              : "inline-flex font-[family-name:var(--font-poppins)] font-semibold text-white/50 bg-white/[0.06]"
-                          }
-                          style={{ borderRadius: 50, padding: "4px 10px", fontSize: 11 }}
-                        >
-                          {row.statusLabel}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {rows.map((row) => {
+                    // Whole row navigates to that role's Overview. A <Link> can't
+                    // wrap a <tr> (invalid HTML), so each cell's content is the
+                    // link target -- clicking anywhere in the row navigates.
+                    const rowHref = `/hub/account?lead=${row.id}`;
+                    return (
+                      <tr key={row.id} className="border-b border-white/[0.06] hover:bg-white/[0.03] transition-colors" style={{ cursor: "pointer" }}>
+                        <td className="font-[family-name:var(--font-poppins)] font-medium text-white" style={{ fontSize: 13.5 }}>
+                          <Link href={rowHref} className="block" style={{ padding: "14px 20px" }}>
+                            {row.roleTitle}
+                          </Link>
+                        </td>
+                        <td className="font-mono font-semibold text-white" style={{ fontSize: 13.5 }}>
+                          <Link href={rowHref} className="block" style={{ padding: "14px 20px" }}>
+                            {row.scoreLabel}
+                          </Link>
+                        </td>
+                        <td className="font-mono text-white/40" style={{ fontSize: 12 }}>
+                          <Link href={rowHref} className="block" style={{ padding: "14px 20px" }}>
+                            {row.dateLabel}
+                          </Link>
+                        </td>
+                        <td>
+                          <Link href={rowHref} className="block" style={{ padding: "14px 20px" }}>
+                            <span
+                              className={
+                                row.statusLabel === "Report ready"
+                                  ? "inline-flex font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24] bg-[#ed1a24]/[0.12]"
+                                  : "inline-flex font-[family-name:var(--font-poppins)] font-semibold text-white/50 bg-white/[0.06]"
+                              }
+                              style={{ borderRadius: 50, padding: "4px 10px", fontSize: 11 }}
+                            >
+                              {row.statusLabel}
+                            </span>
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
