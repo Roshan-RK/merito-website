@@ -136,6 +136,7 @@ describe("POST /api/hub/interview/launch-link", () => {
         magic_link: "https://dead",
         magic_link_expires_at: future,
         has_resumed: true,
+        launch_fail_count: 0,
       },
     });
     reinviteInterviewCandidatesMock.mockResolvedValue({
