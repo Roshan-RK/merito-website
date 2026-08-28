@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Search, Bell, HelpCircle, Briefcase, Receipt, FileText, Brain, Mic, Users, Eye, Megaphone } from "lucide-react";
 import type { ComponentType } from "react";
 import SignOutButton from "./SignOutButton";
+import RoleSwitcherMenu from "./RoleSwitcherMenu";
 import { useDismiss } from "./useDismiss";
 import { formatRelativeTime } from "@/lib/formatRelativeTime";
 import type { HubNotification, HubNotificationCategory } from "@/lib/hubNotifications";
@@ -30,6 +31,7 @@ type Lead = {
   id: string;
   role_title: string;
   name: string;
+  score: number | null;
 };
 
 export default function TopBar({
@@ -156,20 +158,11 @@ export default function TopBar({
       </div>
 
       <div className="flex items-center shrink-0" style={{ gap: 8 }}>
-        {/* Single-application model: today's data is always "the latest role
-            you checked fitment for", so this is a static label (+ the real
-            Change-role flow) rather than the mockup's multi-app switcher,
-            which needs a ?lead= selector this app doesn't have yet. */}
-        <button
-          onClick={onChangeRole}
-          className="hidden sm:flex items-center transition-colors font-[family-name:var(--font-poppins)] font-medium"
-          style={{ borderRadius: 50, padding: "6px 12px", fontSize: 14, background: "rgba(39,37,45,0.6)", border: "1px solid rgb(49,47,55)", color: "rgb(236,235,233)", cursor: "pointer", gap: 8 }}
-        >
-          <span data-testid="role-label">{roleTitle}</span>
-          <span style={{ color: "#ed1a24", fontSize: 11, fontWeight: 700 }}>
-            Change
-          </span>
-        </button>
+        {/* `?lead=<uuid>` is the single source of truth for the active role;
+            RoleSwitcher shows a dropdown to switch between the candidate's
+            existing roles when there are 2+, or a static label otherwise, and
+            defers "+ Check a new role" back to the ChangeRoleModal flow. */}
+        <RoleSwitcherMenu leads={leads} onChangeRole={onChangeRole} />
 
         <div className="relative">
           <button

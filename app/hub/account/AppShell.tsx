@@ -9,6 +9,7 @@ type Lead = {
   id: string;
   role_title: string;
   name: string;
+  score: number | null;
 };
 
 export default function AppShell({
