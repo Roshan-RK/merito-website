@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Search, Bell, HelpCircle, Briefcase, Receipt, FileText, Brain, Mic, Users, Eye, Megaphone } from "lucide-react";
 import type { ComponentType } from "react";
 import SignOutButton from "./SignOutButton";
+import { useDismiss } from "./useDismiss";
 import { formatRelativeTime } from "@/lib/formatRelativeTime";
 import type { HubNotification, HubNotificationCategory } from "@/lib/hubNotifications";
 
@@ -24,27 +25,6 @@ const NOTIFICATION_ICON: Record<HubNotificationCategory, ComponentType<{ size?: 
   recruiter: Eye,
   general: Megaphone,
 };
-
-// Closes any open dropdown when a click lands outside every registered
-// trigger/panel pair, or when Escape is pressed -- shared by the three
-// header menus below instead of duplicating the listener three times.
-function useDismiss(open: boolean, onDismiss: () => void, refs: React.RefObject<HTMLElement | null>[]) {
-  useEffect(() => {
-    if (!open) return;
-    const handlePointer = (e: MouseEvent) => {
-      if (refs.every((ref) => ref.current && !ref.current.contains(e.target as Node))) onDismiss();
-    };
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onDismiss();
-    };
-    document.addEventListener("mousedown", handlePointer);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handlePointer);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [open, onDismiss, refs]);
-}
 
 type Lead = {
   id: string;
@@ -185,7 +165,7 @@ export default function TopBar({
           className="hidden sm:flex items-center transition-colors font-[family-name:var(--font-poppins)] font-medium"
           style={{ borderRadius: 50, padding: "6px 12px", fontSize: 14, background: "rgba(39,37,45,0.6)", border: "1px solid rgb(49,47,55)", color: "rgb(236,235,233)", cursor: "pointer", gap: 8 }}
         >
-          <span>{roleTitle}</span>
+          <span data-testid="role-label">{roleTitle}</span>
           <span style={{ color: "#ed1a24", fontSize: 11, fontWeight: 700 }}>
             Change
           </span>
