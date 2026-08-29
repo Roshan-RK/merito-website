@@ -56,62 +56,56 @@ export default async function ApplicationsPage() {
             </div>
           ) : (
             <div style={{ overflowX: "auto" }}>
-              <table className="w-full" style={{ borderCollapse: "collapse" }}>
-                <thead>
-                  <tr className="border-b border-white/[0.08]">
-                    {["Role", "Score", "Date checked", "Status"].map((heading) => (
-                      <th
-                        key={heading}
-                        className="text-left font-[family-name:var(--font-poppins)] font-semibold uppercase text-white/40"
-                        style={{ fontSize: 10.5, letterSpacing: "0.05em", padding: "12px 20px" }}
+              {/* One <Link> per row (not one per cell) so assistive tech
+                  announces a single link, and the whole row is one click
+                  target. CSS grid keeps the four aligned columns a <table>
+                  gave us; minWidth drives the horizontal scroll on mobile. */}
+              <div style={{ minWidth: 560 }}>
+                <div
+                  className="border-b border-white/[0.08]"
+                  style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr" }}
+                >
+                  {["Role", "Score", "Date checked", "Status"].map((heading) => (
+                    <div
+                      key={heading}
+                      className="font-[family-name:var(--font-poppins)] font-semibold uppercase text-white/40"
+                      style={{ fontSize: 10.5, letterSpacing: "0.05em", padding: "12px 20px" }}
+                    >
+                      {heading}
+                    </div>
+                  ))}
+                </div>
+                {rows.map((row) => (
+                  <Link
+                    key={row.id}
+                    href={`/hub/account?lead=${encodeURIComponent(row.id)}`}
+                    className="border-b border-white/[0.06] hover:bg-white/[0.03] transition-colors"
+                    style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", alignItems: "center" }}
+                  >
+                    <span className="font-[family-name:var(--font-poppins)] font-medium text-white" style={{ fontSize: 13.5, padding: "14px 20px" }}>
+                      {row.roleTitle}
+                    </span>
+                    <span className="font-mono font-semibold text-white" style={{ fontSize: 13.5, padding: "14px 20px" }}>
+                      {row.scoreLabel}
+                    </span>
+                    <span className="font-mono text-white/40" style={{ fontSize: 12, padding: "14px 20px" }}>
+                      {row.dateLabel}
+                    </span>
+                    <span style={{ padding: "14px 20px" }}>
+                      <span
+                        className={
+                          row.statusLabel === "Report ready"
+                            ? "inline-flex font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24] bg-[#ed1a24]/[0.12]"
+                            : "inline-flex font-[family-name:var(--font-poppins)] font-semibold text-white/50 bg-white/[0.06]"
+                        }
+                        style={{ borderRadius: 50, padding: "4px 10px", fontSize: 11 }}
                       >
-                        {heading}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => {
-                    // Whole row navigates to that role's Overview. A <Link> can't
-                    // wrap a <tr> (invalid HTML), so each cell's content is the
-                    // link target -- clicking anywhere in the row navigates.
-                    const rowHref = `/hub/account?lead=${row.id}`;
-                    return (
-                      <tr key={row.id} className="border-b border-white/[0.06] hover:bg-white/[0.03] transition-colors" style={{ cursor: "pointer" }}>
-                        <td className="font-[family-name:var(--font-poppins)] font-medium text-white" style={{ fontSize: 13.5 }}>
-                          <Link href={rowHref} className="block" style={{ padding: "14px 20px" }}>
-                            {row.roleTitle}
-                          </Link>
-                        </td>
-                        <td className="font-mono font-semibold text-white" style={{ fontSize: 13.5 }}>
-                          <Link href={rowHref} className="block" style={{ padding: "14px 20px" }}>
-                            {row.scoreLabel}
-                          </Link>
-                        </td>
-                        <td className="font-mono text-white/40" style={{ fontSize: 12 }}>
-                          <Link href={rowHref} className="block" style={{ padding: "14px 20px" }}>
-                            {row.dateLabel}
-                          </Link>
-                        </td>
-                        <td>
-                          <Link href={rowHref} className="block" style={{ padding: "14px 20px" }}>
-                            <span
-                              className={
-                                row.statusLabel === "Report ready"
-                                  ? "inline-flex font-[family-name:var(--font-poppins)] font-semibold text-[#ed1a24] bg-[#ed1a24]/[0.12]"
-                                  : "inline-flex font-[family-name:var(--font-poppins)] font-semibold text-white/50 bg-white/[0.06]"
-                              }
-                              style={{ borderRadius: 50, padding: "4px 10px", fontSize: 11 }}
-                            >
-                              {row.statusLabel}
-                            </span>
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        {row.statusLabel}
+                      </span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
         </div>
