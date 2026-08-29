@@ -249,8 +249,8 @@ test.describe('TopBar Role Switcher', () => {
    * The Overview ApplicationsCard has one `application-row-<leadId>` per role,
    * so its rows tell us how many leads the test account has. The TopBar
    * switcher only renders its dropdown trigger when there are 2+ -- the tests
-   * below skip themselves (log + return, matching this file's style) when the
-   * seeded account doesn't have the right shape.
+   * below `test.skip(...)` themselves (reported as skipped, not passed) when
+   * the seeded account doesn't have the right shape.
    */
   async function getRoleLeadIds(page: Page): Promise<string[]> {
     await expect(page.locator('[data-testid="applications-card"]')).toBeVisible();
@@ -270,10 +270,7 @@ test.describe('TopBar Role Switcher', () => {
     await page.goto('/hub/account');
 
     const leadIds = await getRoleLeadIds(page);
-    if (leadIds.length < 2) {
-      console.log('Test requires an account with 2+ roles. Found:', leadIds.length);
-      return;
-    }
+    test.skip(leadIds.length < 2, `needs a 2+ role account, found ${leadIds.length}`);
 
     const trigger = page.locator('[data-testid="role-switcher-trigger"]');
     await expect(trigger).toBeVisible();
@@ -295,13 +292,9 @@ test.describe('TopBar Role Switcher', () => {
     await page.goto('/hub/account');
 
     const leadIds = await getRoleLeadIds(page);
-    if (leadIds.length < 2) {
-      console.log('Test requires an account with 2+ roles. Found:', leadIds.length);
-      return;
-    }
+    test.skip(leadIds.length < 2, `needs a 2+ role account, found ${leadIds.length}`);
 
     const roleLabel = page.locator('[data-testid="role-label"]');
-    const initialLabel = (await roleLabel.textContent())?.trim() || '';
 
     await page.locator('[data-testid="role-switcher-trigger"]').click();
     await expect(page.locator('[role="menu"][aria-label="Switch role"]')).toBeVisible();
@@ -314,12 +307,12 @@ test.describe('TopBar Role Switcher', () => {
 
     await otherOption.click();
 
+    // The URL param is the proof the switch happened. The label only *visibly*
+    // changes if the two roles have different titles (same-title re-checks are
+    // a real scenario), so assert the label reflects the chosen role rather
+    // than that it differs from before.
     await expect(page).toHaveURL(new RegExp(`lead=${otherLeadId}`));
-
     const newLabel = (await roleLabel.textContent())?.trim() || '';
-    expect(newLabel).not.toBe(initialLabel);
-    // role-label shows role_title only; the option shows role_title (+ score),
-    // so the label text is a substring of the option text.
     expect(otherOptionText).toContain(newLabel);
   });
 
@@ -329,10 +322,7 @@ test.describe('TopBar Role Switcher', () => {
     await page.goto('/hub/account');
 
     const leadIds = await getRoleLeadIds(page);
-    if (leadIds.length < 2) {
-      console.log('Test requires an account with 2+ roles. Found:', leadIds.length);
-      return;
-    }
+    test.skip(leadIds.length < 2, `needs a 2+ role account, found ${leadIds.length}`);
 
     await page.locator('[data-testid="role-switcher-trigger"]').click();
     const otherOption = page.locator('[data-testid^="role-option-"]:not([aria-current="true"])').first();
@@ -354,10 +344,7 @@ test.describe('TopBar Role Switcher', () => {
     await page.goto('/hub/account');
 
     const leadIds = await getRoleLeadIds(page);
-    if (leadIds.length !== 1) {
-      console.log('Test requires an account with exactly 1 role. Found:', leadIds.length);
-      return;
-    }
+    test.skip(leadIds.length !== 1, `needs a single-role account, found ${leadIds.length}`);
 
     await expect(page.locator('[data-testid="role-switcher-trigger"]')).toHaveCount(0);
     await expect(page.locator('[data-testid="role-label"]')).toBeVisible();
