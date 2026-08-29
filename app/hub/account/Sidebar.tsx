@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLeadHref } from "./useLeadHref";
 import {
   LayoutDashboard,
   FileText,
@@ -31,8 +32,8 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { label: "Overview", href: "/hub/account", icon: LayoutDashboard },
       { label: "Fitment report", href: "/hub/account/report", icon: FileText },
       { label: "Personality test", href: "/hub/account/personality", icon: Brain },
-      // Global nav has no lead id in scope; a param-less click landing on the
-      // candidate's active/most-recent lead is acceptable for a persistent nav.
+      // Nav links carry the active ?lead= via useLeadHref, so role switches survive sidebar navigation.
+      // A param-less visit still falls back to the candidate's most-recent lead.
       { label: "Mock interview", href: "/hub/account/interview", icon: Mic },
       { label: "Reference checks", href: "/hub/account/references", icon: Users },
       { label: "Consolidated report", href: "/hub/account/combined-report", icon: FileStack, tourId: "nav-consolidated" },
@@ -52,6 +53,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const leadHref = useLeadHref();
 
   return (
     <nav
@@ -78,7 +80,7 @@ export default function Sidebar() {
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={leadHref(item.href)}
                   data-tour={item.tourId}
                   aria-current={isActive ? "page" : undefined}
                   className={

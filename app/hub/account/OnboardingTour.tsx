@@ -8,7 +8,8 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 // app with a panel switcher and a command palette -- this app has neither, so
 // two of its steps are dropped outright (see below) and the rest are rewritten
 // to describe this app's real, per-application behavior instead of the
-// mockup's invented multi-app-switching and search features.
+// mockup's invented multi-app-switching and search features. Role switching is
+// covered by the TopBar role-switcher dropdown, not this tour.
 //
 // Design choice: this tour is Overview-page-scoped, not cross-route. Every
 // remaining step's target (ScoreCard, the 4 ProgressRail pills, CounsellingCard,
@@ -18,8 +19,8 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 // page navigation.
 //
 // Dropped vs. mockup:
-// - "Switch applications" (app-switcher) -- no multi-app switcher exists yet
-//   (separate, deferred project per this task's brief).
+// - "Switch applications" (app-switcher) -- role switching is handled by the TopBar
+//   role-switcher dropdown, not this single-page tour.
 // - "Lost? Press ⌘K" (search) -- no search/command-palette exists in this app
 //   (explicit product decision).
 export type TourStep = {

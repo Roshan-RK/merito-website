@@ -61,7 +61,7 @@ export default function ProgressRail({
       icon: FileText,
       state: reportUnlocked ? "done" : "locked",
       statusText: reportUnlocked ? "Unlocked" : "Not started",
-      href: reportUnlocked ? "/hub/account/report" : undefined,
+      href: reportUnlocked ? `/hub/account/report?lead=${encodeURIComponent(leadId)}` : undefined,
       onClick: reportUnlocked ? undefined : onOpenReportPaywall,
     },
     {

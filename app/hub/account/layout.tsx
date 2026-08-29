@@ -18,7 +18,7 @@ export default async function AccountLayout({
 
   const { data: leads } = await supabase
     .from("fitment_leads")
-    .select("id, role_title, name")
+    .select("id, role_title, name, score")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 

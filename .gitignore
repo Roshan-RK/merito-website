@@ -58,6 +58,10 @@ docs/
 graphify-out/
 .graphify_python
 
+# Playwright e2e output
+playwright-report/
+test-results/
+
 # Dev utility scripts
 clean.js
 generate_reftrack.js

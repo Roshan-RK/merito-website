@@ -7,6 +7,9 @@ import Link from "next/link";
 import { Search, Bell, HelpCircle, Briefcase, Receipt, FileText, Brain, Mic, Users, Eye, Megaphone } from "lucide-react";
 import type { ComponentType } from "react";
 import SignOutButton from "./SignOutButton";
+import RoleSwitcherMenu from "./RoleSwitcherMenu";
+import { useLeadHref } from "./useLeadHref";
+import { useDismiss } from "./useDismiss";
 import { formatRelativeTime } from "@/lib/formatRelativeTime";
 import type { HubNotification, HubNotificationCategory } from "@/lib/hubNotifications";
 
@@ -25,31 +28,11 @@ const NOTIFICATION_ICON: Record<HubNotificationCategory, ComponentType<{ size?: 
   general: Megaphone,
 };
 
-// Closes any open dropdown when a click lands outside every registered
-// trigger/panel pair, or when Escape is pressed -- shared by the three
-// header menus below instead of duplicating the listener three times.
-function useDismiss(open: boolean, onDismiss: () => void, refs: React.RefObject<HTMLElement | null>[]) {
-  useEffect(() => {
-    if (!open) return;
-    const handlePointer = (e: MouseEvent) => {
-      if (refs.every((ref) => ref.current && !ref.current.contains(e.target as Node))) onDismiss();
-    };
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onDismiss();
-    };
-    document.addEventListener("mousedown", handlePointer);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handlePointer);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [open, onDismiss, refs]);
-}
-
 type Lead = {
   id: string;
   role_title: string;
   name: string;
+  score: number | null;
 };
 
 export default function TopBar({
@@ -65,6 +48,7 @@ export default function TopBar({
 }) {
   const searchParams = useSearchParams();
   const leadIdParam = searchParams.get("lead");
+  const leadHref = useLeadHref();
 
   const activeLead = leadIdParam
     ? leads.find((l) => l.id === leadIdParam) || leads[0]
@@ -144,7 +128,7 @@ export default function TopBar({
       style={{ height: 64, padding: "0 28px", zIndex: 30, gap: 16, background: "rgba(20,18,22,0.85)", borderBottom: "1px solid rgb(49,47,55)" }}
     >
       <div className="flex items-center shrink-0" style={{ gap: 8 }}>
-        <Link href="/hub/account" className="flex items-center" style={{ gap: 8 }}>
+        <Link href={leadHref("/hub/account")} className="flex items-center" style={{ gap: 8 }}>
           <Image src="/logo-white.png" alt="Merito" width={128} height={36} style={{ height: 30, width: "auto" }} />
           <span
             className="bg-[#ed1a24] text-white font-[family-name:var(--font-poppins)] font-bold"
@@ -176,20 +160,11 @@ export default function TopBar({
       </div>
 
       <div className="flex items-center shrink-0" style={{ gap: 8 }}>
-        {/* Single-application model: today's data is always "the latest role
-            you checked fitment for", so this is a static label (+ the real
-            Change-role flow) rather than the mockup's multi-app switcher,
-            which needs a ?lead= selector this app doesn't have yet. */}
-        <button
-          onClick={onChangeRole}
-          className="hidden sm:flex items-center transition-colors font-[family-name:var(--font-poppins)] font-medium"
-          style={{ borderRadius: 50, padding: "6px 12px", fontSize: 14, background: "rgba(39,37,45,0.6)", border: "1px solid rgb(49,47,55)", color: "rgb(236,235,233)", cursor: "pointer", gap: 8 }}
-        >
-          <span>{roleTitle}</span>
-          <span style={{ color: "#ed1a24", fontSize: 11, fontWeight: 700 }}>
-            Change
-          </span>
-        </button>
+        {/* `?lead=<uuid>` is the single source of truth for the active role;
+            RoleSwitcher shows a dropdown to switch between the candidate's
+            existing roles when there are 2+, or a static label otherwise, and
+            defers "+ Check a new role" back to the ChangeRoleModal flow. */}
+        <RoleSwitcherMenu leads={leads} onChangeRole={onChangeRole} />
 
         <div className="relative">
           <button
@@ -361,7 +336,7 @@ export default function TopBar({
                 )}
               </div>
               <Link
-                href="/hub/account#applications"
+                href={leadHref("/hub/account#applications")}
                 onClick={close}
                 className="flex items-center text-white/75 hover:text-white hover:bg-white/[0.06] transition-colors font-[family-name:var(--font-poppins)] font-semibold"
                 style={{ gap: 10, fontSize: 12.5, padding: "9px 10px", borderRadius: 8 }}
