@@ -7,7 +7,7 @@ import InterviewResumeWarning from "./InterviewResumeWarning";
 const CHECKLIST = [
   { icon: Volume2, text: "Find a quiet space with no interruptions" },
   { icon: Wifi, text: "Check your network connection and keep your device on power" },
-  { icon: Clock, text: "Set aside about 20–25 minutes, uninterrupted" },
+  { icon: Clock, text: "Set aside about 30–45 minutes, uninterrupted" },
 ];
 
 // Renders for fitment_interviews.status === "invited" with ib_interview_status
