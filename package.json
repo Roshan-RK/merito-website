@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:db": "vitest run --config vitest.dbtest.config.ts",
     "test:e2e": "playwright test",
     "verify:schema": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-schema-contract.mjs"
   },
