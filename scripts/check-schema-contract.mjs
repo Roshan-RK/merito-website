@@ -14,11 +14,14 @@
  *   --db-url   an explicit postgres connection string
  *
  * `runSql` shells out to the Supabase CLI (`supabase db query`). When the CLI
- * is absent or the project is not linked — e.g. inside the Vercel build image —
- * the check SKIPS with a warning and exit 0, so it never breaks a deploy it
- * cannot verify. It exits 1 only on a genuine contract failure. Run it locally
- * (`npm run verify:schema`) before pushing schema-dependent code; it also runs
- * automatically as `prebuild`.
+ * is absent or the project is not linked the check SKIPS with a warning and
+ * exit 0; it exits 1 only on a genuine contract failure.
+ *
+ * Run it (`npm run verify:schema`) before pushing schema-dependent code. It is
+ * deliberately NOT wired into `build` / `prebuild`: the Vercel build image has
+ * no `supabase` CLI (so it could only ever SKIP there) and importing this
+ * module's `.ts` dependency needs Node's type-stripping. See
+ * docs/superpowers/BACKLOG-2026-08-29.md item 10 for the real-CI options.
  */
 
 import { spawnSync } from "node:child_process";
