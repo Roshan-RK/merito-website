@@ -4,11 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
+    "prebuild": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-schema-contract.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:db": "vitest run --config vitest.dbtest.config.ts",
+    "test:e2e": "playwright test",
+    "verify:schema": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-schema-contract.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
