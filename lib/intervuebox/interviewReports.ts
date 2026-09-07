@@ -1,6 +1,4 @@
-import http from "http";
-import https from "https";
-import { IntervueBoxError, intervueBoxFetch, type IntervueBoxErrorShape } from "./client";
+import { IntervueBoxError, intervueBoxFetch } from "./client";
 import type { CriteriaMatchStatus } from "../criteriaStatus";
 
 // Real shape confirmed 2026-07-28 against a live isCriteriaMatch:true report.
@@ -135,76 +133,6 @@ type RawInterviewReportResponse = {
   };
 };
 
-function requireEnv(name: "INTERVUEBOX_API_KEY" | "INTERVUEBOX_BASE_URL"): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`IntervueBox is not configured (${name} missing).`);
-  }
-  return value;
-}
-
-// IntervueBox's `GET /public/reports/interviews` genuinely requires a JSON
-// body on a GET request (confirmed verbatim in their own docs' curl/JS/Python
-// examples). The Fetch spec — and therefore Node's native `fetch`, which
-// `intervueBoxFetch` wraps — throws `TypeError: Request with GET/HEAD method
-// cannot have body` for this. GET-with-body is a valid HTTP construct, just
-// not expressible via Fetch, so this one endpoint issues the request via
-// Node's raw http/https modules instead of going through `intervueBoxFetch`.
-function getWithBody<T>(path: string, body: unknown): Promise<T> {
-  const apiKey = requireEnv("INTERVUEBOX_API_KEY");
-  const baseUrl = requireEnv("INTERVUEBOX_BASE_URL").replace(/\/$/, "");
-  const url = new URL(`${baseUrl}${path}`);
-  const payload = JSON.stringify(body);
-  const transport = url.protocol === "https:" ? https : http;
-
-  return new Promise<T>((resolve, reject) => {
-    const request = transport.request(
-      {
-        hostname: url.hostname,
-        port: url.port || (url.protocol === "https:" ? 443 : 80),
-        path: url.pathname + url.search,
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(payload),
-        },
-      },
-      (response) => {
-        let raw = "";
-        response.on("data", (chunk) => {
-          raw += chunk;
-        });
-        response.on("end", () => {
-          let parsed: unknown = null;
-          try {
-            parsed = raw ? JSON.parse(raw) : null;
-          } catch {
-            parsed = null;
-          }
-          const status = response.statusCode ?? 0;
-          if (status < 200 || status >= 300) {
-            const errorShape = (parsed as { error?: Partial<IntervueBoxErrorShape> } | null)?.error ?? {};
-            reject(
-              new IntervueBoxError({
-                code: errorShape.code ?? "unknown_error",
-                message: errorShape.message ?? `IntervueBox request failed with status ${status}`,
-                status: errorShape.status ?? status,
-                details: errorShape.details,
-              })
-            );
-            return;
-          }
-          resolve(parsed as T);
-        });
-      }
-    );
-    request.on("error", reject);
-    request.write(payload);
-    request.end();
-  });
-}
-
 function parseTimestampToSeconds(timestamp: string): number {
   const parts = timestamp.split(":").map(Number);
   if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
@@ -253,9 +181,15 @@ export async function generateInterviewReport(interviewId: string, candidateIds:
 
 export async function getInterviewReport(interviewId: string, candidateId: string): Promise<InterviewReport> {
   try {
-    const response = await getWithBody<RawInterviewReportResponse>("/public/reports/interviews", {
-      interviewId,
-      candidateId,
+    // Was GET-with-body until 2026-09-07, when IntervueBox moved this to a
+    // plain POST (the GET route now 404s with "Cannot GET ..."). Same request
+    // body and same response shape as before. A bare 404 catch used to mask
+    // that route change as "report not ready", stranding every completed
+    // interview -- the isRoutingError guard below makes a future move fail loud.
+    const response = await intervueBoxFetch<RawInterviewReportResponse>("/public/reports/interviews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ interviewId, candidateId }),
     });
     const overallReport = response.sessionDetails.overallReport;
     return {
@@ -311,7 +245,14 @@ export async function getInterviewReport(interviewId: string, candidateId: strin
     };
   } catch (err) {
     if (err instanceof IntervueBoxError && err.status === 404) {
-      return { status: "NOT_READY" };
+      // A genuine "report not generated yet" 404 -- expected, poll again later.
+      // But an Express/Nest routing 404 ("Cannot GET/POST /api/v1/...") means
+      // the endpoint itself moved: never treat that as "not ready" (that's the
+      // 2026-09-07 incident), surface it so the pickup pipeline visibly breaks.
+      const isRoutingError = /^Cannot (GET|POST|PUT|PATCH|DELETE) /.test(err.message);
+      if (!isRoutingError) {
+        return { status: "NOT_READY" };
+      }
     }
     throw err;
   }

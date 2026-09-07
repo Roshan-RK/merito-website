@@ -2,15 +2,12 @@ import http from "http";
 import type { AddressInfo } from "net";
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 
-// getInterviewReport no longer goes through the mocked `intervueBoxFetch` —
-// IntervueBox's `GET /public/reports/interviews` requires a JSON body on a
-// GET, which Node's native `fetch` (what `intervueBoxFetch` wraps) rejects
-// with `TypeError: Request with GET/HEAD method cannot have body`. A test
-// that mocked `intervueBoxFetch` never exercised that failure mode — this
-// file instead spins up a real local HTTP server so every case (including
-// the mapping/404 cases previously covered by mocks) goes through the real
-// Node `http` request path the fix now uses, proving GET+body actually works
-// end-to-end and can't silently regress.
+// getInterviewReport hits a real local HTTP server rather than a mocked
+// `intervueBoxFetch`, so the request method + body and the 404 handling are
+// exercised end-to-end. IntervueBox moved this endpoint from GET-with-body to
+// a plain POST on 2026-09-07 (the old GET route now answers "Cannot GET ..."),
+// which a bare 404 catch silently mapped to "report not ready" — stranding
+// every completed interview. These tests lock in POST + the routing-404 guard.
 
 let server: http.Server;
 let baseUrl: string;
@@ -47,7 +44,7 @@ beforeEach(() => {
 });
 
 describe("getInterviewReport", () => {
-  it("issues a real GET request carrying a JSON body and maps a ready report", async () => {
+  it("issues a real POST carrying a JSON body and maps a ready report", async () => {
     respond = (_req, res) => {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
@@ -77,9 +74,7 @@ describe("getInterviewReport", () => {
 
     const result = await getInterviewReport("INT_123", "USR_123");
 
-    // Proves the exact bug class from the critical finding cannot recur:
-    // a real GET request that actually carries a non-empty body.
-    expect(lastRequest?.method).toBe("GET");
+    expect(lastRequest?.method).toBe("POST");
     expect(lastRequest?.body).toBeTruthy();
     expect(JSON.parse(lastRequest!.body)).toEqual({ interviewId: "INT_123", candidateId: "USR_123" });
 
@@ -330,7 +325,7 @@ describe("getInterviewReport", () => {
     expect(result).toMatchObject({ status: "READY", approxDurationMinutes: null });
   });
 
-  it("returns NOT_READY when the server responds 404", async () => {
+  it("returns NOT_READY when the server responds 404 because the report is not generated yet", async () => {
     respond = (_req, res) => {
       res.writeHead(404, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ message: "Report is not available for this candidate yet" }));
@@ -340,6 +335,22 @@ describe("getInterviewReport", () => {
     const result = await getInterviewReport("INT_123", "USR_123");
 
     expect(result).toEqual({ status: "NOT_READY" });
+  });
+
+  it("throws (not NOT_READY) on a routing 404 — the endpoint itself moved", async () => {
+    respond = (_req, res) => {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          message: "Cannot POST /api/v1/public/reports/interviews",
+          error: "Not Found",
+          statusCode: 404,
+        })
+      );
+    };
+    const { getInterviewReport } = await import("../interviewReports");
+
+    await expect(getInterviewReport("INT_123", "USR_123")).rejects.toThrow(/Cannot POST/);
   });
 
   it("re-throws non-404 errors", async () => {
