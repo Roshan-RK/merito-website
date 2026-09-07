@@ -54,4 +54,24 @@ describe("resolveInterviewViewState", () => {
   it("is 'ready' once status is 'ready' and report_raw is populated", () => {
     expect(resolveInterviewViewState({ status: "ready", report_raw: { overallScore: 80 }, ib_interview_status: null })).toBe("ready");
   });
+
+  it("is 'processing' while the vendor is scoring a finished interview (EVALUATING)", () => {
+    expect(resolveInterviewViewState({ status: "invited", report_raw: null, ib_interview_status: "EVALUATING" })).toBe("processing");
+  });
+
+  it("is 'processing' once the interview is EVALUATED but the report hasn't been pulled yet", () => {
+    expect(resolveInterviewViewState({ status: "invited", report_raw: null, ib_interview_status: "EVALUATED" })).toBe("processing");
+  });
+
+  it("is 'ready', not 'processing', once the EVALUATED report actually lands", () => {
+    expect(resolveInterviewViewState({ status: "ready", report_raw: { overallScore: 36 }, ib_interview_status: "EVALUATED" })).toBe("ready");
+  });
+
+  it("is 'terminated', not 'processing', when a terminated row also shows EVALUATED", () => {
+    expect(resolveInterviewViewState({ status: "terminated", report_raw: null, ib_interview_status: "EVALUATED" })).toBe("terminated");
+  });
+
+  it("stays 'appeared' (resume card) while the candidate is still mid-interview", () => {
+    expect(resolveInterviewViewState({ status: "invited", report_raw: null, ib_interview_status: "APPEARED" })).toBe("appeared");
+  });
 });

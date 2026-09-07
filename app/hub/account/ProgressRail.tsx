@@ -86,7 +86,12 @@ export default function ProgressRail({
       key: "interview",
       label: "Mock interview",
       icon: Mic,
-      state: interviewStatus === "ready" ? "done" : interviewStatus === "invited" || interviewStatus === "terminated" || interviewStatus === "stuck" ? "active" : "locked",
+      state:
+        interviewStatus === "ready"
+          ? "done"
+          : interviewStatus === "invited" || interviewStatus === "processing" || interviewStatus === "terminated" || interviewStatus === "stuck"
+            ? "active"
+            : "locked",
       statusText:
         interviewStatus === "ready"
           ? "Ready"
@@ -94,13 +99,15 @@ export default function ProgressRail({
             ? "Needs help"
             : interviewStatus === "terminated"
               ? "Interrupted"
-              : interviewStatus === "invited"
-                ? "Invited"
-                : "Not started",
-      // No pulse for "stuck" -- unlike invited/terminated, nothing is
-      // pending on the vendor side; the row won't self-resolve without an
+              : interviewStatus === "processing"
+                ? "Scoring…"
+                : interviewStatus === "invited"
+                  ? "Invited"
+                  : "Not started",
+      // No pulse for "stuck" -- unlike invited/processing/terminated, nothing
+      // is pending on the vendor side; the row won't self-resolve without an
       // admin, so an animated "waiting" dot would be misleading.
-      pulse: interviewStatus === "invited" || interviewStatus === "terminated",
+      pulse: interviewStatus === "invited" || interviewStatus === "processing" || interviewStatus === "terminated",
       // Any status that has a real interview row (invited/ready/terminated/
       // stuck) links to the interview page -- that's where the "Start
       // Interview" button (invited), report (ready), and resume card

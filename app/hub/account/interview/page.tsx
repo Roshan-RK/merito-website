@@ -10,6 +10,7 @@ import InterviewTabs from "./InterviewTabs";
 import InterviewLockedState from "./InterviewLockedState";
 import InterviewInProgressState from "./InterviewInProgressState";
 import InterviewAppearedState from "./InterviewAppearedState";
+import InterviewProcessingState from "./InterviewProcessingState";
 import InterviewTerminatedState from "./InterviewTerminatedState";
 import InterviewStuckState from "./InterviewStuckState";
 import InterviewStatusPoller from "./InterviewStatusPoller";
@@ -120,6 +121,20 @@ export default async function InterviewReportPage({
         <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
           <InterviewAppearedState roleTitle={interview.role_title} leadId={activeLead.id} />
           <InterviewStatusPoller leadId={activeLead.id} currentStatus="appeared" />
+        </div>
+      </main>
+    );
+  }
+
+  if (viewState === "processing") {
+    return (
+      <main>
+        <div className="mx-auto" style={{ maxWidth: 820, padding: "28px 24px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+          <InterviewProcessingState roleTitle={interview.role_title} />
+          {/* The status route returns "invited" for this row until the report
+              lands; the poller just needs a value it will differ from on
+              "ready", so "invited" is the right sentinel here. */}
+          <InterviewStatusPoller leadId={activeLead.id} currentStatus="invited" />
         </div>
       </main>
     );
