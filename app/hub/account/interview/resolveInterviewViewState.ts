@@ -1,5 +1,5 @@
-// Which of the interview panel's six states page.tsx should render.
-export type InterviewViewState = "locked" | "invited" | "appeared" | "terminated" | "ready" | "stuck";
+// Which of the interview panel's states page.tsx should render.
+export type InterviewViewState = "locked" | "invited" | "appeared" | "processing" | "terminated" | "ready" | "stuck";
 
 export function resolveInterviewViewState(
   interview: { status: string; report_raw: unknown; ib_interview_status?: string | null; stuck_at?: string | null } | null | undefined
@@ -21,6 +21,16 @@ export function resolveInterviewViewState(
   // A sweep-flipped "terminated" row always shows the resume card, regardless
   // of whatever raw candidate status happens to be cached alongside it.
   if (interview.status === "terminated") return "terminated";
+  // The candidate finished; IntervueBox is scoring it (EVALUATING) or has
+  // scored it (EVALUATED) but the report hasn't been pulled into report_raw
+  // yet. Show a "scoring your interview" card -- NOT the pre-interview "Start
+  // Interview" card the plain "invited" fallthrough would render.
+  if (
+    (interview.ib_interview_status === "EVALUATING" || interview.ib_interview_status === "EVALUATED") &&
+    !interview.report_raw
+  ) {
+    return "processing";
+  }
   if (interview.status !== "ready" || !interview.report_raw) {
     return interview.ib_interview_status === "APPEARED" ? "appeared" : "invited";
   }

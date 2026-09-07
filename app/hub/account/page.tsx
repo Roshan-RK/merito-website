@@ -111,7 +111,7 @@ export default async function AccountPage({
 
   const { data: interviewRow } = await supabase
     .from("fitment_interviews")
-    .select("id, status, ib_agent_id, ib_candidate_id, invited_at, stuck_at")
+    .select("id, status, ib_agent_id, ib_candidate_id, ib_interview_status, invited_at, stuck_at")
     .eq("user_id", user.id)
     .or(leadIdOrRoleTitleFilter(current.id, current.role_title))
     .order("updated_at", { ascending: false })
@@ -130,7 +130,9 @@ export default async function AccountPage({
         ? "stuck"
         : interviewRow.status === "terminated"
           ? "terminated"
-          : "invited";
+          : interviewRow.ib_interview_status === "EVALUATING" || interviewRow.ib_interview_status === "EVALUATED"
+            ? "processing"
+            : "invited";
 
   // The DB row only flips to "ready" via IntervueBox's webhook -- if that
   // delivery is ever missed, nothing else updates it. Self-heal the same
@@ -139,7 +141,7 @@ export default async function AccountPage({
   // state -- a stuck row can still have a real report waiting at the vendor
   // if the interview actually completed just before the failed resume call
   // set stuck_at (see the Critical fix referenced above).
-  if (interviewRow && (interviewStatus === "invited" || interviewStatus === "stuck")) {
+  if (interviewRow && (interviewStatus === "invited" || interviewStatus === "processing" || interviewStatus === "stuck")) {
     try {
       const interviewReport = await getInterviewReport(interviewRow.ib_agent_id, interviewRow.ib_candidate_id);
       if (interviewReport.status === "READY") {
