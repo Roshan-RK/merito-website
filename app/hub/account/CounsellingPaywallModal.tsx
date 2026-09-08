@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackPurchase } from "@/lib/analytics";
 
 type RazorpayHandlerResponse = {
   razorpay_order_id: string;
@@ -109,6 +110,7 @@ export default function CounsellingPaywallModal({
               setError(verifyData.error || "Payment succeeded, but verification failed. Please contact support.");
               return;
             }
+            trackPurchase("counselling");
             onRequested();
           } catch {
             setPaying(false);

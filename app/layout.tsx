@@ -85,6 +85,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Reveal-on-scroll animations SSR an opacity:0 initial state. If JS
+            never runs, that content would stay invisible -- force it visible. */}
+        <noscript>
+          <style>{`[style*="opacity:0"]{opacity:1!important;transform:none!important}`}</style>
+        </noscript>
         {/* Google Tag Manager */}
         <Script id="gtm-head" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':

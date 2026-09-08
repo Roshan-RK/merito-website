@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ResumeMatchReportReady } from "@/lib/intervuebox/reports";
 import PriceOptionTiles from "./PriceOptionTiles";
 import type { CandidateLevel } from "@/lib/razorpay/pricing";
+import { trackPurchase } from "@/lib/analytics";
 
 type RazorpayHandlerResponse = {
   razorpay_order_id: string;
@@ -123,6 +124,7 @@ export default function ReportPaywallModal({
                 setError(verifyData.error || "Payment succeeded, but verification failed. Please contact support.");
                 return;
               }
+              trackPurchase(selection === "bundle" ? "bundle" : "report");
               if (verifyData.status === "pending") {
                 setPending(true);
                 return;

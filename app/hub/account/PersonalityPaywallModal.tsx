@@ -3,6 +3,7 @@
 import { useState } from "react";
 import PriceOptionTiles from "./PriceOptionTiles";
 import type { CandidateLevel } from "@/lib/razorpay/pricing";
+import { trackPurchase } from "@/lib/analytics";
 
 type RazorpayHandlerResponse = {
   razorpay_order_id: string;
@@ -120,6 +121,7 @@ export default function PersonalityPaywallModal({
               setError(verifyData.error || "Payment succeeded, but verification failed. Please contact support.");
               return;
             }
+            trackPurchase((initiateBody as { product?: string }).product ?? "personality");
             await onPaid();
           } catch {
             setPaying(false);
