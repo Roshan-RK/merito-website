@@ -37,6 +37,20 @@ const nextConfig: NextConfig = {
         destination: '/meritoways',
         permanent: true,
       },
+      // Sept 2026 campaigns were built pointing at /fitment, which never
+      // existed. Real destination is the #fit-checker anchor on /hub. Any
+      // ?seg= query is preserved automatically. Temporary (307) -- this is a
+      // safety net for stale ad URLs, not a permanent public path.
+      {
+        source: '/fitment',
+        destination: '/hub#fit-checker',
+        permanent: false,
+      },
+      {
+        source: '/fitment/:path*',
+        destination: '/hub#fit-checker',
+        permanent: false,
+      },
     ];
   },
 };

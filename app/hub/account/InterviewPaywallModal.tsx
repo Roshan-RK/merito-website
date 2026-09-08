@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { InterviewStatus } from "./ProgressRail";
 import { PRODUCT_PRICING, formatPrice, type CandidateLevel } from "@/lib/razorpay/pricing";
+import { trackPurchase } from "@/lib/analytics";
 
 type RazorpayHandlerResponse = {
   razorpay_order_id: string;
@@ -148,6 +149,7 @@ export default function InterviewPaywallModal({
               setError(verifyData.error || "Payment succeeded, but verification failed. Please contact support.");
               return;
             }
+            trackPurchase("interview");
             await startInterview();
           } catch {
             setPaying(false);

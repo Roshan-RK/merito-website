@@ -8,6 +8,10 @@ import ProblemCards from "./ProblemCards";
 import FaqAccordion from "./FaqAccordion";
 import TestimonialCarousel from "./TestimonialCarousel";
 import HubCountUp from "./HubCountUp";
+import PricingSection from "./PricingSection";
+import HashScrollFix from "./HashScrollFix";
+import StickyMobileCta from "./StickyMobileCta";
+import { resolveSegment, getHubHero } from "./heroContent";
 
 export const metadata: Metadata = {
   title: "Merito HUB - Increase Your Chances of Landing Your Dream Job",
@@ -82,13 +86,23 @@ function ArrowChip() {
   );
 }
 
-export default function HubPage() {
+export default async function HubPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ seg?: string | string[] }>;
+}) {
+  const { seg } = await searchParams;
+  const segment = resolveSegment(seg);
+  const hero = getHubHero(segment);
+
   return (
     <main>
       <style>{`
         html { scroll-behavior: smooth; }
-        #fit-checker, #how-it-works { scroll-margin-top: 110px; }
+        #fit-checker, #how-it-works, #pricing { scroll-margin-top: 110px; }
       `}</style>
+      <HashScrollFix />
+      <StickyMobileCta label={hero.ctaLabel} />
 
       {/* ══════════ HERO ══════════ */}
       <section className="bg-white" style={{ padding: "44px 0 24px" }}>
@@ -96,18 +110,18 @@ export default function HubPage() {
           <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] items-start" style={{ gap: 52 }}>
             <RevealOnScroll>
               <div style={{ maxWidth: 620 }}>
-                <Eyebrow>Merito HUB · For Candidates</Eyebrow>
+                <Eyebrow>{hero.eyebrow}</Eyebrow>
                 <h1
                   className="font-[family-name:var(--font-gabarito)] font-semibold text-black"
                   style={{ fontSize: "clamp(2.4rem,4vw,3.7rem)", lineHeight: 1.04, letterSpacing: "-0.04em", margin: "24px 0 0" }}
                 >
-                  Your CV says what you did. <span className="text-[#ed1a24]">Merito HUB proves what you&apos;re worth.</span>
+                  {hero.headlineLead} <span className="text-[#ed1a24]">{hero.headlineAccent}</span>
                 </h1>
                 <p
                   className="font-[family-name:var(--font-poppins)] font-medium text-[#4b4b4d]"
                   style={{ fontSize: 18, lineHeight: 1.65, margin: "20px 0 0", maxWidth: 540 }}
                 >
-                  Whether you&apos;re applying for your first job, pushing for your next promotion, or making a quiet move to something bigger, Merito HUB scores your fit, shows you what to fix, and gets that proof in front of the people deciding.
+                  {hero.sub}
                 </p>
                 <div className="flex flex-wrap items-center" style={{ gap: 12, marginTop: 28 }}>
                   <a
@@ -115,7 +129,7 @@ export default function HubPage() {
                     className="inline-flex items-center gap-2 font-[family-name:var(--font-poppins)] font-semibold text-white bg-[#ed1a24] hover:bg-[#c8151e] transition-colors w-full sm:w-auto justify-center"
                     style={{ height: 52, padding: "0 26px", borderRadius: 8, fontSize: 16, boxShadow: "0px 4px 6px rgba(236,34,40,0.3)" }}
                   >
-                    Check my fitment score - free
+                    {hero.ctaLabel}
                     <ArrowChip />
                   </a>
                   <a
@@ -126,7 +140,10 @@ export default function HubPage() {
                     See how it works
                   </a>
                 </div>
-                <p className="font-[family-name:var(--font-poppins)] font-semibold text-[#4b4b4d]" style={{ fontSize: 13, margin: "24px 0 0", lineHeight: 1.6 }}>
+                <p className="font-[family-name:var(--font-poppins)] font-medium text-[#9c9c9c]" style={{ fontSize: 12.5, margin: "14px 0 0", lineHeight: 1.6 }}>
+                  {hero.note}
+                </p>
+                <p className="font-[family-name:var(--font-poppins)] font-semibold text-[#4b4b4d]" style={{ fontSize: 13, margin: "22px 0 0", lineHeight: 1.6 }}>
                   From Merito - the AI hiring partner trusted by India&apos;s fastest-growing companies.
                   <br />
                   <span className="font-medium text-[#9c9c9c]">1000+ professionals placed across 100+ companies.</span>
@@ -571,6 +588,9 @@ export default function HubPage() {
         </div>
       </section>
 
+      {/* ══════════ PRICING ══════════ */}
+      <PricingSection />
+
       {/* ══════════ FAQ ══════════ */}
       <section className="bg-white" style={{ padding: "56px 0" }}>
         <div className="max-w-[920px] mx-auto px-5">
@@ -630,7 +650,7 @@ export default function HubPage() {
                 </ContactTrigger>
               </div>
               <p className="relative" style={{ fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.5)", margin: "4px 0 0" }}>
-                Free to start · No sign-up for your first score · Takes under 2 minutes
+                Free to start · No sign-up for your first score · Takes about 2 minutes
               </p>
             </div>
           </RevealOnScroll>

@@ -83,7 +83,7 @@ export const PERSONAS: Record<PersonaKey, PersonaContent> = {
     testimonialVideoLength: "1:24",
     finalCtaHeadlinePlain: "Your first job shouldn't come down",
     finalCtaHeadlineAccent: "to luck.",
-    finalCtaBody: "Check your fitment score in 60 seconds - free - and find out which roles you can actually win.",
+    finalCtaBody: "Check your fitment score in about 2 minutes - free - and find out which roles you can actually win.",
   },
   managers: {
     key: "managers",
@@ -129,7 +129,7 @@ export const PERSONAS: Record<PersonaKey, PersonaContent> = {
     testimonialVideoLength: "1:41",
     finalCtaHeadlinePlain: "Stop being hired for what you do.",
     finalCtaHeadlineAccent: "Get hired for what you can lead.",
-    finalCtaBody: "Check your fitment score in 60 seconds - free - and see which manager roles you're ready for.",
+    finalCtaBody: "Check your fitment score in about 2 minutes - free - and see which manager roles you're ready for.",
   },
   leaders: {
     key: "leaders",
@@ -175,6 +175,6 @@ export const PERSONAS: Record<PersonaKey, PersonaContent> = {
     testimonialVideoLength: "2:05",
     finalCtaHeadlinePlain: "The corner office goes to whoever proves they're ready.",
     finalCtaHeadlineAccent: "Prove it.",
-    finalCtaBody: "Check your fitment score in 60 seconds - free - and see how you stand against leadership roles.",
+    finalCtaBody: "Check your fitment score in about 2 minutes - free - and see how you stand against leadership roles.",
   },
 };

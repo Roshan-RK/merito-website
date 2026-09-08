@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Script from "next/script";
 import Link from "next/link";
+import { track } from "@/lib/analytics";
 
 declare global {
   interface Window {
@@ -37,6 +38,16 @@ export default function FitmentChecker() {
   const rafRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isMountedRef = useRef(true);
+  const startedRef = useRef(false);
+
+  // "score_start" = the visitor has meaningfully engaged with the form. Fired
+  // once, on first focus of any field, so score_start -> score_complete
+  // measures form-completion friction (see Sept CRO plan, section 17).
+  const markStarted = () => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    track("score_start");
+  };
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -125,6 +136,7 @@ export default function FitmentChecker() {
         setChecking(false);
         setIsDuplicate(Boolean(data.duplicate));
         setErrorMsg(data.error || "Something went wrong — please try again.");
+        track("score_error", { reason: data.duplicate ? "duplicate" : "submit_failed" });
         return;
       }
       if (data.status === "ready" && typeof data.score === "number") {
@@ -132,6 +144,7 @@ export default function FitmentChecker() {
         setScore(data.score);
         setVerdict(data.verdict || "");
         animateScore(data.score);
+        track("score_complete", { score: data.score });
         return;
       }
       if (data.status === "pending" && data.leadId) {
@@ -144,6 +157,7 @@ export default function FitmentChecker() {
       window.grecaptcha?.reset?.(widgetIdRef.current ?? undefined);
       setChecking(false);
       setErrorMsg("Something went wrong — please try again.");
+      track("score_error", { reason: "network" });
     }
   };
 
@@ -154,6 +168,7 @@ export default function FitmentChecker() {
     if (attempt >= POLL_MAX_ATTEMPTS) {
       setChecking(false);
       setErrorMsg("Your score is taking longer than usual — check back in a few minutes.");
+      track("score_error", { reason: "timeout" });
       return;
     }
     setTimeout(async () => {
@@ -167,6 +182,7 @@ export default function FitmentChecker() {
           setScore(data.score);
           setVerdict(data.verdict || "");
           animateScore(data.score);
+          track("score_complete", { score: data.score });
           return;
         }
         pollForResult(leadId, attempt + 1);
@@ -183,6 +199,7 @@ export default function FitmentChecker() {
   return (
     <div
       id="fit-checker"
+      onFocusCapture={markStarted}
       className="bg-[#fdf8fb] border border-black/[0.08] w-full"
       style={{ borderRadius: 24, boxShadow: "0px 18px 50px rgba(17,35,89,0.05)", padding: 24 }}
     >
@@ -212,6 +229,14 @@ export default function FitmentChecker() {
           Log in
         </Link>
       </div>
+
+      <p
+        className="font-[family-name:var(--font-poppins)] text-[#4b4b4d]"
+        style={{ fontSize: 12, lineHeight: 1.55, margin: "0 0 16px" }}
+      >
+        No sign-up for your first score. We&apos;ll ask for your CV, the role you&apos;re
+        targeting, and its job description — about 2 minutes.
+      </p>
 
       <label className="block font-[family-name:var(--font-poppins)] font-semibold text-black" style={{ fontSize: 12, marginBottom: 6 }}>
         Full name
@@ -470,8 +495,8 @@ export default function FitmentChecker() {
         </div>
       )}
 
-      <p className="font-[family-name:var(--font-poppins)] font-medium text-[#9c9c9c] text-center" style={{ fontSize: 12, margin: "14px 0 0" }}>
-        Free · Takes 60 seconds
+      <p className="font-[family-name:var(--font-poppins)] font-medium text-[#9c9c9c] text-center" style={{ fontSize: 12, margin: "14px 0 0", lineHeight: 1.5 }}>
+        Free · No account needed for your first score · Takes about 2 minutes
       </p>
     </div>
   );

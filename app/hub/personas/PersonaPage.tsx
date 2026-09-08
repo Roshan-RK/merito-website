@@ -4,6 +4,7 @@ import RevealOnScroll from "@/components/anim/RevealOnScroll";
 import type { PersonaContent } from "./data";
 import PersonaHeroVisual from "./PersonaHeroVisual";
 import PersonaLinkedInMockup from "./PersonaLinkedInMockup";
+import StickyMobileCta from "../StickyMobileCta";
 
 function RedEyebrow({ children }: { children: React.ReactNode }) {
   return (
@@ -40,6 +41,8 @@ function ArrowChip() {
 export default function PersonaPage({ p }: { p: PersonaContent }) {
   return (
     <main>
+      <StickyMobileCta label="Check your fitment score - free" href="/hub#fit-checker" />
+
       {/* ══════════ HERO ══════════ */}
       <section className="bg-[#fdf8fb]" style={{ padding: "56px 0 64px" }}>
         <div className="max-w-[1340px] mx-auto px-5">

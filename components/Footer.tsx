@@ -83,6 +83,15 @@ export default function Footer() {
                 >
                   Contact us
                 </Link>
+                <Link href="/privacy" className="transition-colors hover:text-[#ed1a24]">
+                  Privacy Policy
+                </Link>
+                <Link href="/terms" className="transition-colors hover:text-[#ed1a24]">
+                  Terms of Service
+                </Link>
+                <Link href="/refund-policy" className="transition-colors hover:text-[#ed1a24]">
+                  Refund &amp; Cancellation
+                </Link>
               </div>
             </div>
 
@@ -143,7 +152,7 @@ export default function Footer() {
 
         <div className="flex flex-col items-start sm:items-center justify-between gap-4 border-t border-white/20 pt-6 md:flex-row">
           <p className="text-[12px] sm:text-[15px] font-medium leading-[1.6] text-white">
-            © 2023 Merito - by Career Corner Education Pvt. Ltd
+            © {new Date().getFullYear()} Merito - by Career Corner Education Pvt. Ltd
           </p>
           <div className="hidden sm:flex items-center gap-[10px]">
             {socialLinks.map((social) => (

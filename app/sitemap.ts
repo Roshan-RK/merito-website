@@ -2,13 +2,20 @@ import { MetadataRoute } from "next";
 import { siteUrl } from "@/lib/site";
 
 const staticRoutes = [
-  { path: "/",           priority: 1.0,  changeFrequency: "weekly"  },
-  { path: "/about",      priority: 0.7,  changeFrequency: "monthly" },
-  { path: "/contact",    priority: 0.6,  changeFrequency: "monthly" },
-  { path: "/meritoways", priority: 0.8,  changeFrequency: "monthly" },
-  { path: "/offervault", priority: 0.8,  changeFrequency: "monthly" },
-  { path: "/reftrack",   priority: 0.8,  changeFrequency: "monthly" },
-  { path: "/insights",   priority: 0.9,  changeFrequency: "daily"   },
+  { path: "/",               priority: 1.0,  changeFrequency: "weekly"  },
+  { path: "/about",          priority: 0.7,  changeFrequency: "monthly" },
+  { path: "/contact",        priority: 0.6,  changeFrequency: "monthly" },
+  { path: "/meritoways",     priority: 0.8,  changeFrequency: "monthly" },
+  { path: "/offervault",     priority: 0.8,  changeFrequency: "monthly" },
+  { path: "/reftrack",       priority: 0.8,  changeFrequency: "monthly" },
+  { path: "/insights",       priority: 0.9,  changeFrequency: "daily"   },
+  { path: "/hub",            priority: 0.9,  changeFrequency: "weekly"  },
+  { path: "/hub/freshers",   priority: 0.8,  changeFrequency: "monthly" },
+  { path: "/hub/managers",   priority: 0.8,  changeFrequency: "monthly" },
+  { path: "/hub/leaders",    priority: 0.8,  changeFrequency: "monthly" },
+  { path: "/privacy",        priority: 0.3,  changeFrequency: "yearly"  },
+  { path: "/terms",          priority: 0.3,  changeFrequency: "yearly"  },
+  { path: "/refund-policy",  priority: 0.3,  changeFrequency: "yearly"  },
 ] as const;
 
 const articleSlugs = [
